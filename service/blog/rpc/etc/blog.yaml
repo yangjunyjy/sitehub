@@ -1,0 +1,37 @@
+# Local development only. Deploy configs use reachable container addresses.
+Name: blog-rpc
+ListenOn: 0.0.0.0:9802
+Timeout: 30000
+ServiceKey: ${SERVICE_KEY}
+Database:
+  Driver: mysql
+  DSN: ${BLOG_DB_DSN}
+RbacRPC:
+  Timeout: 5000
+  Target: nacos:///rbac-rpc
+FileRPC:
+  Timeout: 30000
+  Target: nacos:///file-rpc
+Mode: dev
+Nacos:
+  Servers:
+  - 127.0.0.1:8848
+  NamespaceID: ${NACOS_NAMESPACE_ID}
+  Group: SITEHUB
+  Username: ${NACOS_USERNAME}
+  Password: ${NACOS_PASSWORD}
+Registry:
+  Enabled: true
+  AdvertiseIP: ${SERVICE_ADVERTISE_IP}
+  AllowLoopback: true
+  MaxStale: 30s
+  StartupTimeout: 30s
+ConfigCenter:
+  Enabled: true
+  DataID: blog-rpc.yaml
+Runtime:
+  Maintenance: false
+  MaxConcurrentRequests: 1000
+Shutdown:
+  WrapUpTime: 10s
+  WaitTime: 75s

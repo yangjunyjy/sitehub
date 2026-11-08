@@ -1,0 +1,560 @@
+name: sitehub
+services:
+  rbac-db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: sitehub_rbac
+      MYSQL_USER: rbac
+      MYSQL_PASSWORD: ${RBAC_DB_PASSWORD:?set RBAC_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${RBAC_DB_ROOT_PASSWORD:?set RBAC_DB_ROOT_PASSWORD}
+    volumes:
+    - rbac-db:/var/lib/mysql
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  blog-db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: sitehub_blog
+      MYSQL_USER: blog
+      MYSQL_PASSWORD: ${BLOG_DB_PASSWORD:?set BLOG_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${BLOG_DB_ROOT_PASSWORD:?set BLOG_DB_ROOT_PASSWORD}
+    volumes:
+    - blog-db:/var/lib/mysql
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  product-db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: sitehub_product
+      MYSQL_USER: product
+      MYSQL_PASSWORD: ${PRODUCT_DB_PASSWORD:?set PRODUCT_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${PRODUCT_DB_ROOT_PASSWORD:?set PRODUCT_DB_ROOT_PASSWORD}
+    volumes:
+    - product-db:/var/lib/mysql
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  file-db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: sitehub_file
+      MYSQL_USER: file
+      MYSQL_PASSWORD: ${FILE_DB_PASSWORD:?set FILE_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${FILE_DB_ROOT_PASSWORD:?set FILE_DB_ROOT_PASSWORD}
+    volumes:
+    - file-db:/var/lib/mysql
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  redis:
+    image: redis:7.4-alpine
+    command:
+    - redis-server
+    - --requirepass
+    - ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+    volumes:
+    - rbac-cache:/data
+  rbac-rpc:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        TARGET: service/rbac/rpc
+    command:
+    - -f
+    - /app/etc/service.yaml
+    restart: unless-stopped
+    volumes:
+    - ./config/rbac-rpc.yaml:/app/etc/service.yaml:ro
+    environment:
+      SERVICE_KEY: ${SERVICE_KEY:?set a service key of at least 32 characters}
+      RBAC_DB_DSN: rbac:${RBAC_DB_PASSWORD}@tcp(rbac-db:3306)/sitehub_rbac?charset=utf8mb4&parseTime=true&loc=UTC
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      NACOS_NAMESPACE_ID: ${NACOS_NAMESPACE_ID:-sitehub-dev}
+      NACOS_USERNAME: ${NACOS_USERNAME:-nacos}
+      NACOS_PASSWORD: ${NACOS_PASSWORD:?set a URL-safe Nacos password}
+    depends_on:
+      rbac-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      nacos-init:
+        condition: service_completed_successfully
+    stop_grace_period: 80s
+  rbac-api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        TARGET: service/rbac/api
+    command:
+    - -f
+    - /app/etc/service.yaml
+    restart: unless-stopped
+    volumes:
+    - ./config/rbac-api.yaml:/app/etc/service.yaml:ro
+    environment:
+      SERVICE_KEY: ${SERVICE_KEY:?set a service key of at least 32 characters}
+      NACOS_NAMESPACE_ID: ${NACOS_NAMESPACE_ID:-sitehub-dev}
+      NACOS_USERNAME: ${NACOS_USERNAME:-nacos}
+      NACOS_PASSWORD: ${NACOS_PASSWORD:?set a URL-safe Nacos password}
+      WEB_COOKIE_SECURE: ${WEB_COOKIE_SECURE:-false}
+    depends_on:
+      rbac-rpc:
+        condition: service_started
+      nacos-init:
+        condition: service_completed_successfully
+    stop_grace_period: 80s
+  rbac-bootstrap:
+    profiles:
+    - init
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        TARGET: tools/bootstrap
+    command:
+    - -service
+    - rbac
+    environment:
+      RBAC_DB_DSN: rbac:${RBAC_DB_PASSWORD}@tcp(rbac-db:3306)/sitehub_rbac?charset=utf8mb4&parseTime=true&loc=UTC
+      BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+    depends_on:
+      rbac-db:
+        condition: service_healthy
+  file-rpc:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        TARGET: service/file/rpc
+    command:
+    - -f
+    - /app/etc/service.yaml
+    restart: unless-stopped
+    volumes:
+    - ./config/file-rpc.yaml:/app/etc/service.yaml:ro
+    - files:/data/files
+    environment:
+      SERVICE_KEY: ${SERVICE_KEY:?set a service key of at least 32 characters}
+      FILE_DB_DSN: file:${FILE_DB_PASSWORD}@tcp(file-db:3306)/sitehub_file?charset=utf8mb4&parseTime=true&loc=UTC
+      STORAGE_SECRET: ${STORAGE_SECRET:?set STORAGE_SECRET}
+      NACOS_NAMESPACE_ID: ${NACOS_NAMESPACE_ID:-sitehub-dev}
+      NACOS_USERNAME: ${NACOS_USERNAME:-nacos}
+      NACOS_PASSWORD: ${NACOS_PASSWORD:?set a URL-safe Nacos password}
+    depends_on:
+      file-db:
+        condition: service_healthy
+      nacos-init:
+        condition: service_completed_successfully
+    stop_grace_period: 80s
+  file-api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        TARGET: service/file/api
+    command:
+    - -f
+    - /app/etc/service.yaml
+    restart: unless-stopped
+    volumes:
+    - ./config/file-api.yaml:/app/etc/service.yaml:ro
+    environment:
+      SERVICE_KEY: ${SERVICE_KEY:?set a service key of at least 32 characters}
+      NACOS_NAMESPACE_ID: ${NACOS_NAMESPACE_ID:-sitehub-dev}
+      NACOS_USERNAME: ${NACOS_USERNAME:-nacos}
+      NACOS_PASSWORD: ${NACOS_PASSWORD:?set a URL-safe Nacos password}
+    depends_on:
+      file-rpc:
+        condition: service_started
+      nacos-init:
+        condition: service_completed_successfully
+    stop_grace_period: 80s
+  file-bootstrap:
+    profiles:
+    - init
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        TARGET: tools/bootstrap
+    command:
+    - -service
+    - file
+    environment:
+      FILE_DB_DSN: file:${FILE_DB_PASSWORD}@tcp(file-db:3306)/sitehub_file?charset=utf8mb4&parseTime=true&loc=UTC
+      BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+    depends_on:
+      file-db:
+        condition: service_healthy
+  blog-rpc:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        TARGET: service/blog/rpc
+    command:
+    - -f
+    - /app/etc/service.yaml
+    restart: unless-stopped
+    volumes:
+    - ./config/blog-rpc.yaml:/app/etc/service.yaml:ro
+    environment:
+      SERVICE_KEY: ${SERVICE_KEY:?set a service key of at least 32 characters}
+      BLOG_DB_DSN: blog:${BLOG_DB_PASSWORD}@tcp(blog-db:3306)/sitehub_blog?charset=utf8mb4&parseTime=true&loc=UTC
+      NACOS_NAMESPACE_ID: ${NACOS_NAMESPACE_ID:-sitehub-dev}
+      NACOS_USERNAME: ${NACOS_USERNAME:-nacos}
+      NACOS_PASSWORD: ${NACOS_PASSWORD:?set a URL-safe Nacos password}
+    depends_on:
+      blog-db:
+        condition: service_healthy
+      nacos-init:
+        condition: service_completed_successfully
+    stop_grace_period: 80s
+  blog-api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        TARGET: service/blog/api
+    command:
+    - -f
+    - /app/etc/service.yaml
+    restart: unless-stopped
+    volumes:
+    - ./config/blog-api.yaml:/app/etc/service.yaml:ro
+    environment:
+      SERVICE_KEY: ${SERVICE_KEY:?set a service key of at least 32 characters}
+      NACOS_NAMESPACE_ID: ${NACOS_NAMESPACE_ID:-sitehub-dev}
+      NACOS_USERNAME: ${NACOS_USERNAME:-nacos}
+      NACOS_PASSWORD: ${NACOS_PASSWORD:?set a URL-safe Nacos password}
+    depends_on:
+      blog-rpc:
+        condition: service_started
+      nacos-init:
+        condition: service_completed_successfully
+    stop_grace_period: 80s
+  blog-bootstrap:
+    profiles:
+    - init
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        TARGET: tools/bootstrap
+    command:
+    - -service
+    - blog
+    environment:
+      BLOG_DB_DSN: blog:${BLOG_DB_PASSWORD}@tcp(blog-db:3306)/sitehub_blog?charset=utf8mb4&parseTime=true&loc=UTC
+      BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+    depends_on:
+      blog-db:
+        condition: service_healthy
+  product-rpc:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        TARGET: service/product/rpc
+    command:
+    - -f
+    - /app/etc/service.yaml
+    restart: unless-stopped
+    volumes:
+    - ./config/product-rpc.yaml:/app/etc/service.yaml:ro
+    environment:
+      SERVICE_KEY: ${SERVICE_KEY:?set a service key of at least 32 characters}
+      PRODUCT_DB_DSN: product:${PRODUCT_DB_PASSWORD}@tcp(product-db:3306)/sitehub_product?charset=utf8mb4&parseTime=true&loc=UTC
+      NACOS_NAMESPACE_ID: ${NACOS_NAMESPACE_ID:-sitehub-dev}
+      NACOS_USERNAME: ${NACOS_USERNAME:-nacos}
+      NACOS_PASSWORD: ${NACOS_PASSWORD:?set a URL-safe Nacos password}
+    depends_on:
+      product-db:
+        condition: service_healthy
+      nacos-init:
+        condition: service_completed_successfully
+    stop_grace_period: 80s
+  product-api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        TARGET: service/product/api
+    command:
+    - -f
+    - /app/etc/service.yaml
+    restart: unless-stopped
+    volumes:
+    - ./config/product-api.yaml:/app/etc/service.yaml:ro
+    environment:
+      SERVICE_KEY: ${SERVICE_KEY:?set a service key of at least 32 characters}
+      NACOS_NAMESPACE_ID: ${NACOS_NAMESPACE_ID:-sitehub-dev}
+      NACOS_USERNAME: ${NACOS_USERNAME:-nacos}
+      NACOS_PASSWORD: ${NACOS_PASSWORD:?set a URL-safe Nacos password}
+    depends_on:
+      product-rpc:
+        condition: service_started
+      nacos-init:
+        condition: service_completed_successfully
+    stop_grace_period: 80s
+  product-bootstrap:
+    profiles:
+    - init
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        TARGET: tools/bootstrap
+    command:
+    - -service
+    - product
+    environment:
+      PRODUCT_DB_DSN: product:${PRODUCT_DB_PASSWORD}@tcp(product-db:3306)/sitehub_product?charset=utf8mb4&parseTime=true&loc=UTC
+      BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+    depends_on:
+      product-db:
+        condition: service_healthy
+  scheduler:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        TARGET: service/scheduler/cronjob
+    command:
+    - -f
+    - /app/etc/service.yaml
+    restart: unless-stopped
+    environment:
+      SERVICE_KEY: ${SERVICE_KEY}
+      NACOS_NAMESPACE_ID: ${NACOS_NAMESPACE_ID:-sitehub-dev}
+      NACOS_USERNAME: ${NACOS_USERNAME:-nacos}
+      NACOS_PASSWORD: ${NACOS_PASSWORD:?set a URL-safe Nacos password}
+    volumes:
+    - ./config/scheduler.yaml:/app/etc/service.yaml:ro
+    depends_on:
+      blog-rpc:
+        condition: service_started
+      nacos-init:
+        condition: service_completed_successfully
+    stop_grace_period: 80s
+  web-site:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+      args:
+        APP: site
+    command:
+    - --app
+    - site
+    restart: unless-stopped
+    healthcheck:
+      test:
+      - CMD
+      - node
+      - -e
+      - fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  web-admin:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+      args:
+        APP: admin
+        VITE_WEBSITE_URL: ${WEB_SITE_URL:-http://sitehub.local:8082}
+    command:
+    - --app
+    - admin
+    restart: unless-stopped
+    healthcheck:
+      test:
+      - CMD
+      - node
+      - -e
+      - fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  gateway:
+    build:
+      context: ..
+      dockerfile: deploy/gateway/Dockerfile
+    restart: unless-stopped
+    ports:
+    - ${GATEWAY_PORT:-8082}:9080
+    environment:
+      NACOS_NAMESPACE_ID: ${NACOS_NAMESPACE_ID:-sitehub-dev}
+      NACOS_USERNAME: ${NACOS_USERNAME:-nacos}
+      NACOS_PASSWORD: ${NACOS_PASSWORD:?set a URL-safe Nacos password}
+      GATEWAY_ADMIN_KEY: ${GATEWAY_ADMIN_KEY:?set a gateway control key of at least
+        32 characters}
+    depends_on:
+      gateway-etcd:
+        condition: service_healthy
+      nacos-init:
+        condition: service_completed_successfully
+      web-site:
+        condition: service_healthy
+      web-admin:
+        condition: service_healthy
+    networks:
+    - default
+    - control
+    stop_grace_period: 65s
+    healthcheck:
+      test:
+      - CMD
+      - /app/gateway
+      - health
+      - -f
+      - /app/etc/gateway.yaml
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    volumes:
+    - ./gateway/gateway.yaml:/app/etc/gateway.yaml:ro
+    - ../gateway/etc/routes.json:/app/etc/routes.json:ro
+  nacos:
+    image: nacos/nacos-server:v2.5.1
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+      NACOS_AUTH_ENABLE: 'true'
+      NACOS_AUTH_TOKEN: ${NACOS_AUTH_TOKEN:?base64 encode at least 32 random bytes}
+      NACOS_AUTH_IDENTITY_KEY: sitehub-server
+      NACOS_AUTH_IDENTITY_VALUE: ${NACOS_AUTH_IDENTITY_VALUE:?set an internal server
+        identity secret}
+      JVM_XMS: 256m
+      JVM_XMX: 512m
+      JVM_XMN: 128m
+    volumes:
+    - nacos-data:/home/nacos/data
+    - nacos-logs:/home/nacos/logs
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -fsS http://127.0.0.1:8848/nacos/v1/console/health/readiness >/dev/null
+      interval: 5s
+      timeout: 5s
+      retries: 40
+    networks:
+    - default
+    - control
+  nacos-init:
+    image: python:3.12-alpine
+    command:
+    - python
+    - /init.py
+    environment:
+      NACOS_NAMESPACE_ID: ${NACOS_NAMESPACE_ID:-sitehub-dev}
+      NACOS_USERNAME: ${NACOS_USERNAME:-nacos}
+      NACOS_PASSWORD: ${NACOS_PASSWORD:?set a URL-safe Nacos password}
+    volumes:
+    - ./nacos/init.py:/init.py:ro
+    - ./nacos/config:/config:ro
+    depends_on:
+      nacos:
+        condition: service_healthy
+  gateway-etcd:
+    image: quay.io/coreos/etcd:v3.5.21
+    command:
+    - etcd
+    - --name=gateway
+    - --data-dir=/etcd-data
+    - --listen-client-urls=http://0.0.0.0:2379
+    - --advertise-client-urls=http://gateway-etcd:2379
+    - --listen-peer-urls=http://0.0.0.0:2380
+    - --initial-advertise-peer-urls=http://gateway-etcd:2380
+    - --initial-cluster=gateway=http://gateway-etcd:2380
+    volumes:
+    - gateway-etcd:/etcd-data
+    networks:
+    - control
+    healthcheck:
+      test:
+      - CMD
+      - etcdctl
+      - endpoint
+      - health
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  gateway-publish:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        TARGET: tools/gatewayctl
+    command:
+    - publish
+    - --manifest
+    - /app/manifests/routes.json
+    - -f
+    - /app/etc/gatewayctl.yaml
+    environment:
+      GATEWAY_ADMIN_KEY: ${GATEWAY_ADMIN_KEY:?set GATEWAY_ADMIN_KEY}
+    volumes:
+    - ../gateway/etc:/app/manifests:ro
+    - ./gateway/gatewayctl.yaml:/app/etc/gatewayctl.yaml:ro
+    - gateway-releases:/data/releases
+    depends_on:
+      gateway:
+        condition: service_healthy
+    networks:
+    - control
+    profiles:
+    - ops
+volumes:
+  rbac-db: null
+  blog-db: null
+  product-db: null
+  file-db: null
+  rbac-cache: null
+  files: null
+  nacos-data: null
+  nacos-logs: null
+  gateway-etcd: null
+  gateway-releases: null
+networks:
+  default:
+    ipam:
+      config:
+      - subnet: 172.30.0.0/24
+  control:
+    internal: true
+    ipam:
+      config:
+      - subnet: 172.31.0.0/24

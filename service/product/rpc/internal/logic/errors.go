@@ -1,0 +1,23 @@
+package logic
+
+import (
+	"errors"
+	"sitehub/common/rpcx"
+	business "sitehub/service/product/business"
+	domain "sitehub/service/product/domain"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
+
+func classify(err error) error {
+	switch {
+	case errors.Is(err, domain.ErrDocumentConflict):
+		return status.Error(codes.Aborted, err.Error())
+	case errors.Is(err, domain.ErrDocumentNotFound):
+		return status.Error(codes.NotFound, err.Error())
+	case errors.Is(err, domain.ErrInvalidDocument), errors.Is(err, business.ErrInvalidWebsiteDownloads):
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+	return rpcx.Error(err)
+}

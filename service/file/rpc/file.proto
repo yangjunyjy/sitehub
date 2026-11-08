@@ -1,0 +1,91 @@
+syntax = "proto3";
+package file;
+option go_package = "./pb/file";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+message BoolReply {
+  bool value = 1 [json_name = "value"];
+}
+
+message Empty {
+}
+
+message FileInfo {
+  string url = 1 [json_name = "url"];
+  string name = 2 [json_name = "name"];
+  string mime_type = 3 [json_name = "mimeType"];
+  int64 size = 4 [json_name = "size"];
+  int64 modified_at = 5 [json_name = "modifiedAt"];
+}
+
+message HealthRequest {
+}
+
+message HealthResponse {
+  string service = 1 [json_name = "service"];
+  string status = 2 [json_name = "status"];
+}
+
+message LocationRequest {
+  string location = 1 [json_name = "location"];
+  int64 offset = 2 [json_name = "offset"];
+  int64 length = 3 [json_name = "length"];
+}
+
+message SnapshotReply {
+  string snapshot = 1 [json_name = "snapshot"];
+}
+
+message SnapshotRequest {
+  string key = 1 [json_name = "key"];
+  string snapshot = 2 [json_name = "snapshot"];
+}
+
+message StorageView {
+  WebsiteStorage config = 1 [json_name = "config"];
+  bool has_secret = 2 [json_name = "hasSecret"];
+}
+
+message StreamChunk {
+  bytes data = 1 [json_name = "data"];
+  string name = 2 [json_name = "name"];
+  string kind = 3 [json_name = "kind"];
+  string mime = 4 [json_name = "mime"];
+  int64 size = 5 [json_name = "size"];
+  string snapshot = 6 [json_name = "snapshot"];
+}
+
+message UpdateWebsiteStorageRequest {
+  WebsiteStorage value = 1 [json_name = "value"];
+}
+
+message WebsiteStorage {
+  string provider = 1 [json_name = "provider"];
+  string local_path = 2 [json_name = "localPath"];
+  string url_prefix = 3 [json_name = "urlPrefix"];
+  string cdn = 4 [json_name = "cdn"];
+  string endpoint = 5 [json_name = "endpoint"];
+  string access_key = 6 [json_name = "accessKey"];
+  string secret_key = 7 [json_name = "secretKey"];
+  string bucket = 8 [json_name = "bucket"];
+  string region = 9 [json_name = "region"];
+  bool path_style = 10 [json_name = "pathStyle"];
+  repeated string allowed_exts = 11 [json_name = "allowedExts"];
+  int64 max_size = 12 [json_name = "maxSize"];
+}
+
+service File {
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc GetStorage(Empty) returns (WebsiteStorage);
+  rpc SaveStorage(WebsiteStorage) returns (Empty);
+  rpc StorageSnapshot(Empty) returns (WebsiteStorage);
+  rpc EnsureStorage(Empty) returns (Empty);
+  rpc ValidateRelease(LocationRequest) returns (Empty);
+  rpc PreparePrivate(SnapshotRequest) returns (SnapshotReply);
+  rpc DeletePrivate(SnapshotRequest) returns (Empty);
+  rpc Upload(stream StreamChunk) returns (FileInfo);
+  rpc WritePrivate(stream StreamChunk) returns (Empty);
+  rpc ReadPrivate(SnapshotRequest) returns (stream StreamChunk);
+  rpc ReadLocal(LocationRequest) returns (stream StreamChunk);
+}

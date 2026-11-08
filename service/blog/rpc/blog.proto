@@ -1,0 +1,385 @@
+syntax = "proto3";
+package blog;
+option go_package = "./pb/blog";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+message ArticleAction {
+  uint64 id = 1 [json_name = "id"];
+  uint64 version = 2 [json_name = "version"];
+  string request_id = 3 [json_name = "requestID"];
+  string action = 4 [json_name = "action"];
+  google.protobuf.Timestamp scheduled_at = 5 [json_name = "scheduledAt"];
+  uint64 revision_id = 6 [json_name = "revisionID"];
+  optional bool is_top = 7 [json_name = "isTop"];
+}
+
+message ArticleHistory {
+  uint64 id = 1 [json_name = "id"];
+  uint64 version = 2 [json_name = "version"];
+  uint64 actor_id = 3 [json_name = "actor_id"];
+  string action = 4 [json_name = "action"];
+  google.protobuf.Timestamp created_at = 5 [json_name = "created_at"];
+}
+
+message ArticleHistoryReply {
+  repeated ArticleHistory items = 1 [json_name = "items"];
+}
+
+message ArticleInput {
+  string title = 1 [json_name = "title"];
+  string slug = 2 [json_name = "slug"];
+  string summary = 3 [json_name = "summary"];
+  string content = 4 [json_name = "content"];
+  string content_format = 5 [json_name = "content_format"];
+  string cover = 6 [json_name = "cover"];
+  uint64 category_id = 7 [json_name = "category_id"];
+  repeated uint64 tag_ids = 8 [json_name = "tag_ids"];
+}
+
+message ArticleLabel {
+  uint64 id = 1 [json_name = "id"];
+  string name = 2 [json_name = "name"];
+}
+
+message ArticleListQuery {
+  int64 page = 1 [json_name = "page"];
+  int64 page_size = 2 [json_name = "pageSize"];
+  string title = 3 [json_name = "title"];
+  string sort = 4 [json_name = "sort"];
+  optional int64 status = 5 [json_name = "status"];
+  uint64 category_id = 6 [json_name = "categoryID"];
+  repeated uint64 tag_i_ds = 7 [json_name = "tagIDs"];
+  bool trash = 8 [json_name = "trash"];
+}
+
+message ArticleListReply {
+  repeated EntityArticle items = 1 [json_name = "items"];
+  int64 total = 2 [json_name = "total"];
+}
+
+message ArticleOptions {
+  repeated ArticleLabel categories = 1 [json_name = "categories"];
+  repeated ArticleLabel tags = 2 [json_name = "tags"];
+}
+
+message ArticlePage {
+  repeated ArticleView items = 1 [json_name = "items"];
+  int64 total = 2 [json_name = "total"];
+  int64 page = 3 [json_name = "page"];
+  int64 page_size = 4 [json_name = "pageSize"];
+}
+
+message ArticleRevisionRequest {
+  uint64 id = 1 [json_name = "id"];
+  uint64 revision_id = 2 [json_name = "revisionId"];
+}
+
+message ArticleStats {
+  int64 total = 1 [json_name = "total"];
+  int64 published = 2 [json_name = "published"];
+  int64 draft = 3 [json_name = "draft"];
+  int64 total_views = 4 [json_name = "totalViews"];
+  repeated int64 trend = 5 [json_name = "trend"];
+}
+
+message ArticleTrendData {
+  repeated string dates = 1 [json_name = "dates"];
+  repeated int64 counts = 2 [json_name = "counts"];
+}
+
+message ArticleView {
+  uint64 id = 1 [json_name = "id"];
+  uint64 version = 2 [json_name = "version"];
+  string title = 3 [json_name = "title"];
+  string slug = 4 [json_name = "slug"];
+  string summary = 5 [json_name = "summary"];
+  string content = 6 [json_name = "content"];
+  string content_format = 7 [json_name = "content_format"];
+  string cover = 8 [json_name = "cover"];
+  uint64 category_id = 9 [json_name = "category_id"];
+  repeated uint64 tag_ids = 10 [json_name = "tag_ids"];
+  uint64 status = 11 [json_name = "status"];
+  bool is_top = 12 [json_name = "is_top"];
+  ArticleLabel author = 13 [json_name = "author"];
+  ArticleLabel category = 14 [json_name = "category"];
+  repeated ArticleLabel tags = 15 [json_name = "tags"];
+  uint64 created_by = 16 [json_name = "created_by"];
+  uint64 updated_by = 17 [json_name = "updated_by"];
+  google.protobuf.Timestamp created_at = 18 [json_name = "created_at"];
+  google.protobuf.Timestamp updated_at = 19 [json_name = "updated_at"];
+  google.protobuf.Timestamp published_at = 20 [json_name = "published_at"];
+  google.protobuf.Timestamp scheduled_at = 21 [json_name = "scheduled_at"];
+  google.protobuf.Timestamp deleted_at = 22 [json_name = "deleted_at"];
+  uint64 views = 23 [json_name = "views"];
+  bool has_unpublished_changes = 24 [json_name = "has_unpublished_changes"];
+}
+
+message AssetInfo {
+  string id = 1 [json_name = "id"];
+  string url = 2 [json_name = "url"];
+  string name = 3 [json_name = "name"];
+  string mime = 4 [json_name = "mime"];
+  int64 size = 5 [json_name = "size"];
+}
+
+message AssetRequest {
+  string id = 1 [json_name = "id"];
+}
+
+message BoolReply {
+  bool value = 1 [json_name = "value"];
+}
+
+message CategoryInput {
+  uint64 id = 1 [json_name = "id"];
+  string name = 2 [json_name = "name"];
+  string slug = 3 [json_name = "slug"];
+  optional string description = 4 [json_name = "description"];
+  optional string icon = 5 [json_name = "icon"];
+  optional uint64 parent_id = 6 [json_name = "parentId"];
+  int64 sort_order = 7 [json_name = "sortOrder"];
+}
+
+message CategoryListQueryRequest {
+  int64 page = 1 [json_name = "page"];
+  int64 page_size = 2 [json_name = "pageSize"];
+  string name = 3 [json_name = "name"];
+}
+
+message CategoryPage {
+  repeated EntityCategory items = 1 [json_name = "items"];
+  int64 total = 2 [json_name = "total"];
+}
+
+message CountReply {
+  int64 count = 1 [json_name = "count"];
+}
+
+message CreateTagRequest {
+  string name = 1 [json_name = "name"];
+  string slug = 2 [json_name = "slug"];
+  optional string description = 3 [json_name = "description"];
+}
+
+message DashboardStats {
+  Record39 overview = 1 [json_name = "overview"];
+  Record40 trend = 2 [json_name = "trend"];
+  Record41 content = 3 [json_name = "content"];
+}
+
+message DaysRequest {
+  int64 days = 1 [json_name = "days"];
+}
+
+message Empty {
+}
+
+message EntityArticle {
+  uint64 version = 1 [json_name = "version"];
+  string content_format = 2 [json_name = "content_format"];
+  uint64 created_by = 3 [json_name = "created_by"];
+  uint64 updated_by = 4 [json_name = "updated_by"];
+  string author_name = 5 [json_name = "author_name"];
+  uint64 published_version = 6 [json_name = "published_version"];
+  uint64 scheduled_version = 7 [json_name = "scheduled_version"];
+  google.protobuf.Timestamp deleted_at = 8 [json_name = "deleted_at"];
+  uint64 id = 9 [json_name = "id"];
+  string title = 10 [json_name = "title"];
+  string slug = 11 [json_name = "slug"];
+  string summary = 12 [json_name = "summary"];
+  string content = 13 [json_name = "content"];
+  string cover = 14 [json_name = "cover"];
+  uint64 category_id = 15 [json_name = "category_id"];
+  uint64 author_id = 16 [json_name = "author_id"];
+  uint64 views = 17 [json_name = "views"];
+  uint64 likes = 18 [json_name = "likes"];
+  uint64 favorites = 19 [json_name = "favorites"];
+  uint64 comments = 20 [json_name = "comments"];
+  uint64 status = 21 [json_name = "status"];
+  bool is_top = 22 [json_name = "is_top"];
+  int64 sort_order = 23 [json_name = "sort_order"];
+  google.protobuf.Timestamp published_at = 24 [json_name = "published_at"];
+  google.protobuf.Timestamp scheduled_at = 25 [json_name = "scheduled_at"];
+  google.protobuf.Timestamp created_at = 26 [json_name = "created_at"];
+  google.protobuf.Timestamp updated_at = 27 [json_name = "updated_at"];
+  EntityCategory category = 28 [json_name = "category"];
+  repeated EntityTag tags = 29 [json_name = "tags"];
+  repeated EntityArticleView article_views = 30 [json_name = "article_views"];
+}
+
+message EntityArticleView {
+  uint64 id = 1 [json_name = "id"];
+  uint64 article_id = 2 [json_name = "article_id"];
+  string ip_address = 3 [json_name = "ip_address"];
+  string user_agent = 4 [json_name = "user_agent"];
+  optional uint64 user_id = 5 [json_name = "user_id"];
+  google.protobuf.Timestamp created_at = 6 [json_name = "created_at"];
+  EntityArticle article = 7 [json_name = "article"];
+  EntityUser user = 8 [json_name = "user"];
+}
+
+message EntityCategory {
+  optional uint64 parent_id = 1 [json_name = "parent_id"];
+  uint64 id = 2 [json_name = "id"];
+  string name = 3 [json_name = "name"];
+  string slug = 4 [json_name = "slug"];
+  string description = 5 [json_name = "description"];
+  string icon = 6 [json_name = "icon"];
+  int64 sort_order = 7 [json_name = "sort_order"];
+  uint64 status = 8 [json_name = "status"];
+  int64 article_count = 9 [json_name = "article_count"];
+  google.protobuf.Timestamp created_at = 10 [json_name = "created_at"];
+  google.protobuf.Timestamp updated_at = 11 [json_name = "updated_at"];
+  repeated EntityArticle articles = 12 [json_name = "articles"];
+}
+
+message EntityTag {
+  uint64 id = 1 [json_name = "id"];
+  string name = 2 [json_name = "name"];
+  string slug = 3 [json_name = "slug"];
+  string description = 4 [json_name = "description"];
+  int64 article_count = 5 [json_name = "article_count"];
+  google.protobuf.Timestamp created_at = 6 [json_name = "created_at"];
+  repeated EntityArticle articles = 7 [json_name = "articles"];
+}
+
+message EntityUser {
+  uint64 id = 1 [json_name = "id"];
+  string username = 2 [json_name = "username"];
+  string email = 3 [json_name = "email"];
+  string nickname = 4 [json_name = "nickname"];
+  string avatar = 5 [json_name = "avatar"];
+  string bio = 6 [json_name = "bio"];
+  uint64 role = 7 [json_name = "role"];
+  uint64 status = 8 [json_name = "status"];
+  google.protobuf.Timestamp created_at = 9 [json_name = "created_at"];
+  google.protobuf.Timestamp updated_at = 10 [json_name = "updated_at"];
+}
+
+message HealthRequest {
+}
+
+message HealthResponse {
+  string service = 1 [json_name = "service"];
+  string status = 2 [json_name = "status"];
+}
+
+message IDRequest {
+  uint64 id = 1 [json_name = "id"];
+}
+
+message LimitRequest {
+  int64 limit = 1 [json_name = "limit"];
+}
+
+message Record39 {
+  int64 articles = 1 [json_name = "articles"];
+  int64 views = 2 [json_name = "views"];
+  int64 likes = 3 [json_name = "likes"];
+  int64 comments = 4 [json_name = "comments"];
+}
+
+message Record40 {
+  repeated string dates = 1 [json_name = "dates"];
+  repeated int64 views = 2 [json_name = "views"];
+  repeated int64 articles = 3 [json_name = "articles"];
+}
+
+message Record41 {
+  int64 categories = 1 [json_name = "categories"];
+  int64 tags = 2 [json_name = "tags"];
+}
+
+message Records {
+  repeated google.protobuf.Struct items = 1 [json_name = "items"];
+}
+
+message SaveArticle {
+  uint64 id = 1 [json_name = "id"];
+  uint64 version = 2 [json_name = "version"];
+  string request_id = 3 [json_name = "requestID"];
+  ArticleInput input = 4 [json_name = "input"];
+}
+
+message SearchRequest {
+  string keyword = 1 [json_name = "keyword"];
+  int64 page = 2 [json_name = "page"];
+  int64 page_size = 3 [json_name = "pageSize"];
+}
+
+message StreamChunk {
+  bytes data = 1 [json_name = "data"];
+  string name = 2 [json_name = "name"];
+  string kind = 3 [json_name = "kind"];
+  string mime = 4 [json_name = "mime"];
+  int64 size = 5 [json_name = "size"];
+  string snapshot = 6 [json_name = "snapshot"];
+}
+
+message TagListQueryRequest {
+  int64 page = 1 [json_name = "page"];
+  int64 page_size = 2 [json_name = "pageSize"];
+  string name = 3 [json_name = "name"];
+}
+
+message TagPage {
+  repeated EntityTag items = 1 [json_name = "items"];
+  int64 total = 2 [json_name = "total"];
+}
+
+message UpdateTagRequest {
+  uint64 id = 1 [json_name = "id"];
+  string name = 2 [json_name = "name"];
+  string slug = 3 [json_name = "slug"];
+  optional string description = 4 [json_name = "description"];
+}
+
+message ViewRequest {
+  uint64 id = 1 [json_name = "id"];
+}
+
+message ViewTrendData {
+  repeated string dates = 1 [json_name = "dates"];
+  repeated int64 views = 2 [json_name = "views"];
+}
+
+service Blog {
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc PublicArticles(ArticleListQuery) returns (ArticlePage);
+  rpc PublicArticle(IDRequest) returns (ArticleView);
+  rpc AdminArticles(ArticleListQuery) returns (ArticlePage);
+  rpc EditorArticle(IDRequest) returns (ArticleView);
+  rpc GetArticleOptions(Empty) returns (ArticleOptions);
+  rpc SaveDraft(SaveArticle) returns (ArticleView);
+  rpc ApplyArticleAction(ArticleAction) returns (ArticleView);
+  rpc GetArticleHistory(IDRequest) returns (ArticleHistoryReply);
+  rpc ArticleRevision(ArticleRevisionRequest) returns (ArticleView);
+  rpc RecordView(ViewRequest) returns (Empty);
+  rpc SearchArticles(SearchRequest) returns (ArticlePage);
+  rpc HotArticles(LimitRequest) returns (ArticlePage);
+  rpc RecentArticles(LimitRequest) returns (ArticlePage);
+  rpc ListCategories(CategoryListQueryRequest) returns (CategoryPage);
+  rpc GetCategory(IDRequest) returns (EntityCategory);
+  rpc CreateCategory(CategoryInput) returns (Empty);
+  rpc UpdateCategory(CategoryInput) returns (Empty);
+  rpc DeleteCategory(IDRequest) returns (Empty);
+  rpc ListTags(TagListQueryRequest) returns (TagPage);
+  rpc GetTag(IDRequest) returns (EntityTag);
+  rpc CreateTag(CreateTagRequest) returns (Empty);
+  rpc UpdateTag(UpdateTagRequest) returns (Empty);
+  rpc DeleteTag(IDRequest) returns (Empty);
+  rpc CategoryTree(Empty) returns (CategoryPage);
+  rpc Dashboard(Empty) returns (DashboardStats);
+  rpc GetArticleStats(Empty) returns (ArticleStats);
+  rpc ArticleTrend(DaysRequest) returns (ArticleTrendData);
+  rpc ViewTrend(DaysRequest) returns (ViewTrendData);
+  rpc CategoryStats(LimitRequest) returns (Records);
+  rpc TagStats(LimitRequest) returns (Records);
+  rpc HotTags(LimitRequest) returns (Records);
+  rpc HotArticleStats(LimitRequest) returns (Records);
+  rpc PublishScheduled(Empty) returns (CountReply);
+  rpc CleanupAssets(Empty) returns (Empty);
+  rpc UploadAsset(stream StreamChunk) returns (AssetInfo);
+  rpc ReadAsset(AssetRequest) returns (stream StreamChunk);
+}

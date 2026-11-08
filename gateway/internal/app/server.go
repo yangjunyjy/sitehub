@@ -1,0 +1,236 @@
+package app
+
+import (
+	"context"
+	"crypto/tls"
+	"errors"
+	"fmt"
+	"net"
+	"net/http"
+	"sync"
+	"time"
+
+	"github.com/zeromicro/go-zero/core/logx"
+	clientv3 "go.etcd.io/etcd/client/v3"
+	registry "sitehub/common/registry/nacos"
+	"sitehub/gateway/internal/config"
+	"sitehub/gateway/internal/control"
+	"sitehub/gateway/internal/discovery"
+	"sitehub/gateway/internal/engine"
+	"sitehub/gateway/manifest"
+	"sitehub/gateway/plugin"
+)
+
+func Run(ctx context.Context, c config.Config) error {
+	if err := c.Validate(); err != nil {
+		return err
+	}
+	allowed, err := control.AllowedCIDRs(c.Admin.AllowedCIDRs)
+	if err != nil {
+		return err
+	}
+	seed, err := manifest.Read(c.Manifest)
+	if err != nil {
+		return err
+	}
+	if err = logx.SetUp(c.Log); err != nil {
+		return err
+	}
+	defer logx.Close()
+	storeClient, err := clientv3.New(clientv3.Config{Endpoints: c.Etcd.Endpoints, Username: c.Etcd.Username, Password: c.Etcd.Password, DialTimeout: 5 * time.Second})
+	if err != nil {
+		return fmt.Errorf("connect to gateway configuration store failed")
+	}
+	defer storeClient.Close()
+	store := &control.EtcdStore{Client: storeClient, Key: c.Etcd.Key}
+	var provider *discovery.Manager
+	if c.Discovery.Enabled {
+		naming, err := registry.New(c.Name, c.Nacos)
+		if err != nil {
+			return err
+		}
+		defer naming.CloseClient()
+		provider = discovery.New(naming, c.Nacos.Group, c.Discovery.MaxStale)
+		defer provider.Close()
+	}
+	proxy := engine.New(provider, plugin.DefaultRegistry(), c.HTTP.MaxBodyBytes)
+	defer proxy.Close()
+	controller := &control.Controller{Store: store, Engine: proxy, Key: c.Admin.Key, Allowed: allowed}
+	// Validate the seed before the first persistent write. Existing records are
+	// authoritative and never overwritten by process startup or image upgrades.
+	prepared, err := proxy.Prepare(seed)
+	if err != nil {
+		return err
+	}
+	prepared.Release()
+	record, err := control.Seed(ctx, store, seed)
+	if err != nil {
+		return err
+	}
+	if err = controller.Apply(record); err != nil {
+		return err
+	}
+	watchCtx, cancelWatch := context.WithCancel(context.Background())
+	watchDone := make(chan struct{})
+	// The watcher can prepare snapshots using both the engine and the Nacos
+	// client. Join it before deferred dependency cleanup on every exit path.
+	defer func() { cancelWatch(); <-watchDone }()
+	go func() {
+		defer close(watchDone)
+		store.Watch(watchCtx, func(r control.Record) {
+			if err := controller.Apply(r); err != nil {
+				logx.Errorw("gateway configuration rejected", logx.Field("reason", err.Error()))
+			}
+		}, controller.Failure)
+	}()
+	connections := newConnections()
+	public := &http.Server{Addr: c.Listen, Handler: proxy, ReadHeaderTimeout: c.HTTP.ReadHeaderTimeout, IdleTimeout: c.HTTP.IdleTimeout, MaxHeaderBytes: 1 << 20, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12}}
+	admin := &http.Server{Addr: c.Admin.Listen, Handler: controller.Handler(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 16 << 10}
+	publicListener, err := net.Listen("tcp", c.Listen)
+	if err != nil {
+		return err
+	}
+	defer publicListener.Close()
+	publicListener = &trackingListener{Listener: publicListener, owner: connections}
+	adminListener, err := net.Listen("tcp", c.Admin.Listen)
+	if err != nil {
+		return err
+	}
+	defer adminListener.Close()
+	failures := make(chan error, 2)
+	go func() {
+		if c.TLS.Certificate != "" {
+			failures <- public.ServeTLS(publicListener, c.TLS.Certificate, c.TLS.Key)
+		} else {
+			failures <- public.Serve(publicListener)
+		}
+	}()
+	go func() { failures <- admin.Serve(adminListener) }()
+	logx.Infow("gateway started", logx.Field("listen", c.Listen), logx.Field("revision", record.Revision))
+	var result error
+	select {
+	case <-ctx.Done():
+	case result = <-failures:
+		if errors.Is(result, http.ErrServerClosed) {
+			result = nil
+		}
+	}
+	controller.Stop()
+	cancelWatch()
+	drainCtx, cancel := context.WithTimeout(context.Background(), c.HTTP.ShutdownTimeout)
+	defer cancel()
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		if err := public.Shutdown(drainCtx); err != nil {
+			_ = public.Close()
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		if err := admin.Shutdown(drainCtx); err != nil {
+			_ = admin.Close()
+		}
+	}()
+	wg.Wait()
+	// Shutdown excludes hijacked WebSocket connections. Give them the same
+	// drain deadline, then close tracked sockets to bound process termination.
+	connections.drain(drainCtx)
+	return result
+}
+
+type connections struct {
+	mu      sync.Mutex
+	active  map[*trackedConn]struct{}
+	changed chan struct{}
+	closed  bool
+}
+
+func newConnections() *connections {
+	return &connections{active: make(map[*trackedConn]struct{}), changed: make(chan struct{})}
+}
+
+// Track below TLS and HTTP. net/http does not issue StateClosed after a
+// connection is hijacked, whereas the underlying Conn.Close is always called
+// by ReverseProxy when an upgraded session finishes.
+type trackingListener struct {
+	net.Listener
+	owner *connections
+}
+
+func (l *trackingListener) Accept() (net.Conn, error) {
+	conn, err := l.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	l.owner.mu.Lock()
+	if l.owner.closed {
+		l.owner.mu.Unlock()
+		_ = conn.Close()
+		return nil, net.ErrClosed
+	}
+	tracked := &trackedConn{Conn: conn, owner: l.owner}
+	l.owner.active[tracked] = struct{}{}
+	l.owner.signalLocked()
+	l.owner.mu.Unlock()
+	return tracked, nil
+}
+
+type trackedConn struct {
+	net.Conn
+	owner *connections
+	once  sync.Once
+	err   error
+}
+
+func (c *trackedConn) Close() error {
+	c.once.Do(func() {
+		c.err = c.Conn.Close()
+		c.owner.mu.Lock()
+		delete(c.owner.active, c)
+		c.owner.signalLocked()
+		c.owner.mu.Unlock()
+	})
+	return c.err
+}
+
+func (c *connections) signalLocked() {
+	close(c.changed)
+	c.changed = make(chan struct{})
+}
+
+// Called after HTTP Shutdown has drained ordinary requests. Sessions that
+// finish naturally wake this wait immediately; remaining upgraded sockets are
+// closed at the same original shutdown deadline, not a second timeout.
+func (c *connections) drain(ctx context.Context) {
+	for {
+		c.mu.Lock()
+		if len(c.active) == 0 {
+			c.closed = true
+			c.mu.Unlock()
+			return
+		}
+		changed := c.changed
+		c.mu.Unlock()
+		select {
+		case <-changed:
+		case <-ctx.Done():
+			c.closeAll()
+			return
+		}
+	}
+}
+
+func (c *connections) closeAll() {
+	c.mu.Lock()
+	c.closed = true
+	pending := make([]*trackedConn, 0, len(c.active))
+	for conn := range c.active {
+		pending = append(pending, conn)
+	}
+	c.mu.Unlock()
+	for _, conn := range pending {
+		_ = conn.Close()
+	}
+}

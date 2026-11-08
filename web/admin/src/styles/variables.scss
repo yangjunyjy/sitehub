@@ -1,0 +1,57 @@
+// Pure Admin reference: compact white shell and native Element Plus controls.
+:root {
+  --el-font-family:
+    'Helvetica Neue', Helvetica, 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+  --el-color-primary: #409eff;
+  --el-color-primary-light-3: #79bbff;
+  --el-color-primary-light-5: #a0cfff;
+  --el-color-primary-light-7: #c6e2ff;
+  --el-color-primary-light-8: #d9ecff;
+  --el-color-primary-light-9: #ecf5ff;
+  --el-color-primary-dark-2: #337ecc;
+  --el-border-radius-base: 4px;
+  --el-border-color: #dcdfe6;
+  --el-border-color-light: #e4e7ed;
+  --el-border-color-lighter: #ebeef5;
+  --el-text-color-primary: #303133;
+  --el-text-color-regular: #606266;
+  --el-text-color-secondary: #909399;
+  --primary-color: #409eff;
+  --success-color: #67c23a;
+  --warning-color: #e6a23c;
+  --danger-color: #f56c6c;
+  --info-color: #909399;
+  --color-blue: #409eff;
+  --color-purple: #a07bf2;
+  --color-cyan: #36cfc9;
+  --color-orange: #ff9b66;
+  --color-green: #30c88b;
+  --text-primary: #303133;
+  --text-regular: #606266;
+  --text-secondary: #909399;
+  --text-placeholder: #a8abb2;
+  --bg-page: #f0f2f5;
+  --bg-container: #fff;
+  --bg-hover: #f5f7fa;
+  --border-base: #dcdfe6;
+  --border-light: #ebeef5;
+  --border-primary: #409eff;
+  --border-radius-base: 4px;
+  --border-radius-small: 3px;
+  --border-radius-large: 6px;
+  --border-radius-extra-large: 8px;
+  --box-shadow-base: 0 2px 12px #0000000d;
+  --box-shadow-hover: 0 6px 16px #00000012;
+  --box-shadow-card: none;
+  --gradient-primary: linear-gradient(135deg, #409eff, #79bbff);
+  --gradient-success: linear-gradient(135deg, #67c23a, #95d475);
+  --gradient-info: linear-gradient(135deg, #36cfc9, #87e8de);
+  --gradient-warm: linear-gradient(135deg, #e6a23c, #f3d19e);
+  --sidebar-width: 210px;
+  --sidebar-collapsed-width: 54px;
+  --header-height: 48px;
+  --tags-view-height: 38px;
+  --transition-base: all 0.2s ease;
+  --transition-fast: all 0.15s ease;
+  --transition-slow: all 0.3s ease;
+}

@@ -1,0 +1,29 @@
+Name: gateway
+Listen: 0.0.0.0:9080
+Manifest: /app/etc/routes.json
+Log:
+  ServiceName: gateway
+  Mode: console
+  Level: info
+Admin:
+  Listen: 0.0.0.0:9180
+  Key: ${GATEWAY_ADMIN_KEY}
+  AllowedCIDRs: [127.0.0.1/32, 172.31.0.0/24]
+Etcd:
+  Endpoints: [gateway-etcd:2379]
+  Key: /sitehub/gateway/v1/config
+Nacos:
+  Servers: [nacos:8848]
+  NamespaceID: ${NACOS_NAMESPACE_ID}
+  Group: SITEHUB
+  Username: ${NACOS_USERNAME}
+  Password: ${NACOS_PASSWORD}
+  StateDir: /data/nacos
+Discovery:
+  Enabled: true
+  MaxStale: 30s
+HTTP:
+  MaxBodyBytes: 2149580800
+  ReadHeaderTimeout: 10s
+  IdleTimeout: 90s
+  ShutdownTimeout: 60s

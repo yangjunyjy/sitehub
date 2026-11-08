@@ -1,0 +1,3 @@
+AdminURL: http://gateway:9180
+AdminKey: ${GATEWAY_ADMIN_KEY}
+StateDir: /data/releases

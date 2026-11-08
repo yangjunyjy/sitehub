@@ -1,0 +1,423 @@
+syntax = "proto3";
+package rbac;
+option go_package = "./pb/rbac";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/struct.proto";
+
+message AdminSession {
+  string token = 1 [json_name = "token"];
+  int64 expires_at = 2 [json_name = "expiresAt"];
+  string once_token = 3 [json_name = "onceToken"];
+  EntitySysUser user = 4 [json_name = "user"];
+}
+
+message AssignRolesRequest {
+  uint64 user_id = 1 [json_name = "userId"];
+  repeated uint64 role_ids = 2 [json_name = "roleIds"];
+}
+
+message AuthorizeRequest {
+  string token = 1 [json_name = "token"];
+  string permission = 2 [json_name = "permission"];
+  string audience = 3 [json_name = "audience"];
+  bool secure = 4 [json_name = "secure"];
+  string totp = 5 [json_name = "totp"];
+}
+
+message BlacklistInput {
+  uint64 id = 1 [json_name = "id"];
+  string ip = 2 [json_name = "ip"];
+  string reason = 3 [json_name = "reason"];
+}
+
+message BoolReply {
+  bool value = 1 [json_name = "value"];
+}
+
+message CaptchaVerifyRequest {
+  string captcha_key = 1 [json_name = "captchaKey"];
+  int64 slider_x = 2 [json_name = "sliderX"];
+  int64 duration = 3 [json_name = "duration"];
+  int64 move_count = 4 [json_name = "moveCount"];
+}
+
+message CreateRoleRequest {
+  string role_code = 1 [json_name = "role_code"];
+  string role_name = 2 [json_name = "role_name"];
+  string role_desc = 3 [json_name = "role_desc"];
+  int64 status = 4 [json_name = "status"];
+}
+
+message CreateSysMenuRequest {
+  string name = 1 [json_name = "name"];
+  string code = 2 [json_name = "code"];
+  uint64 type = 3 [json_name = "type"];
+  optional uint64 status = 4 [json_name = "status"];
+  uint64 parent_id = 5 [json_name = "parent_id"];
+  int64 sort = 6 [json_name = "sort"];
+  string component = 7 [json_name = "component"];
+  string path = 8 [json_name = "path"];
+  string description = 9 [json_name = "description"];
+  bool is_visible = 10 [json_name = "isVisible"];
+  string icon = 11 [json_name = "icon"];
+}
+
+message CreateSysUserRequest {
+  string username = 1 [json_name = "username"];
+  string nickname = 2 [json_name = "nickname"];
+  string password = 3 [json_name = "password"];
+  string email = 4 [json_name = "email"];
+  uint64 status = 5 [json_name = "status"];
+  uint64 gender = 6 [json_name = "gender"];
+}
+
+message EmailSettingsView {
+  string smtp_host = 1 [json_name = "smtpHost"];
+  int64 smtp_port = 2 [json_name = "smtpPort"];
+  string from_email = 3 [json_name = "fromEmail"];
+  string from_name = 4 [json_name = "fromName"];
+  string subject = 5 [json_name = "subject"];
+  bool has_password = 6 [json_name = "hasPassword"];
+  string source = 7 [json_name = "source"];
+}
+
+message Empty {
+}
+
+message EntitySysDept {
+  uint64 id = 1 [json_name = "id"];
+  google.protobuf.Timestamp create_time = 2 [json_name = "createTime"];
+  google.protobuf.Timestamp update_time = 3 [json_name = "updateTime"];
+  uint64 create_by = 4 [json_name = "createBy"];
+  uint64 update_by = 5 [json_name = "updateBy"];
+  string remark = 6 [json_name = "remark"];
+  int64 deleted = 7 [json_name = "deleted"];
+  uint64 parent_id = 8 [json_name = "parent_id"];
+  string ancestors = 9 [json_name = "ancestors"];
+  string name = 10 [json_name = "name"];
+  int64 sort = 11 [json_name = "sort"];
+  string leader = 12 [json_name = "leader"];
+  string phone = 13 [json_name = "phone"];
+  string email = 14 [json_name = "email"];
+  int64 status = 15 [json_name = "status"];
+  repeated EntitySysDept children = 16 [json_name = "children"];
+  repeated EntitySysUser users = 17 [json_name = "users"];
+}
+
+message EntitySysMenu {
+  uint64 id = 1 [json_name = "id"];
+  google.protobuf.Timestamp create_time = 2 [json_name = "createTime"];
+  google.protobuf.Timestamp update_time = 3 [json_name = "updateTime"];
+  uint64 create_by = 4 [json_name = "createBy"];
+  uint64 update_by = 5 [json_name = "updateBy"];
+  string remark = 6 [json_name = "remark"];
+  int64 deleted = 7 [json_name = "deleted"];
+  uint64 parent_id = 8 [json_name = "parent_id"];
+  string menu_name = 9 [json_name = "menu_name"];
+  string menu_code = 10 [json_name = "menu_code"];
+  int64 menu_type = 11 [json_name = "menu_type"];
+  string icon = 12 [json_name = "icon"];
+  int64 sort = 13 [json_name = "sort"];
+  string path = 14 [json_name = "path"];
+  string component = 15 [json_name = "component"];
+  string permission = 16 [json_name = "permission"];
+  bool is_visible = 17 [json_name = "is_visible"];
+  int64 status = 18 [json_name = "status"];
+  repeated EntitySysMenu children = 19 [json_name = "children"];
+  repeated EntitySysRole roles = 20 [json_name = "roles"];
+}
+
+message EntitySysPost {
+  uint64 id = 1 [json_name = "id"];
+  string post_name = 2 [json_name = "post_name"];
+  string post_code = 3 [json_name = "post_code"];
+  int64 post_sort = 4 [json_name = "post_sort"];
+  int64 status = 5 [json_name = "status"];
+  string remark = 6 [json_name = "remark"];
+  repeated EntitySysUser users = 7 [json_name = "users"];
+}
+
+message EntitySysRole {
+  uint64 id = 1 [json_name = "id"];
+  google.protobuf.Timestamp create_time = 2 [json_name = "createTime"];
+  google.protobuf.Timestamp update_time = 3 [json_name = "updateTime"];
+  uint64 create_by = 4 [json_name = "createBy"];
+  uint64 update_by = 5 [json_name = "updateBy"];
+  string remark = 6 [json_name = "remark"];
+  int64 deleted = 7 [json_name = "deleted"];
+  string role_code = 8 [json_name = "roleCode"];
+  string role_name = 9 [json_name = "roleName"];
+  string role_desc = 10 [json_name = "roleDesc"];
+  int64 data_scope = 11 [json_name = "dataScope"];
+  int64 status = 12 [json_name = "status"];
+  int64 sort = 13 [json_name = "sort"];
+  repeated EntitySysUser users = 14 [json_name = "users"];
+  repeated EntitySysMenu menus = 15 [json_name = "menus"];
+}
+
+message EntitySysUser {
+  uint64 id = 1 [json_name = "id"];
+  google.protobuf.Timestamp create_time = 2 [json_name = "createTime"];
+  google.protobuf.Timestamp update_time = 3 [json_name = "updateTime"];
+  uint64 create_by = 4 [json_name = "createBy"];
+  uint64 update_by = 5 [json_name = "updateBy"];
+  string remark = 6 [json_name = "remark"];
+  int64 deleted = 7 [json_name = "deleted"];
+  string username = 8 [json_name = "username"];
+  string real_name = 9 [json_name = "realName"];
+  string nickname = 10 [json_name = "nickname"];
+  string avatar = 11 [json_name = "avatar"];
+  string email = 12 [json_name = "email"];
+  string phone = 13 [json_name = "phone"];
+  int64 gender = 14 [json_name = "gender"];
+  uint64 dept_id = 15 [json_name = "deptId"];
+  int64 status = 16 [json_name = "status"];
+  int64 is_admin = 17 [json_name = "isAdmin"];
+  google.protobuf.Timestamp last_login_time = 18 [json_name = "lastLoginTime"];
+  string last_login_ip = 19 [json_name = "lastLoginIp"];
+  EntitySysDept dept = 20 [json_name = "dept"];
+  repeated EntitySysRole roles = 21 [json_name = "roles"];
+  repeated EntitySysPost posts = 22 [json_name = "posts"];
+}
+
+message HealthRequest {
+}
+
+message HealthResponse {
+  string service = 1 [json_name = "service"];
+  string status = 2 [json_name = "status"];
+}
+
+message IDRequest {
+  uint64 id = 1 [json_name = "id"];
+}
+
+message LoginMemberInput {
+  string email = 1 [json_name = "email"];
+  string password = 2 [json_name = "password"];
+}
+
+message MemberProfile {
+  uint64 id = 1 [json_name = "id"];
+  string email = 2 [json_name = "email"];
+  google.protobuf.Timestamp created_at = 3 [json_name = "createdAt"];
+}
+
+message MemberSessionReply {
+  string token = 1 [json_name = "token"];
+  int64 expires_at = 2 [json_name = "expiresAt"];
+  MemberProfile user = 3 [json_name = "user"];
+}
+
+message MenuPage {
+  repeated EntitySysMenu items = 1 [json_name = "items"];
+  int64 total = 2 [json_name = "total"];
+}
+
+message PageRequest {
+  int64 page = 1 [json_name = "page"];
+  int64 page_size = 2 [json_name = "pageSize"];
+}
+
+message PermissionRequest {
+  string permission = 1 [json_name = "permission"];
+}
+
+message Principal {
+  uint64 id = 1 [json_name = "id"];
+  string name = 2 [json_name = "name"];
+  string email = 3 [json_name = "email"];
+  bool super_admin = 4 [json_name = "superAdmin"];
+  bool member = 5 [json_name = "member"];
+  repeated string permissions = 6 [json_name = "permissions"];
+}
+
+message RegisterMemberInput {
+  string email = 1 [json_name = "email"];
+  string password = 2 [json_name = "password"];
+  string code = 3 [json_name = "code"];
+}
+
+message RoleAssignMenusRequest {
+  uint64 role_id = 1 [json_name = "role_id"];
+  repeated uint64 menu_ids = 2 [json_name = "menu_ids"];
+}
+
+message RolePage {
+  repeated EntitySysRole items = 1 [json_name = "items"];
+  int64 total = 2 [json_name = "total"];
+}
+
+message RoleSearchQueryRequest {
+  string role_name = 1 [json_name = "roleName"];
+  string role_code = 2 [json_name = "roleCode"];
+  optional int64 status = 3 [json_name = "status"];
+  int64 page = 4 [json_name = "page"];
+  int64 page_size = 5 [json_name = "pageSize"];
+}
+
+message SearchSysUserQueryRequest {
+  string username = 1 [json_name = "username"];
+  string email = 2 [json_name = "email"];
+  optional uint64 status = 3 [json_name = "status"];
+  int64 page = 4 [json_name = "page"];
+  int64 page_size = 5 [json_name = "pageSize"];
+}
+
+message SendCodeRequest {
+  string email = 1 [json_name = "email"];
+  string captcha_key = 2 [json_name = "captchaKey"];
+}
+
+message SliderCaptchaResult {
+  string captcha_key = 1 [json_name = "captchaKey"];
+  string background_image = 2 [json_name = "backgroundImage"];
+  string slider_image = 3 [json_name = "sliderImage"];
+  int64 y = 4 [json_name = "y"];
+  int64 img_width = 5 [json_name = "imgWidth"];
+  int64 img_height = 6 [json_name = "imgHeight"];
+  int64 piece_size = 7 [json_name = "pieceSize"];
+  int64 piece_padding = 8 [json_name = "piecePadding"];
+}
+
+message StringList {
+  repeated string items = 1 [json_name = "items"];
+}
+
+message SysLoginRequest {
+  string username = 1 [json_name = "username"];
+  string password = 2 [json_name = "password"];
+  string email = 3 [json_name = "email"];
+  string code = 4 [json_name = "code"];
+}
+
+message SysVerifyEmailCaptchaRequest {
+  string email = 1 [json_name = "email"];
+  string code = 2 [json_name = "code"];
+}
+
+message TOTPInfo {
+  bool enabled = 1 [json_name = "enabled"];
+  string secret = 2 [json_name = "secret"];
+  int64 time_step = 3 [json_name = "timeStep"];
+  int64 window_size = 4 [json_name = "windowSize"];
+}
+
+message TokenReply {
+  string token = 1 [json_name = "token"];
+  int64 expires_at = 2 [json_name = "expiresAt"];
+}
+
+message UpdateEmailSettingsRequest {
+  string smtp_host = 1 [json_name = "smtpHost"];
+  int64 smtp_port = 2 [json_name = "smtpPort"];
+  string from_email = 3 [json_name = "fromEmail"];
+  string from_name = 4 [json_name = "fromName"];
+  string subject = 5 [json_name = "subject"];
+  optional string password = 6 [json_name = "password"];
+}
+
+message UpdatePasswordRequest {
+  string email = 1 [json_name = "email"];
+  string old_password = 2 [json_name = "oldPassword"];
+  string new_password = 3 [json_name = "newPassword"];
+}
+
+message UpdateRoleRequest {
+  uint64 id = 1 [json_name = "id"];
+  string role_code = 2 [json_name = "role_code"];
+  string role_name = 3 [json_name = "role_name"];
+  string role_desc = 4 [json_name = "role_desc"];
+  int64 status = 5 [json_name = "status"];
+}
+
+message UpdateSysMenuRequest {
+  uint64 id = 1 [json_name = "id"];
+  string name = 2 [json_name = "name"];
+  string code = 3 [json_name = "code"];
+  uint64 type = 4 [json_name = "type"];
+  optional uint64 status = 5 [json_name = "status"];
+  uint64 parent_id = 6 [json_name = "parent_id"];
+  int64 sort = 7 [json_name = "sort"];
+  string component = 8 [json_name = "component"];
+  string path = 9 [json_name = "path"];
+  string description = 10 [json_name = "description"];
+  bool is_visible = 11 [json_name = "isVisible"];
+  string icon = 12 [json_name = "icon"];
+}
+
+message UpdateSysUserRequest {
+  uint64 id = 1 [json_name = "id"];
+  string username = 2 [json_name = "username"];
+  string nickname = 3 [json_name = "nickname"];
+  string password = 4 [json_name = "password"];
+  string email = 5 [json_name = "email"];
+  uint64 status = 6 [json_name = "status"];
+  uint64 gender = 7 [json_name = "gender"];
+}
+
+message UserListResponse {
+  uint64 id = 1 [json_name = "id"];
+  string username = 2 [json_name = "username"];
+  string nickname = 3 [json_name = "nickname"];
+  string avatar = 4 [json_name = "avatar"];
+  string email = 5 [json_name = "email"];
+  int64 gender = 6 [json_name = "gender"];
+  int64 status = 7 [json_name = "status"];
+  int64 is_admin = 8 [json_name = "isAdmin"];
+  google.protobuf.Timestamp create_time = 9 [json_name = "createTime"];
+  repeated EntitySysRole roles = 10 [json_name = "roles"];
+}
+
+message UserPage {
+  repeated UserListResponse items = 1 [json_name = "items"];
+  int64 total = 2 [json_name = "total"];
+}
+
+message ConsumeTokenRequest { string token = 1; }
+
+service Rbac {
+  rpc CheckClient(Empty) returns (Empty);
+  rpc ConsumeToken(ConsumeTokenRequest) returns (Empty);
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc Authorize(AuthorizeRequest) returns (Principal);
+  rpc Captcha(Empty) returns (SliderCaptchaResult);
+  rpc VerifyCaptcha(CaptchaVerifyRequest) returns (BoolReply);
+  rpc SendAdminCode(SendCodeRequest) returns (Empty);
+  rpc Login(SysLoginRequest) returns (AdminSession);
+  rpc Logout(Empty) returns (Empty);
+  rpc CurrentUser(Empty) returns (EntitySysUser);
+  rpc CurrentPermissions(Empty) returns (StringList);
+  rpc CurrentMenus(Empty) returns (MenuPage);
+  rpc OnceToken(Empty) returns (TokenReply);
+  rpc TOTPStatus(Empty) returns (TOTPInfo);
+  rpc ChangePassword(UpdatePasswordRequest) returns (Empty);
+  rpc SendMemberCode(SendCodeRequest) returns (Empty);
+  rpc RegisterMember(RegisterMemberInput) returns (MemberProfile);
+  rpc LoginMember(LoginMemberInput) returns (MemberSessionReply);
+  rpc CurrentMember(Empty) returns (MemberProfile);
+  rpc LogoutMember(Empty) returns (Empty);
+  rpc ListUsers(SearchSysUserQueryRequest) returns (UserPage);
+  rpc GetUser(IDRequest) returns (EntitySysUser);
+  rpc CreateUser(CreateSysUserRequest) returns (Empty);
+  rpc UpdateUser(UpdateSysUserRequest) returns (Empty);
+  rpc DeleteUser(IDRequest) returns (Empty);
+  rpc AssignRoles(AssignRolesRequest) returns (Empty);
+  rpc ListRoles(RoleSearchQueryRequest) returns (RolePage);
+  rpc GetRole(IDRequest) returns (EntitySysRole);
+  rpc CreateRole(CreateRoleRequest) returns (Empty);
+  rpc UpdateRole(UpdateRoleRequest) returns (Empty);
+  rpc DeleteRole(IDRequest) returns (Empty);
+  rpc AssignMenus(RoleAssignMenusRequest) returns (Empty);
+  rpc RoleMenus(IDRequest) returns (MenuPage);
+  rpc MenuTree(Empty) returns (MenuPage);
+  rpc GetMenu(IDRequest) returns (EntitySysMenu);
+  rpc CreateMenu(CreateSysMenuRequest) returns (Empty);
+  rpc UpdateMenu(UpdateSysMenuRequest) returns (Empty);
+  rpc DeleteMenu(IDRequest) returns (Empty);
+  rpc GetEmailSettings(Empty) returns (EmailSettingsView);
+  rpc SaveEmailSettings(UpdateEmailSettingsRequest) returns (EmailSettingsView);
+  rpc Blacklist(Empty) returns (StringList);
+  rpc BlockIP(BlacklistInput) returns (Empty);
+  rpc UnblockIP(BlacklistInput) returns (Empty);
+}

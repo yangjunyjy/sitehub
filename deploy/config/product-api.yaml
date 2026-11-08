@@ -1,0 +1,34 @@
+Name: product-api
+Host: 0.0.0.0
+Port: 8803
+Timeout: 30000
+ServiceKey: ${SERVICE_KEY}
+RPC:
+  Timeout: 30000
+  Target: nacos:///product-rpc
+TrustedProxyCIDRs:
+- 172.30.0.0/24
+Nacos:
+  Servers:
+  - nacos:8848
+  NamespaceID: ${NACOS_NAMESPACE_ID}
+  Group: SITEHUB
+  Username: ${NACOS_USERNAME}
+  Password: ${NACOS_PASSWORD}
+  StateDir: /app/.nacos
+Registry:
+  Enabled: true
+  AdvertiseIP: ${HOSTNAME}
+  MaxStale: 30s
+  StartupTimeout: 30s
+ConfigCenter:
+  Enabled: true
+  DataID: product-api.yaml
+Runtime:
+  Maintenance: false
+  MaxConcurrentRequests: 1000
+Shutdown:
+  WrapUpTime: 10s
+  WaitTime: 75s
+Management:
+  ListenOn: 0.0.0.0:9900

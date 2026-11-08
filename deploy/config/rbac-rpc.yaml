@@ -1,0 +1,41 @@
+Name: rbac-rpc
+ListenOn: 0.0.0.0:9801
+Timeout: 30000
+ServiceKey: ${SERVICE_KEY}
+Database:
+  Driver: mysql
+  DSN: ${RBAC_DB_DSN}
+Cache:
+  Addr: redis:6379
+  Password: ${REDIS_PASSWORD}
+AuthSecret: ${AUTH_SECRET}
+TOTP:
+  Enabled: false
+Mail:
+  Host: ${SMTP_HOST}
+  Username: ${SMTP_USERNAME}
+  Password: ${SMTP_PASSWORD}
+Nacos:
+  Servers:
+  - nacos:8848
+  NamespaceID: ${NACOS_NAMESPACE_ID}
+  Group: SITEHUB
+  Username: ${NACOS_USERNAME}
+  Password: ${NACOS_PASSWORD}
+  StateDir: /app/.nacos
+Registry:
+  Enabled: true
+  AdvertiseIP: ${HOSTNAME}
+  MaxStale: 30s
+  StartupTimeout: 30s
+ConfigCenter:
+  Enabled: true
+  DataID: rbac-rpc.yaml
+Runtime:
+  Maintenance: false
+  MaxConcurrentRequests: 1000
+Shutdown:
+  WrapUpTime: 10s
+  WaitTime: 75s
+Management:
+  ListenOn: 0.0.0.0:9900

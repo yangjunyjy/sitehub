@@ -1,0 +1,32 @@
+# Local development only. Deploy configs use reachable container addresses.
+Name: scheduler
+ServiceKey: ${SERVICE_KEY}
+BlogRPC:
+  Timeout: 120000
+  Target: nacos:///blog-rpc
+PublishSchedule: '@every 1m'
+CleanupSchedule: 0 0 * * * *
+JobTimeout: 2m
+Mode: dev
+Nacos:
+  Servers:
+  - 127.0.0.1:8848
+  NamespaceID: ${NACOS_NAMESPACE_ID}
+  Group: SITEHUB
+  Username: ${NACOS_USERNAME}
+  Password: ${NACOS_PASSWORD}
+Registry:
+  Enabled: true
+  AdvertiseIP: ${SERVICE_ADVERTISE_IP}
+  AllowLoopback: true
+  MaxStale: 30s
+  StartupTimeout: 30s
+ConfigCenter:
+  Enabled: true
+  DataID: scheduler.yaml
+Runtime:
+  Maintenance: false
+  MaxConcurrentRequests: 1000
+Shutdown:
+  WrapUpTime: 10s
+  WaitTime: 75s

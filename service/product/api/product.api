@@ -1,0 +1,321 @@
+syntax = "v1"
+
+info (
+	title: "product service"
+)
+
+type Response {
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
+}
+
+type ResolveDownloadRequest {
+	ID string `form:"id,optional"`
+}
+
+type DocsNavigationRequest {
+	ID        string `form:"id,optional"`
+	Version   string `form:"version,optional"`
+	Mode      string `form:"mode,optional"`
+	HistoryID uint64 `form:"historyId,optional"`
+}
+
+type DocumentRequest {
+	ID        string `form:"id,optional"`
+	Version   string `form:"version,optional"`
+	Mode      string `form:"mode,optional"`
+	HistoryID uint64 `form:"historyId,optional"`
+}
+
+type AdminDocumentRequest {
+	ID        string `form:"id,optional"`
+	Version   string `form:"version,optional"`
+	Mode      string `form:"mode,optional"`
+	HistoryID uint64 `form:"historyId,optional"`
+}
+
+type SaveContentRequest {
+	Brand         WebsiteBrand          `json:"brand,optional"`
+	Navigation    []WebsiteNavigation   `json:"navigation,optional"`
+	Home          WebsiteHomeContent    `json:"home,optional"`
+	Capabilities  []WebsiteCapability   `json:"capabilities,optional"`
+	DeliverySteps []WebsiteDeliveryStep `json:"deliverySteps,optional"`
+	Audiences     []WebsiteAudience     `json:"audiences,optional"`
+	Product       WebsiteProductContent `json:"product,optional"`
+	About         WebsiteAboutContent   `json:"about,optional"`
+	Footer        WebsiteFooterContent  `json:"footer,optional"`
+}
+
+type SaveDownloadsRequest {
+	Title                string                   `json:"title,optional"`
+	Groups               []WebsiteDownloadGroup   `json:"groups,optional"`
+	Version              string                   `json:"version,optional"`
+	ReleaseDate          string                   `json:"releaseDate,optional"`
+	SupportArchitectures string                   `json:"supportArchitectures,optional"`
+	Description          string                   `json:"description,optional"`
+	Packages             []WebsiteDownloadPackage `json:"packages,optional"`
+	InstallOptions       []WebsiteInstallOption   `json:"installOptions,optional"`
+	Requirements         []WebsiteRequirement     `json:"requirements,optional"`
+	SupportTitle         string                   `json:"supportTitle,optional"`
+	SupportDescription   string                   `json:"supportDescription,optional"`
+}
+
+type SaveDocSettingsRequest {
+	Title       string `json:"title,optional"`
+	Description string `json:"description,optional"`
+	Revision    uint64 `json:"revision,optional"`
+}
+
+type ChangeDocModeRequest {
+	Action         string `json:"action,optional"`
+	ID             string `json:"id,optional"`
+	Label          string `json:"label,optional"`
+	Description    string `json:"description,optional"`
+	Icon           string `json:"icon,optional"`
+	Status         string `json:"status,optional"`
+	DefaultVersion string `json:"defaultVersion,optional"`
+	SortOrder      int64  `json:"sortOrder,optional"`
+	Revision       uint64 `json:"revision,optional"`
+}
+
+type ChangeDocVersionRequest {
+	Action   string `json:"action,optional"`
+	ID       string `json:"id,optional"`
+	Name     string `json:"name,optional"`
+	Status   string `json:"status,optional"`
+	Source   string `json:"source,optional"`
+	ModeID   string `json:"modeID,optional"`
+	Revision uint64 `json:"revision,optional"`
+}
+
+type ChangeDocGroupRequest {
+	Action    string `json:"action,optional"`
+	Version   string `json:"version,optional"`
+	Title     string `json:"title,optional"`
+	ID        uint64 `json:"id,optional"`
+	Revision  uint64 `json:"revision,optional"`
+	Direction int64  `json:"direction,optional"`
+}
+
+type DeleteDocumentRequest {
+	Version  string `json:"version,optional"`
+	ID       string `json:"id,optional"`
+	Revision uint64 `json:"revision,optional"`
+}
+
+type SaveDocumentRequest {
+	Version  string `json:"version,optional"`
+	ID       string `json:"id,optional"`
+	Slug     string `json:"slug,optional"`
+	Title    string `json:"title,optional"`
+	Summary  string `json:"summary,optional"`
+	Content  string `json:"content,optional"`
+	GroupID  uint64 `json:"groupID,optional"`
+	Revision uint64 `json:"revision,optional"`
+}
+
+type DocumentHistoryRequest {
+	ID        string `form:"id,optional"`
+	Version   string `form:"version,optional"`
+	Mode      string `form:"mode,optional"`
+	HistoryID uint64 `form:"historyId,optional"`
+}
+
+type WebsiteAboutContent {
+	Title       string             `json:"title,optional"`
+	Description string             `json:"description,optional"`
+	IntroTitle  string             `json:"introTitle,optional"`
+	Paragraphs  []string           `json:"paragraphs,optional"`
+	Principles  []WebsitePrinciple `json:"principles,optional"`
+	TeamTitle   string             `json:"teamTitle,optional"`
+	TeamIntro   string             `json:"teamIntro,optional"`
+	TeamRoles   []string           `json:"teamRoles,optional"`
+}
+
+type WebsiteAudience {
+	Index       string `json:"index,optional"`
+	Title       string `json:"title,optional"`
+	Headline    string `json:"headline,optional"`
+	Description string `json:"description,optional"`
+}
+
+type WebsiteBrand {
+	Name         string `json:"name,optional"`
+	FullName     string `json:"fullName,optional"`
+	Description  string `json:"description,optional"`
+	ContactEmail string `json:"contactEmail,optional"`
+	RecordNumber string `json:"recordNumber,optional"`
+	Copyright    string `json:"copyright,optional"`
+}
+
+type WebsiteCapability {
+	Key         string   `json:"key,optional"`
+	Index       string   `json:"index,optional"`
+	Title       string   `json:"title,optional"`
+	Description string   `json:"description,optional"`
+	Tags        []string `json:"tags,optional"`
+}
+
+type WebsiteDeliveryStep {
+	Index       string `json:"index,optional"`
+	Key         string `json:"key,optional"`
+	Title       string `json:"title,optional"`
+	Description string `json:"description,optional"`
+}
+
+type WebsiteDownloadGroup {
+	ID          string `json:"id,optional"`
+	Name        string `json:"name,optional"`
+	Description string `json:"description,optional"`
+}
+
+type WebsiteDownloadPackage {
+	ID          string `json:"id,optional"`
+	GroupID     string `json:"groupId,optional"`
+	Edition     string `json:"edition,optional"`
+	SortOrder   int64  `json:"sortOrder,optional"`
+	Platform    string `json:"platform,optional"`
+	Arch        string `json:"arch,optional"`
+	Format      string `json:"format,optional"`
+	URL         string `json:"url,optional"`
+	Checksum    string `json:"checksum,optional"`
+	Icon        string `json:"icon,optional"`
+	Product     string `json:"product,optional"`
+	Version     string `json:"version,optional"`
+	Description string `json:"description,optional"`
+	FileName    string `json:"fileName,optional"`
+	Size        int64  `json:"size,optional"`
+	ReleaseDate string `json:"releaseDate,optional"`
+	Status      string `json:"status,optional"`
+}
+
+type WebsiteFooterContent {
+	Slogan    string `json:"slogan,optional"`
+	Statement string `json:"statement,optional"`
+}
+
+type WebsiteHomeContent {
+	Eyebrow         string   `json:"eyebrow,optional"`
+	Title           string   `json:"title,optional"`
+	Highlight       string   `json:"highlight,optional"`
+	Description     string   `json:"description,optional"`
+	PrimaryAction   string   `json:"primaryAction,optional"`
+	SecondaryAction string   `json:"secondaryAction,optional"`
+	Meta            []string `json:"meta,optional"`
+	CapabilityTitle string   `json:"capabilityTitle,optional"`
+	CapabilityIntro string   `json:"capabilityIntro,optional"`
+	FlowTitle       string   `json:"flowTitle,optional"`
+	FlowIntro       string   `json:"flowIntro,optional"`
+	AudienceTitle   string   `json:"audienceTitle,optional"`
+	AudienceIntro   string   `json:"audienceIntro,optional"`
+	BlogTitle       string   `json:"blogTitle,optional"`
+	CTA             string   `json:"cta,optional"`
+}
+
+type WebsiteInstallOption {
+	ID          string `json:"id,optional"`
+	Title       string `json:"title,optional"`
+	Badge       string `json:"badge,optional"`
+	Description string `json:"description,optional"`
+	Command     string `json:"command,optional"`
+}
+
+type WebsiteNavigation {
+	Label string `json:"label,optional"`
+	Path  string `json:"path,optional"`
+}
+
+type WebsitePrinciple {
+	Index       string `json:"index,optional"`
+	Title       string `json:"title,optional"`
+	Description string `json:"description,optional"`
+}
+
+type WebsiteProductContent {
+	Title              string                     `json:"title,optional"`
+	Description        string                     `json:"description,optional"`
+	CapabilityTitle    string                     `json:"capabilityTitle,optional"`
+	CapabilityIntro    string                     `json:"capabilityIntro,optional"`
+	ArchitectureTitle  string                     `json:"architectureTitle,optional"`
+	ArchitectureIntro  string                     `json:"architectureIntro,optional"`
+	ArchitectureLayers []WebsiteArchitectureLayer `json:"architectureLayers,optional"`
+	SecurityTitle      string                     `json:"securityTitle,optional"`
+	SecurityIntro      string                     `json:"securityIntro,optional"`
+	SecurityItems      []WebsiteSecurityItem      `json:"securityItems,optional"`
+}
+
+type WebsiteArchitectureLayer {
+	Name  string   `json:"name,optional"`
+	Items []string `json:"items,optional"`
+}
+
+type WebsiteRequirement {
+	Label string `json:"label,optional"`
+	Value string `json:"value,optional"`
+}
+
+type WebsiteSecurityItem {
+	Title       string `json:"title,optional"`
+	Description string `json:"description,optional"`
+}
+
+service product-api {
+	@handler Health
+	get /health returns (Response)
+
+	@handler Content
+	get /v1/product/content returns (Response)
+
+	@handler Downloads
+	get /v1/product/downloads returns (Response)
+
+	@handler AdminDownloads
+	get /v1/product/admin/downloads returns (Response)
+
+	@handler Docs
+	get /v1/product/admin/docs returns (Response)
+
+	@handler DocModes
+	get /v1/product/docs/modes returns (Response)
+
+	@handler ResolveDownload
+	get /v1/product/downloads/resolve (ResolveDownloadRequest) returns (Response)
+
+	@handler DocsNavigation
+	get /v1/product/docs/navigation (DocsNavigationRequest) returns (Response)
+
+	@handler Document
+	get /v1/product/docs/document (DocumentRequest) returns (Response)
+
+	@handler AdminDocument
+	get /v1/product/admin/docs/document (AdminDocumentRequest) returns (Response)
+
+	@handler SaveContent
+	post /v1/product/content (SaveContentRequest) returns (Response)
+
+	@handler SaveDownloads
+	post /v1/product/downloads (SaveDownloadsRequest) returns (Response)
+
+	@handler SaveDocSettings
+	post /v1/product/docs/settings (SaveDocSettingsRequest) returns (Response)
+
+	@handler ChangeDocMode
+	post /v1/product/docs/modes (ChangeDocModeRequest) returns (Response)
+
+	@handler ChangeDocVersion
+	post /v1/product/docs/versions (ChangeDocVersionRequest) returns (Response)
+
+	@handler ChangeDocGroup
+	post /v1/product/docs/groups (ChangeDocGroupRequest) returns (Response)
+
+	@handler DeleteDocument
+	post /v1/product/docs/delete (DeleteDocumentRequest) returns (Response)
+
+	@handler SaveDocument
+	post /v1/product/docs/save (SaveDocumentRequest) returns (Response)
+
+	@handler DocumentHistory
+	get /v1/product/admin/docs/history (DocumentHistoryRequest) returns (Response)
+}
+
