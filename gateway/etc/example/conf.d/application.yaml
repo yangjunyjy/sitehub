@@ -1,0 +1,32 @@
+# Add another upstream/route file here to proxy another HTTP service.
+upstreams:
+  application:
+    nodes:
+      - url: http://127.0.0.1:8802
+        weight: 1
+    health_path: /health
+    # Other health/timeout fields have defaults; long downloads can override them.
+    io_timeout_ms: 600000
+
+routes:
+  - id: application-api
+    host: example.test
+    paths: [/api, /api/*]
+    upstream: application
+    profile: api
+
+  - id: application-public
+    host: example.test
+    paths: [/public, /public/*]
+    upstream: application
+    plugins:
+      # Explicitly disable the global rate limiter for this route only.
+      rate-limit: null
+
+  - id: gateway-ping
+    host: example.test
+    paths: [/ping]
+    plugins:
+      static-response:
+        status: 200
+        body: pong

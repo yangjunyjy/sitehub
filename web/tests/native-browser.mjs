@@ -26,11 +26,13 @@ async function visit(page, origin, path) {
   await page.goto(origin + path, { waitUntil: 'networkidle' })
   assert(!page.url().includes('/login'), `Unexpected login redirect: ${path}`)
   assert(await page.locator('body').innerText(), `Empty page: ${path}`)
+  assert.equal(await page.getByRole('heading', { name: /^(403|404)$/ }).count(), 0, `Missing or inaccessible page: ${path}`)
 }
 try {
   const adminURL = process.env.WEB_ADMIN_URL, siteURL = process.env.WEB_SITE_URL
-  if (!adminURL || !siteURL) throw new Error('Browser tests require the unified gateway URLs')
-  browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHANNEL || undefined, args: ['--host-resolver-rules=MAP sitehub.local 127.0.0.1, MAP admin.sitehub.local 127.0.0.1', '--no-proxy-server'] })
+  const blogURL = process.env.WEB_BLOG_URL
+  if (!adminURL || !siteURL || !blogURL) throw new Error('Browser tests require the unified gateway URLs')
+  browser = await chromium.launch({ headless: true, channel: process.env.PLAYWRIGHT_CHANNEL || undefined, args: ['--host-resolver-rules=MAP sitehub.local 127.0.0.1, MAP blog.sitehub.local 127.0.0.1, MAP admin.sitehub.local 127.0.0.1', '--no-proxy-server'] })
   const adminContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
   const siteContext = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
   const admin = await adminContext.newPage(), site = await siteContext.newPage()
@@ -46,18 +48,18 @@ try {
   assert((await adminContext.cookies()).some(c => c.name === 'sitehub_admin_session' && c.httpOnly))
   check('administrator UI login and independent HttpOnly session')
   await admin.screenshot({ path: resolve(artifacts, 'admin-desktop.png'), fullPage: true })
-  for (const path of ['articles', 'statistics/content', 'categories', 'tags', 'users', 'roles', 'menus', 'docs', 'docs/groups', 'docs/versions', 'docs/modes', 'docs/settings', 'website', 'downloads', 'settings/basic', 'settings/storage', 'settings/email', 'profile']) {
+  for (const path of ['blog/articles', 'blog/statistics', 'blog/categories', 'blog/tags', 'system/systems', 'system/users', 'system/roles', 'system/menus', 'product/docs', 'product/docs/groups', 'product/docs/versions', 'product/docs/modes', 'product/docs/settings', 'product/content', 'product/downloads', 'product/download-settings', 'admin/settings/basic', 'admin/settings/storage', 'admin/settings/email', 'profile']) {
     await visit(admin, adminURL, '/dashboard/' + path)
   }
   check('all native administration pages load without API errors')
-  await visit(admin, adminURL, '/dashboard/docs/settings')
+  await visit(admin, adminURL, '/dashboard/product/docs/settings')
   await admin.getByPlaceholder('Deploy 产品文档').fill('Browser documentation')
   const savedSettings = admin.waitForResponse(r => r.url().endsWith('/v1/product/docs/settings') && r.request().method() === 'POST')
   await admin.getByRole('button', { name: '保存设置', exact: true }).click()
   assert.equal((await savedSettings).status(), 200)
   await admin.waitForLoadState('networkidle')
   check('document settings preserve the native revision contract')
-  await visit(admin, adminURL, '/dashboard/categories')
+  await visit(admin, adminURL, '/dashboard/blog/categories')
   await admin.getByRole('button', { name: '新增分类', exact: true }).click()
   const dialog = admin.getByRole('dialog')
   await dialog.getByPlaceholder('请输入分类名称').fill('Browser category')
@@ -68,18 +70,19 @@ try {
   await dialog.waitFor({ state: 'hidden' })
   await admin.getByText('Browser category', { exact: true }).first().waitFor()
   check('category creation through the native API from the actual form')
-  await visit(admin, adminURL, '/dashboard/articles/editor/' + process.env.FRONTEND_ARTICLE_ID)
+  await visit(admin, adminURL, '/dashboard/blog/articles/editor/' + process.env.FRONTEND_ARTICLE_ID)
   await admin.getByPlaceholder('请输入文章标题').fill('Browser unpublished edit')
   const savedArticle = admin.waitForResponse(r => r.url().endsWith('/v1/blog/admin/articles/draft') && r.request().method() === 'POST')
   await admin.getByRole('button', { name: '保存草稿', exact: true }).click()
   assert.equal((await savedArticle).status(), 200)
   check('article editor saves native uint64 IDs and draft version')
 
-  for (const path of ['/', '/blog', '/blog/categories', '/blog/tags', '/article/' + process.env.FRONTEND_ARTICLE_ID, '/docs/native-doc?version=v1', '/download']) {
+  for (const path of ['/', '/docs/native-doc?version=v1', '/download']) {
     await visit(site, siteURL, path)
     if (path.startsWith('/docs/')) await site.getByRole('heading', { name: 'Native documentation', exact: true }).waitFor()
   }
-  await visit(site, siteURL, '/article/' + process.env.FRONTEND_ARTICLE_ID)
+  for (const path of ['/', '/categories', '/tags', '/archives', '/friends', '/messages', '/about']) await visit(site, blogURL, path)
+  await visit(site, blogURL, '/article/' + process.env.FRONTEND_ARTICLE_ID)
   await site.getByRole('heading', { name: 'Native migration', exact: true }).waitFor()
   assert(!(await site.locator('body').innerText()).includes('Browser unpublished edit'))
   check('public site reads published articles, native documents and downloads')
@@ -101,10 +104,10 @@ try {
   assert.equal(await site.evaluate(async () => (await fetch('/v1/file/download?id=native')).status), 401)
   check('member logout clears the cookie and revokes download access')
   await site.setViewportSize({ width: 390, height: 844 })
-  await visit(site, siteURL, '/blog')
+  await visit(site, blogURL, '/')
   await site.screenshot({ path: resolve(artifacts, 'site-mobile.png'), fullPage: true })
   await admin.setViewportSize({ width: 390, height: 844 })
-  await visit(admin, adminURL, '/dashboard/categories')
+  await visit(admin, adminURL, '/dashboard/blog/categories')
   await admin.screenshot({ path: resolve(artifacts, 'admin-mobile.png'), fullPage: true })
   await admin.setViewportSize({ width: 1440, height: 1000 })
   await visit(admin, adminURL, '/dashboard/profile')

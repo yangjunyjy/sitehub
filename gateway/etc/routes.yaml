@@ -1,0 +1,12 @@
+# Project gateway routes. Includes are relative to this file.
+version: 1
+plugins:
+  deny-paths:
+    paths:
+      - /healthz
+      - /readyz
+      - /metrics
+      - /internal
+      - /internal/*
+include:
+  - conf.d/*.yaml

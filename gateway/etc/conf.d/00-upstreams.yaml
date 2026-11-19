@@ -1,0 +1,62 @@
+# Upstream addresses, discovery names, timeouts and health checks.
+upstreams:
+  blog:
+    connect_timeout_ms: 3000
+    health_failures: 2
+    health_interval_ms: 2000
+    health_path: /readyz
+    health_timeout_ms: 1000
+    io_timeout_ms: 600000
+    response_header_timeout_ms: 600000
+    service: blog-api
+  product:
+    connect_timeout_ms: 3000
+    health_failures: 2
+    health_interval_ms: 2000
+    health_path: /readyz
+    health_timeout_ms: 1000
+    io_timeout_ms: 600000
+    response_header_timeout_ms: 600000
+    service: product-api
+  rbac:
+    connect_timeout_ms: 3000
+    health_failures: 2
+    health_interval_ms: 2000
+    health_path: /readyz
+    health_timeout_ms: 1000
+    io_timeout_ms: 600000
+    response_header_timeout_ms: 600000
+    service: rbac-api
+  web-admin:
+    connect_timeout_ms: 3000
+    health_failures: 2
+    health_interval_ms: 2000
+    health_path: /healthz
+    health_timeout_ms: 1000
+    io_timeout_ms: 10000
+    nodes:
+      - url: http://web-admin:3000
+        weight: 1
+    response_header_timeout_ms: 10000
+  web-product:
+    connect_timeout_ms: 3000
+    health_failures: 2
+    health_interval_ms: 2000
+    health_path: /healthz
+    health_timeout_ms: 1000
+    io_timeout_ms: 10000
+    nodes:
+      - url: http://web-product:3000
+        weight: 1
+    response_header_timeout_ms: 10000
+  web-blog:
+    connect_timeout_ms: 3000
+    health_failures: 2
+    health_interval_ms: 2000
+    health_path: /healthz
+    health_timeout_ms: 1000
+    io_timeout_ms: 10000
+    nodes:
+      - url: http://web-blog:3000
+        weight: 1
+    response_header_timeout_ms: 10000

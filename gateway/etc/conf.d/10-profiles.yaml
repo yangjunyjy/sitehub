@@ -1,0 +1,42 @@
+# Reusable plugin configurations shared by project routes.
+profiles:
+  admin:
+    browser-session:
+      audience: admin
+      origins:
+        - http://admin.sitehub.local:8082
+        - https://admin.sitehub.local
+        - http://127.0.0.1:4311
+        - http://localhost:4311
+    circuit-breaker:
+      failures: 5
+      initial_open_seconds: 1
+      max_open_seconds: 30
+      successes: 2
+    rate-limit:
+      burst: 100
+      rate: 100
+    request-id: {}
+  site:
+    browser-session:
+      audience: site
+      origins:
+        - http://sitehub.local:8082
+        - https://sitehub.local
+        - http://127.0.0.1:4310
+        - http://localhost:4310
+        - https://product.sitehub.local
+        - http://product.sitehub.local:8082
+        - https://blog.sitehub.local
+        - http://blog.sitehub.local:8082
+        - http://localhost:4312
+        - http://127.0.0.1:4312
+    circuit-breaker:
+      failures: 5
+      initial_open_seconds: 1
+      max_open_seconds: 30
+      successes: 2
+    rate-limit:
+      burst: 100
+      rate: 100
+    request-id: {}

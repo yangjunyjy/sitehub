@@ -1,0 +1,79 @@
+# Public website and member API routing.
+routes:
+  - host: product.sitehub.local
+    id: product-rbac
+    paths:
+      - /v1/rbac
+      - /v1/rbac/*
+    priority: 100
+    profile: site
+    upstream: rbac
+  - host: product.sitehub.local
+    id: product-blog
+    paths:
+      - /v1/blog
+      - /v1/blog/*
+    priority: 100
+    profile: site
+    upstream: blog
+  - host: product.sitehub.local
+    id: product-product
+    paths:
+      - /v1/product
+      - /v1/product/*
+    priority: 100
+    profile: site
+    upstream: product
+  - host: product.sitehub.local
+    id: product-file
+    paths:
+      - /v1/file
+      - /v1/file/*
+    priority: 100
+    profile: site
+    upstream: blog
+  - host: product.sitehub.local
+    id: product-unknown
+    paths:
+      - /v1
+    plugins:
+      static-response:
+        body: '{"code":404,"message":"Unknown API route"}'
+        headers:
+          Content-Type: application/json
+        status: 404
+    priority: 50
+  - host: product.sitehub.local
+    id: product-unknownall
+    paths:
+      - /v1/*
+    plugins:
+      static-response:
+        body: '{"code":404,"message":"Unknown API route"}'
+        headers:
+          Content-Type: application/json
+        status: 404
+    priority: 50
+  - host: product.sitehub.local
+    id: product-web
+    methods:
+      - GET
+      - HEAD
+    paths:
+      - /*
+    plugins:
+      strip-credentials: {}
+    priority: 0
+    upstream: web-product
+  - host: product.sitehub.local
+    id: product-login
+    paths:
+      - /v1/rbac/members/login
+      - /v1/rbac/members/register
+    plugins:
+      limit-count:
+        count: 10
+        window_seconds: 60
+    priority: 200
+    profile: site
+    upstream: rbac

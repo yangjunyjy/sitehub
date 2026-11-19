@@ -1,0 +1,79 @@
+# Public website and member API routing.
+routes:
+  - host: blog.sitehub.local
+    id: blog-rbac
+    paths:
+      - /v1/rbac
+      - /v1/rbac/*
+    priority: 100
+    profile: site
+    upstream: rbac
+  - host: blog.sitehub.local
+    id: blog-blog
+    paths:
+      - /v1/blog
+      - /v1/blog/*
+    priority: 100
+    profile: site
+    upstream: blog
+  - host: blog.sitehub.local
+    id: blog-product
+    paths:
+      - /v1/product
+      - /v1/product/*
+    priority: 100
+    profile: site
+    upstream: product
+  - host: blog.sitehub.local
+    id: blog-file
+    paths:
+      - /v1/file
+      - /v1/file/*
+    priority: 100
+    profile: site
+    upstream: blog
+  - host: blog.sitehub.local
+    id: blog-unknown
+    paths:
+      - /v1
+    plugins:
+      static-response:
+        body: '{"code":404,"message":"Unknown API route"}'
+        headers:
+          Content-Type: application/json
+        status: 404
+    priority: 50
+  - host: blog.sitehub.local
+    id: blog-unknownall
+    paths:
+      - /v1/*
+    plugins:
+      static-response:
+        body: '{"code":404,"message":"Unknown API route"}'
+        headers:
+          Content-Type: application/json
+        status: 404
+    priority: 50
+  - host: blog.sitehub.local
+    id: blog-web
+    methods:
+      - GET
+      - HEAD
+    paths:
+      - /*
+    plugins:
+      strip-credentials: {}
+    priority: 0
+    upstream: web-blog
+  - host: blog.sitehub.local
+    id: blog-login
+    paths:
+      - /v1/rbac/members/login
+      - /v1/rbac/members/register
+    plugins:
+      limit-count:
+        count: 10
+        window_seconds: 60
+    priority: 200
+    profile: site
+    upstream: rbac

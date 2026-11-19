@@ -4,17 +4,36 @@ Host: 0.0.0.0
 Port: 8802
 Timeout: 30000
 ServiceKey: ${SERVICE_KEY}
-RPC:
-  Timeout: 30000
-  Target: nacos:///blog-rpc
+Database:
+  Driver: mysql
+  DSN: ${BLOG_DB_DSN}
+RbacRPC:
+  Timeout: 5000
+  Target: discovery:///rbac-rpc
+FileDatabase:
+  Driver: mysql
+  DSN: ${FILE_DB_DSN}
+StorageRoot: ./data/files
+StorageSecret: ${STORAGE_SECRET}
+PublicBaseURL: ''
+Scheduler:
+  Enabled: true
+  PublishSchedule: '@every 1m'
+  CleanupSchedule: '0 0 * * * *'
+  JobTimeout: 2m
+ProductURL: http://127.0.0.1:8803
 Mode: dev
-Nacos:
-  Servers:
-  - 127.0.0.1:8848
-  NamespaceID: ${NACOS_NAMESPACE_ID}
+ControlPlane:
+  Provider: etcd
+  Endpoints: ['${ETCD_ENDPOINT}']
+  Prefix: /sitehub
+  Namespace: ${CONTROL_NAMESPACE}
   Group: SITEHUB
-  Username: ${NACOS_USERNAME}
-  Password: ${NACOS_PASSWORD}
+  Username: ${ETCD_USERNAME}
+  Password: ${ETCD_PASSWORD}
+  DialTimeout: 5s
+  RequestTimeout: 5s
+  LeaseTTL: 15
 Registry:
   Enabled: true
   AdvertiseIP: ${SERVICE_ADVERTISE_IP}
@@ -23,10 +42,10 @@ Registry:
   StartupTimeout: 30s
 ConfigCenter:
   Enabled: true
-  DataID: blog-api.yaml
+  Key: blog-api.yaml
 Runtime:
   Maintenance: false
   MaxConcurrentRequests: 1000
 Shutdown:
-  WrapUpTime: 10s
+  WrapUpTime: 20s
   WaitTime: 75s

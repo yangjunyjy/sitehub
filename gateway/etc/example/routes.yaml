@@ -1,0 +1,23 @@
+version: 1
+include:
+  - conf.d/*.yaml
+
+# Built-in capabilities are configured here, never in Go service fields.
+plugins:
+  request-id: {}
+  rate-limit:
+    rate: 100
+    burst: 100
+  circuit-breaker:
+    failures: 5
+    successes: 2
+    initial_open_seconds: 1
+    max_open_seconds: 30
+
+profiles:
+  api:
+    proxy-rewrite:
+      strip_prefix: /api
+      host: backend.internal
+      headers:
+        X-Gateway: sitehub

@@ -1,4 +1,5 @@
 Name: gateway
+Source: etcd
 Listen: 0.0.0.0:9080
 Manifest: /app/etc/routes.json
 Log:
@@ -10,15 +11,21 @@ Admin:
   Key: ${GATEWAY_ADMIN_KEY}
   AllowedCIDRs: [127.0.0.1/32, 172.31.0.0/24]
 Etcd:
-  Endpoints: [gateway-etcd:2379]
+  Endpoints: ['${ETCD_ENDPOINT}']
+  Username: ${ETCD_USERNAME}
+  Password: ${ETCD_PASSWORD}
   Key: /sitehub/gateway/v1/config
-Nacos:
-  Servers: [nacos:8848]
-  NamespaceID: ${NACOS_NAMESPACE_ID}
+ControlPlane:
+  Provider: etcd
+  Endpoints: ['${ETCD_ENDPOINT}']
+  Prefix: /sitehub
+  Namespace: ${CONTROL_NAMESPACE}
   Group: SITEHUB
-  Username: ${NACOS_USERNAME}
-  Password: ${NACOS_PASSWORD}
-  StateDir: /data/nacos
+  Username: ${ETCD_USERNAME}
+  Password: ${ETCD_PASSWORD}
+  DialTimeout: 5s
+  RequestTimeout: 5s
+  LeaseTTL: 15
 Discovery:
   Enabled: true
   MaxStale: 30s

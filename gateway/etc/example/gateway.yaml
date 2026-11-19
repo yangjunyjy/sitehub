@@ -1,0 +1,14 @@
+# Process settings only. Proxy targets and plugins live in routes.yaml/conf.d.
+Name: gateway
+Listen: 0.0.0.0:9080
+Source: file
+Manifest: routes.yaml
+Log:
+  Mode: console
+  Level: info
+Admin:
+  Listen: 127.0.0.1:9180
+  Key: ${GATEWAY_ADMIN_KEY}
+  AllowedCIDRs: [127.0.0.1/32, '::1/128']
+Discovery:
+  Enabled: false

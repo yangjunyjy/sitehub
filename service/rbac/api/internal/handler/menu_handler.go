@@ -1,0 +1,82 @@
+// Code scaffolded by goctl. Safe to edit.
+// goctl 1.10.2
+
+package handler
+
+import (
+	"net/http"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+	"sitehub/service/rbac/api/internal/logic"
+	"sitehub/service/rbac/api/internal/svc"
+	"sitehub/service/rbac/api/internal/types"
+
+	"github.com/zeromicro/go-zero/rest/httpx"
+)
+
+func CreateMenuHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req types.CreateMenuRequest
+		if err := httpx.Parse(r, &req); err != nil {
+			httpx.ErrorCtx(r.Context(), w, status.Error(codes.InvalidArgument, "invalid request"))
+			return
+		}
+
+		l := logic.NewCreateMenuLogic(r.Context(), svcCtx)
+		resp, err := l.CreateMenu(&req)
+		if err != nil {
+			httpx.ErrorCtx(r.Context(), w, err)
+		} else {
+			httpx.OkJsonCtx(r.Context(), w, resp)
+		}
+	}
+}
+
+func MenuTreeHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req types.SystemRequest
+		if err := httpx.Parse(r, &req); err != nil {
+			httpx.ErrorCtx(r.Context(), w, status.Error(codes.InvalidArgument, "invalid request"))
+			return
+		}
+		l := logic.NewMenuTreeLogic(r.Context(), svcCtx)
+		resp, err := l.MenuTree(&req)
+		if err != nil {
+			httpx.ErrorCtx(r.Context(), w, err)
+		} else {
+			httpx.OkJsonCtx(r.Context(), w, resp)
+		}
+	}
+}
+
+func GetMenuHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req types.GetMenuRequest
+		if err := httpx.Parse(r, &req); err != nil {
+			httpx.ErrorCtx(r.Context(), w, status.Error(codes.InvalidArgument, "invalid request"))
+			return
+		}
+
+		l := logic.NewGetMenuLogic(r.Context(), svcCtx)
+		resp, err := l.GetMenu(&req)
+		if err != nil {
+			httpx.ErrorCtx(r.Context(), w, err)
+		} else {
+			httpx.OkJsonCtx(r.Context(), w, resp)
+		}
+	}
+}
+
+func CurrentMenusHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		l := logic.NewCurrentMenusLogic(r.Context(), svcCtx)
+		resp, err := l.CurrentMenus()
+		if err != nil {
+			httpx.ErrorCtx(r.Context(), w, err)
+		} else {
+			httpx.OkJsonCtx(r.Context(), w, resp)
+		}
+	}
+}
