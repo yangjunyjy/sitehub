@@ -10,6 +10,38 @@ type Response {
 	Data    interface{} `json:"data"`
 }
 
+type FriendApplication {
+	Name        string `json:"name"`
+	URL         string `json:"url"`
+	Description string `json:"description"`
+	Avatar      string `json:"avatar,optional"`
+}
+
+type GuestPost {
+	Nickname string `json:"nickname,optional"`
+	Content  string `json:"content"`
+}
+
+type CommunityPage {
+	Page     int64 `form:"page,optional"`
+	PageSize int64 `form:"pageSize,optional"`
+}
+
+type SaveStorageRequest {
+	Provider    string   `json:"provider,optional"`
+	LocalPath   string   `json:"localPath,optional"`
+	URLPrefix   string   `json:"urlPrefix,optional"`
+	CDN         string   `json:"cdn,optional"`
+	Endpoint    string   `json:"endpoint,optional"`
+	AccessKey   string   `json:"accessKey,optional"`
+	SecretKey   string   `json:"secretKey,optional"`
+	Bucket      string   `json:"bucket,optional"`
+	Region      string   `json:"region,optional"`
+	PathStyle   bool     `json:"pathStyle,optional"`
+	AllowedExts []string `json:"allowedExts,optional"`
+	MaxSize     int64    `json:"maxSize,optional"`
+}
+
 type PublicArticlesRequest {
 	Page       int64    `form:"page,optional"`
 	PageSize   int64    `form:"pageSize,optional"`
@@ -181,6 +213,21 @@ type ArticleInput {
 }
 
 service blog-api {
+	@handler ListFriends
+	get /v1/blog/friends returns (Response)
+
+	@handler ApplyFriend
+	post /v1/blog/friends (FriendApplication) returns (Response)
+
+	@handler ListMessages
+	get /v1/blog/messages (CommunityPage) returns (Response)
+
+	@handler SendMessage
+	post /v1/blog/messages (GuestPost) returns (Response)
+
+	@handler GetAbout
+	get /v1/blog/about returns (Response)
+
 	@handler Health
 	get /health returns (Response)
 
@@ -279,5 +326,11 @@ service blog-api {
 
 	@handler HotArticleStats
 	get /v1/blog/statistics/hotarticlestats (HotArticleStatsRequest) returns (Response)
+
+	@handler GetStorage
+	get /v1/file/settings returns (Response)
+
+	@handler SaveStorage
+	post /v1/file/settings (SaveStorageRequest) returns (Response)
 }
 

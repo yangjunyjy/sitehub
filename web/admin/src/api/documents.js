@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import { uint64 } from '../../../shared/native-api.mjs'
+import { uint64 } from '../utils/native-api.mjs'
 const revision = data => ({ ...data, revision: uint64(data.revision) })
 export const changeDocMode = data => request.post('/product/docs/modes', revision(data))
 export const getDocumentWorkspace = () => request.get('/product/admin/docs')

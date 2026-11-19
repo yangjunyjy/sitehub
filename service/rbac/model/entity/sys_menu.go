@@ -5,6 +5,7 @@ import "gorm.io/gorm"
 // SysMenu 系统菜单表
 type SysMenu struct {
 	BaseModel
+	SystemCode string   `gorm:"column:system_code;type:varchar(50);not null;default:admin;index" json:"systemCode"`
 	ParentID   uint64   `gorm:"column:parent_id;type:bigint;default:0;comment:父菜单ID，0为一级菜单" json:"parent_id"`
 	MenuName   string   `gorm:"column:menu_name;type:varchar(50);not null;comment:菜单名称" json:"menu_name"`
 	MenuCode   string   `gorm:"column:menu_code;type:varchar(100);not null;uniqueIndex;comment:菜单编码，权限标识" json:"menu_code"`

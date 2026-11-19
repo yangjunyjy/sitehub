@@ -13,8 +13,8 @@ import (
 	settingsmodel "sitehub/common/settings/model"
 	settingsrepository "sitehub/common/settings/repository"
 	settingsservice "sitehub/common/settings/service"
-	fileservice "sitehub/service/file/business"
-	filecontract "sitehub/service/file/contract"
+	fileservice "sitehub/service/blog/business"
+	filecontract "sitehub/service/blog/contract"
 	productcontract "sitehub/service/product/contract"
 )
 

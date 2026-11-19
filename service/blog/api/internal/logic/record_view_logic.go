@@ -2,15 +2,10 @@ package logic
 
 import (
 	"context"
-	"sitehub/common/protoconv"
+	"github.com/zeromicro/go-zero/core/logx"
 	"sitehub/common/rpcx"
 	"sitehub/service/blog/api/internal/svc"
 	"sitehub/service/blog/api/internal/types"
-	pb "sitehub/service/blog/rpc/pb/blog"
-
-	"github.com/zeromicro/go-zero/core/logx"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type RecordViewLogic struct {
@@ -23,17 +18,9 @@ func NewRecordViewLogic(ctx context.Context, s *svc.ServiceContext) *RecordViewL
 	return &RecordViewLogic{ctx, s, logx.WithContext(ctx)}
 }
 func (l *RecordViewLogic) RecordView(req *types.RecordViewRequest) (*types.Response, error) {
-	in := &pb.ViewRequest{}
-	if err := protoconv.Encode(req, in); err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid request")
+
+	if _, err := l.svcCtx.Core.Articles.PublicDetail(uint64(req.ID)); err != nil {
+		return nil, rpcx.Error(err)
 	}
-	out, err := l.svcCtx.RPC.RecordView(rpcx.Outgoing(l.ctx, l.svcCtx.Config.ServiceKey), in)
-	if err != nil {
-		return nil, err
-	}
-	value, err := protoconv.Value(out)
-	if err != nil {
-		return nil, err
-	}
-	return &types.Response{Code: 0, Message: "ok", Data: value}, nil
+	return done(l.svcCtx.Core.Articles.RecordViewWithInfo(uint(req.ID), 0, rpcx.HTTPValue(l.ctx, "x-client-ip"), rpcx.HTTPValue(l.ctx, "x-client-agent")))
 }

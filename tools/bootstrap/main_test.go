@@ -1,9 +1,9 @@
 package main
 
 import (
-	"sitehub/common/runtimeconf"
 	"os"
 	"path/filepath"
+	"sitehub/common/runtimeconf"
 	"strings"
 	"testing"
 )

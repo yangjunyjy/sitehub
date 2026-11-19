@@ -6,7 +6,7 @@ import {
   packageError,
   formatFileSize,
 } from '../src/utils/downloads.js'
-import { normalizeDownloadURL, downloadHref, isLocalReleaseURL } from '../../shared/downloads.mjs'
+import { normalizeDownloadURL, downloadHref, isLocalReleaseURL } from '../src/utils/download-links.mjs'
 
 test('new download records default to draft and omit UI metadata', () => {
   const item = normalizePackage(

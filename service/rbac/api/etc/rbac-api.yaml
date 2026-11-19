@@ -6,15 +6,19 @@ Timeout: 30000
 ServiceKey: ${SERVICE_KEY}
 RPC:
   Timeout: 30000
-  Target: nacos:///rbac-rpc
+  Target: discovery:///rbac-rpc
 Mode: dev
-Nacos:
-  Servers:
-  - 127.0.0.1:8848
-  NamespaceID: ${NACOS_NAMESPACE_ID}
+ControlPlane:
+  Provider: etcd
+  Endpoints: ['${ETCD_ENDPOINT}']
+  Prefix: /sitehub
+  Namespace: ${CONTROL_NAMESPACE}
   Group: SITEHUB
-  Username: ${NACOS_USERNAME}
-  Password: ${NACOS_PASSWORD}
+  Username: ${ETCD_USERNAME}
+  Password: ${ETCD_PASSWORD}
+  DialTimeout: 5s
+  RequestTimeout: 5s
+  LeaseTTL: 15
 Registry:
   Enabled: true
   AdvertiseIP: ${SERVICE_ADVERTISE_IP}
@@ -23,12 +27,12 @@ Registry:
   StartupTimeout: 30s
 ConfigCenter:
   Enabled: true
-  DataID: rbac-api.yaml
+  Key: rbac-api.yaml
 Runtime:
   Maintenance: false
   MaxConcurrentRequests: 1000
 Shutdown:
-  WrapUpTime: 10s
+  WrapUpTime: 20s
   WaitTime: 75s
 BrowserSession:
   Secure: false

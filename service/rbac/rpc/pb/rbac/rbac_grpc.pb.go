@@ -53,6 +53,10 @@ const (
 	Rbac_AssignMenus_FullMethodName        = "/rbac.Rbac/AssignMenus"
 	Rbac_RoleMenus_FullMethodName          = "/rbac.Rbac/RoleMenus"
 	Rbac_MenuTree_FullMethodName           = "/rbac.Rbac/MenuTree"
+	Rbac_PublicMenus_FullMethodName        = "/rbac.Rbac/PublicMenus"
+	Rbac_ListSystems_FullMethodName        = "/rbac.Rbac/ListSystems"
+	Rbac_SaveSystem_FullMethodName         = "/rbac.Rbac/SaveSystem"
+	Rbac_DeleteSystem_FullMethodName       = "/rbac.Rbac/DeleteSystem"
 	Rbac_GetMenu_FullMethodName            = "/rbac.Rbac/GetMenu"
 	Rbac_CreateMenu_FullMethodName         = "/rbac.Rbac/CreateMenu"
 	Rbac_UpdateMenu_FullMethodName         = "/rbac.Rbac/UpdateMenu"
@@ -101,7 +105,11 @@ type RbacClient interface {
 	DeleteRole(ctx context.Context, in *IDRequest, opts ...grpc.CallOption) (*Empty, error)
 	AssignMenus(ctx context.Context, in *RoleAssignMenusRequest, opts ...grpc.CallOption) (*Empty, error)
 	RoleMenus(ctx context.Context, in *IDRequest, opts ...grpc.CallOption) (*MenuPage, error)
-	MenuTree(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*MenuPage, error)
+	MenuTree(ctx context.Context, in *SystemRequest, opts ...grpc.CallOption) (*MenuPage, error)
+	PublicMenus(ctx context.Context, in *SystemRequest, opts ...grpc.CallOption) (*PublicMenuPage, error)
+	ListSystems(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*SystemPage, error)
+	SaveSystem(ctx context.Context, in *SystemEntry, opts ...grpc.CallOption) (*Empty, error)
+	DeleteSystem(ctx context.Context, in *IDRequest, opts ...grpc.CallOption) (*Empty, error)
 	GetMenu(ctx context.Context, in *IDRequest, opts ...grpc.CallOption) (*EntitySysMenu, error)
 	CreateMenu(ctx context.Context, in *CreateSysMenuRequest, opts ...grpc.CallOption) (*Empty, error)
 	UpdateMenu(ctx context.Context, in *UpdateSysMenuRequest, opts ...grpc.CallOption) (*Empty, error)
@@ -451,10 +459,50 @@ func (c *rbacClient) RoleMenus(ctx context.Context, in *IDRequest, opts ...grpc.
 	return out, nil
 }
 
-func (c *rbacClient) MenuTree(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*MenuPage, error) {
+func (c *rbacClient) MenuTree(ctx context.Context, in *SystemRequest, opts ...grpc.CallOption) (*MenuPage, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(MenuPage)
 	err := c.cc.Invoke(ctx, Rbac_MenuTree_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rbacClient) PublicMenus(ctx context.Context, in *SystemRequest, opts ...grpc.CallOption) (*PublicMenuPage, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(PublicMenuPage)
+	err := c.cc.Invoke(ctx, Rbac_PublicMenus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rbacClient) ListSystems(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*SystemPage, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SystemPage)
+	err := c.cc.Invoke(ctx, Rbac_ListSystems_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rbacClient) SaveSystem(ctx context.Context, in *SystemEntry, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, Rbac_SaveSystem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rbacClient) DeleteSystem(ctx context.Context, in *IDRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, Rbac_DeleteSystem_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -588,7 +636,11 @@ type RbacServer interface {
 	DeleteRole(context.Context, *IDRequest) (*Empty, error)
 	AssignMenus(context.Context, *RoleAssignMenusRequest) (*Empty, error)
 	RoleMenus(context.Context, *IDRequest) (*MenuPage, error)
-	MenuTree(context.Context, *Empty) (*MenuPage, error)
+	MenuTree(context.Context, *SystemRequest) (*MenuPage, error)
+	PublicMenus(context.Context, *SystemRequest) (*PublicMenuPage, error)
+	ListSystems(context.Context, *Empty) (*SystemPage, error)
+	SaveSystem(context.Context, *SystemEntry) (*Empty, error)
+	DeleteSystem(context.Context, *IDRequest) (*Empty, error)
 	GetMenu(context.Context, *IDRequest) (*EntitySysMenu, error)
 	CreateMenu(context.Context, *CreateSysMenuRequest) (*Empty, error)
 	UpdateMenu(context.Context, *UpdateSysMenuRequest) (*Empty, error)
@@ -707,8 +759,20 @@ func (UnimplementedRbacServer) AssignMenus(context.Context, *RoleAssignMenusRequ
 func (UnimplementedRbacServer) RoleMenus(context.Context, *IDRequest) (*MenuPage, error) {
 	return nil, status.Error(codes.Unimplemented, "method RoleMenus not implemented")
 }
-func (UnimplementedRbacServer) MenuTree(context.Context, *Empty) (*MenuPage, error) {
+func (UnimplementedRbacServer) MenuTree(context.Context, *SystemRequest) (*MenuPage, error) {
 	return nil, status.Error(codes.Unimplemented, "method MenuTree not implemented")
+}
+func (UnimplementedRbacServer) PublicMenus(context.Context, *SystemRequest) (*PublicMenuPage, error) {
+	return nil, status.Error(codes.Unimplemented, "method PublicMenus not implemented")
+}
+func (UnimplementedRbacServer) ListSystems(context.Context, *Empty) (*SystemPage, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListSystems not implemented")
+}
+func (UnimplementedRbacServer) SaveSystem(context.Context, *SystemEntry) (*Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method SaveSystem not implemented")
+}
+func (UnimplementedRbacServer) DeleteSystem(context.Context, *IDRequest) (*Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteSystem not implemented")
 }
 func (UnimplementedRbacServer) GetMenu(context.Context, *IDRequest) (*EntitySysMenu, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetMenu not implemented")
@@ -1353,7 +1417,7 @@ func _Rbac_RoleMenus_Handler(srv interface{}, ctx context.Context, dec func(inte
 }
 
 func _Rbac_MenuTree_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
+	in := new(SystemRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -1365,7 +1429,79 @@ func _Rbac_MenuTree_Handler(srv interface{}, ctx context.Context, dec func(inter
 		FullMethod: Rbac_MenuTree_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RbacServer).MenuTree(ctx, req.(*Empty))
+		return srv.(RbacServer).MenuTree(ctx, req.(*SystemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rbac_PublicMenus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SystemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RbacServer).PublicMenus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rbac_PublicMenus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RbacServer).PublicMenus(ctx, req.(*SystemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rbac_ListSystems_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RbacServer).ListSystems(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rbac_ListSystems_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RbacServer).ListSystems(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rbac_SaveSystem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SystemEntry)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RbacServer).SaveSystem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rbac_SaveSystem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RbacServer).SaveSystem(ctx, req.(*SystemEntry))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rbac_DeleteSystem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RbacServer).DeleteSystem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rbac_DeleteSystem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RbacServer).DeleteSystem(ctx, req.(*IDRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1674,6 +1810,22 @@ var Rbac_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MenuTree",
 			Handler:    _Rbac_MenuTree_Handler,
+		},
+		{
+			MethodName: "PublicMenus",
+			Handler:    _Rbac_PublicMenus_Handler,
+		},
+		{
+			MethodName: "ListSystems",
+			Handler:    _Rbac_ListSystems_Handler,
+		},
+		{
+			MethodName: "SaveSystem",
+			Handler:    _Rbac_SaveSystem_Handler,
+		},
+		{
+			MethodName: "DeleteSystem",
+			Handler:    _Rbac_DeleteSystem_Handler,
 		},
 		{
 			MethodName: "GetMenu",

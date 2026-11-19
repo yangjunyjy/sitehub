@@ -351,14 +351,9 @@ export const useRbacStore = defineStore('rbac', () => {
         console.error('菜单数据加载失败:', menusResponse.reason)
         menus.value = []
         currentMenus.value = []  // 同步更新 currentMenus
-        // 如果菜单加载失败，但用户是超级管理员，仍然标记为已加载
-        // 这样超级管理员可以正常进入 dashboard，即使没有分配角色
-        if (userData?.isAdmin) {
-          menusLoaded.value = true
-        } else {
-          menusLoaded.value = false
-        }
+        menusLoaded.value = false
         menuLastFetchTime.value = 0
+        throw new Error('菜单数据加载失败')
       }
       
       return {
@@ -392,7 +387,7 @@ export const useRbacStore = defineStore('rbac', () => {
         icon: menu.icon,
         path: menu.path,
         component: menu.component,
-        permission: menu.perms || menu.permission || menu.menu_code,
+        permission: menu.perms || menu.permission || '',
         menuCode: menu.menu_code,
         sort: menu.sort,
         status: menu.status,
@@ -411,9 +406,6 @@ export const useRbacStore = defineStore('rbac', () => {
     const permissions = []
     const traverse = (menuList) => {
       menuList.forEach(menu => {
-        if (menu.menuCode) {
-          permissions.push(menu.menuCode)
-        }
         if (menu.permission) {
           permissions.push(menu.permission)
         }

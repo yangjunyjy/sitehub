@@ -59,10 +59,10 @@ type ProductDocument struct {
 	CreatedAt, UpdatedAt time.Time
 }
 type DocumentRevision struct {
-	ID              uint64    `json:"id"`
-	DocumentID      uint64    `json:"documentId" gorm:"not null;uniqueIndex:uk_document_revision"`
-	Revision        uint64    `json:"revision" gorm:"not null;uniqueIndex:uk_document_revision"`
-	ActorID         uint64    `json:"actorId"`
+	ID              uint64    `json:"id,string"`
+	DocumentID      uint64    `json:"documentId,string" gorm:"not null;uniqueIndex:uk_document_revision"`
+	Revision        uint64    `json:"revision,string" gorm:"not null;uniqueIndex:uk_document_revision"`
+	ActorID         uint64    `json:"actorId,string"`
 	VersionID       string    `json:"versionId"`
 	DocKey          string    `json:"docKey"`
 	Slug            string    `json:"slug"`

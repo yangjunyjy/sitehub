@@ -6,21 +6,17 @@ package handler
 import (
 	"net/http"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
+	"github.com/zeromicro/go-zero/rest/httpx"
 	"sitehub/service/blog/api/internal/logic"
 	"sitehub/service/blog/api/internal/svc"
 	"sitehub/service/blog/api/internal/types"
-
-	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
 func CategoryStatsHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req types.CategoryStatsRequest
 		if err := httpx.Parse(r, &req); err != nil {
-			httpx.ErrorCtx(r.Context(), w, status.Error(codes.InvalidArgument, "invalid request"))
+			httpx.ErrorCtx(r.Context(), w, err)
 			return
 		}
 

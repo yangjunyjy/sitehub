@@ -60,6 +60,8 @@ message CreateSysMenuRequest {
   string description = 9 [json_name = "description"];
   bool is_visible = 10 [json_name = "isVisible"];
   string icon = 11 [json_name = "icon"];
+  string permission = 12 [json_name = "permission"];
+  string system_code = 13 [json_name = "systemCode"];
 }
 
 message CreateSysUserRequest {
@@ -125,6 +127,7 @@ message EntitySysMenu {
   int64 status = 18 [json_name = "status"];
   repeated EntitySysMenu children = 19 [json_name = "children"];
   repeated EntitySysRole roles = 20 [json_name = "roles"];
+  string system_code = 21 [json_name = "systemCode"];
 }
 
 message EntitySysPost {
@@ -213,6 +216,29 @@ message MenuPage {
   repeated EntitySysMenu items = 1 [json_name = "items"];
   int64 total = 2 [json_name = "total"];
 }
+
+message SystemRequest { string system = 1; }
+message SystemEntry {
+  uint64 id = 1;
+  string code = 2;
+  string name = 3;
+  string description = 4;
+  string origin = 5;
+  bool enabled = 6;
+  bool public = 7;
+}
+message SystemPage { repeated SystemEntry items = 1; }
+message PublicMenu {
+  uint64 id = 1;
+  string name = 2;
+  string path = 3;
+  string component = 4;
+  string icon = 5;
+  bool is_visible = 6 [json_name = "isVisible"];
+  string system_code = 7 [json_name = "systemCode"];
+  repeated PublicMenu children = 8;
+}
+message PublicMenuPage { repeated PublicMenu items = 1; }
 
 message PageRequest {
   int64 page = 1 [json_name = "page"];
@@ -344,6 +370,8 @@ message UpdateSysMenuRequest {
   string description = 10 [json_name = "description"];
   bool is_visible = 11 [json_name = "isVisible"];
   string icon = 12 [json_name = "icon"];
+  string permission = 13 [json_name = "permission"];
+  string system_code = 14 [json_name = "systemCode"];
 }
 
 message UpdateSysUserRequest {
@@ -410,7 +438,11 @@ service Rbac {
   rpc DeleteRole(IDRequest) returns (Empty);
   rpc AssignMenus(RoleAssignMenusRequest) returns (Empty);
   rpc RoleMenus(IDRequest) returns (MenuPage);
-  rpc MenuTree(Empty) returns (MenuPage);
+  rpc MenuTree(SystemRequest) returns (MenuPage);
+  rpc PublicMenus(SystemRequest) returns (PublicMenuPage);
+  rpc ListSystems(Empty) returns (SystemPage);
+  rpc SaveSystem(SystemEntry) returns (Empty);
+  rpc DeleteSystem(IDRequest) returns (Empty);
   rpc GetMenu(IDRequest) returns (EntitySysMenu);
   rpc CreateMenu(CreateSysMenuRequest) returns (Empty);
   rpc UpdateMenu(UpdateSysMenuRequest) returns (Empty);

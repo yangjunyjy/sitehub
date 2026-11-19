@@ -82,7 +82,7 @@ const definition = computed(() => actions[props.action] || actions.more)
 const resolvedLabel = computed(() => props.label || definition.value.label)
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .admin-row-action {
   --action-color: #409eff;
   display: inline-flex;

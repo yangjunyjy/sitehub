@@ -25,10 +25,13 @@ type State struct {
 	LastError       string            `json:"last_error,omitempty"`
 }
 type Controller struct {
-	Store     Store
-	Engine    *engine.Engine
-	Key       string
-	Allowed   []*net.IPNet
+	Store   Store
+	Engine  *engine.Engine
+	Key     string
+	Allowed []*net.IPNet
+	// Load is set only in file mode. PUT is then disabled so restarts and reloads
+	// always use the same authoritative files, including their include tree.
+	Load      func() (manifest.Document, error)
 	mu        sync.Mutex
 	applied   int64
 	lastError string
@@ -76,6 +79,7 @@ func (c *Controller) Handler() http.Handler {
 		respond(w, 200, map[string]string{"status": "ready"})
 	})
 	mux.HandleFunc("/v1/config", c.config)
+	mux.HandleFunc("POST /v1/reload", c.reload)
 	mux.Handle("GET /metrics", c.Engine.Metrics())
 	mux.HandleFunc("GET /v1/status", func(w http.ResponseWriter, _ *http.Request) {
 		c.mu.Lock()
@@ -132,6 +136,10 @@ func (c *Controller) config(w http.ResponseWriter, r *http.Request) {
 		respond(w, 405, map[string]string{"message": "Method not allowed"})
 		return
 	}
+	if c.Load != nil {
+		respond(w, 405, map[string]string{"message": "Configuration is managed by files; edit them and use POST /v1/reload"})
+		return
+	}
 	if c.stopping.Load() {
 		respond(w, 503, map[string]string{"message": "Gateway is stopping"})
 		return
@@ -155,6 +163,10 @@ func (c *Controller) config(w http.ResponseWriter, r *http.Request) {
 	// writers across gateway replicas; only complete validated snapshots commit.
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.stopping.Load() {
+		respond(w, 503, map[string]string{"message": "Gateway is stopping"})
+		return
+	}
 	prepared, err := c.Engine.Prepare(d)
 	if err != nil {
 		respond(w, 400, map[string]string{"message": err.Error()})
@@ -174,6 +186,51 @@ func (c *Controller) config(w http.ResponseWriter, r *http.Request) {
 	c.applied = record.Revision
 	c.lastError = ""
 	w.Header().Set("ETag", strconv.Quote(strconv.FormatInt(record.Revision, 10)))
+	respond(w, 200, State{Revision: record.Revision, AppliedRevision: c.applied, Manifest: d})
+}
+
+func (c *Controller) reload(w http.ResponseWriter, r *http.Request) {
+	if c.Load == nil {
+		respond(w, 409, map[string]string{"message": "Reload is available in file source mode; use configuration publication for etcd"})
+		return
+	}
+	if c.stopping.Load() {
+		respond(w, 503, map[string]string{"message": "Gateway is stopping"})
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.stopping.Load() {
+		respond(w, 503, map[string]string{"message": "Gateway is stopping"})
+		return
+	}
+	d, err := c.Load()
+	if err != nil {
+		c.lastError = err.Error()
+		respond(w, 400, map[string]string{"message": err.Error()})
+		return
+	}
+	if manifest.Revision(d) == c.Engine.Revision() {
+		c.lastError = ""
+		respond(w, 200, State{Revision: c.applied, AppliedRevision: c.applied, Manifest: d})
+		return
+	}
+	prepared, err := c.Engine.Prepare(d)
+	if err != nil {
+		c.lastError = err.Error()
+		respond(w, 400, map[string]string{"message": err.Error()})
+		return
+	}
+	record, err := c.Store.CompareAndSwap(r.Context(), c.applied, manifest.Bytes(d))
+	if err != nil {
+		prepared.Release()
+		c.lastError = err.Error()
+		respond(w, 503, map[string]string{"message": err.Error()})
+		return
+	}
+	c.Engine.Commit(prepared)
+	c.applied = record.Revision
+	c.lastError = ""
 	respond(w, 200, State{Revision: record.Revision, AppliedRevision: c.applied, Manifest: d})
 }
 func respond(w http.ResponseWriter, status int, value any) {

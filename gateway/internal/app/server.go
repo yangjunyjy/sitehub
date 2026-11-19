@@ -10,18 +10,28 @@ import (
 	"sync"
 	"time"
 
-	"github.com/zeromicro/go-zero/core/logx"
-	clientv3 "go.etcd.io/etcd/client/v3"
-	registry "sitehub/common/registry/nacos"
+	"sitehub/common/controlplane"
 	"sitehub/gateway/internal/config"
 	"sitehub/gateway/internal/control"
 	"sitehub/gateway/internal/discovery"
 	"sitehub/gateway/internal/engine"
 	"sitehub/gateway/manifest"
 	"sitehub/gateway/plugin"
+
+	"github.com/zeromicro/go-zero/core/logx"
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
 func Run(ctx context.Context, c config.Config) error {
+	return RunWithRegistry(ctx, c, plugin.DefaultRegistry())
+}
+
+// RunWithRegistry lets an embedding gateway register compiled plugins once and
+// use the same schemas for file loading, validation and request execution.
+func RunWithRegistry(ctx context.Context, c config.Config, plugins *plugin.Registry) error {
+	if plugins == nil {
+		return fmt.Errorf("plugin registry is required")
+	}
 	if err := c.Validate(); err != nil {
 		return err
 	}
@@ -29,7 +39,8 @@ func Run(ctx context.Context, c config.Config) error {
 	if err != nil {
 		return err
 	}
-	seed, err := manifest.Read(c.Manifest)
+	load := func() (manifest.Document, error) { return ReadRoutes(c, plugins) }
+	seed, err := Check(c, plugins)
 	if err != nil {
 		return err
 	}
@@ -37,25 +48,38 @@ func Run(ctx context.Context, c config.Config) error {
 		return err
 	}
 	defer logx.Close()
-	storeClient, err := clientv3.New(clientv3.Config{Endpoints: c.Etcd.Endpoints, Username: c.Etcd.Username, Password: c.Etcd.Password, DialTimeout: 5 * time.Second})
-	if err != nil {
-		return fmt.Errorf("connect to gateway configuration store failed")
+	var store control.Store = &control.MemoryStore{}
+	var watch func(context.Context, func(control.Record), func(error))
+	if c.SourceType() == "etcd" {
+		storeClient, err := clientv3.New(clientv3.Config{
+			Endpoints:   c.Etcd.Endpoints,
+			Username:    c.Etcd.Username,
+			Password:    c.Etcd.Password,
+			DialTimeout: 5 * time.Second,
+		})
+		if err != nil {
+			return fmt.Errorf("connect to gateway configuration store failed")
+		}
+		defer storeClient.Close()
+		shared := &control.EtcdStore{Client: storeClient, Key: c.Etcd.Key}
+		store, watch = shared, shared.Watch
 	}
-	defer storeClient.Close()
-	store := &control.EtcdStore{Client: storeClient, Key: c.Etcd.Key}
 	var provider *discovery.Manager
 	if c.Discovery.Enabled {
-		naming, err := registry.New(c.Name, c.Nacos)
+		registry, err := controlplane.NewRegistry(c.ControlPlane)
 		if err != nil {
 			return err
 		}
-		defer naming.CloseClient()
-		provider = discovery.New(naming, c.Nacos.Group, c.Discovery.MaxStale)
+		defer registry.Close()
+		provider = discovery.New(registry, c.Discovery.MaxStale)
 		defer provider.Close()
 	}
-	proxy := engine.New(provider, plugin.DefaultRegistry(), c.HTTP.MaxBodyBytes)
+	proxy := engine.New(provider, plugins, c.HTTP.MaxBodyBytes)
 	defer proxy.Close()
 	controller := &control.Controller{Store: store, Engine: proxy, Key: c.Admin.Key, Allowed: allowed}
+	if c.SourceType() == "file" {
+		controller.Load = load
+	}
 	// Validate the seed before the first persistent write. Existing records are
 	// authoritative and never overwritten by process startup or image upgrades.
 	prepared, err := proxy.Prepare(seed)
@@ -72,12 +96,15 @@ func Run(ctx context.Context, c config.Config) error {
 	}
 	watchCtx, cancelWatch := context.WithCancel(context.Background())
 	watchDone := make(chan struct{})
-	// The watcher can prepare snapshots using both the engine and the Nacos
-	// client. Join it before deferred dependency cleanup on every exit path.
+	// The watcher can prepare snapshots using both the engine and the registry
+	// proxy. Join it before deferred dependency cleanup on every exit path.
 	defer func() { cancelWatch(); <-watchDone }()
 	go func() {
 		defer close(watchDone)
-		store.Watch(watchCtx, func(r control.Record) {
+		if watch == nil {
+			return
+		}
+		watch(watchCtx, func(r control.Record) {
 			if err := controller.Apply(r); err != nil {
 				logx.Errorw("gateway configuration rejected", logx.Field("reason", err.Error()))
 			}

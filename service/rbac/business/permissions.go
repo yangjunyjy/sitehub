@@ -18,8 +18,8 @@ func ExtractRolePerms(user *rbacentity.SysUser) []string {
 			continue
 		}
 		for _, menu := range role.Menus {
-			if menu != nil && menu.MenuType == 3 {
-				permSet[menu.MenuCode] = struct{}{}
+			if menu != nil && menu.MenuType == 3 && menu.Permission != "" {
+				permSet[menu.Permission] = struct{}{}
 			}
 		}
 	}

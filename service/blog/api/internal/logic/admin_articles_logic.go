@@ -2,11 +2,10 @@ package logic
 
 import (
 	"context"
-	"sitehub/common/protoconv"
-	"sitehub/common/rpcx"
+	"sitehub/service/blog/api/internal/payload"
 	"sitehub/service/blog/api/internal/svc"
 	"sitehub/service/blog/api/internal/types"
-	pb "sitehub/service/blog/rpc/pb/blog"
+	"sitehub/service/blog/domain"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"google.golang.org/grpc/codes"
@@ -23,17 +22,15 @@ func NewAdminArticlesLogic(ctx context.Context, s *svc.ServiceContext) *AdminArt
 	return &AdminArticlesLogic{ctx, s, logx.WithContext(ctx)}
 }
 func (l *AdminArticlesLogic) AdminArticles(req *types.AdminArticlesRequest) (*types.Response, error) {
-	in := &pb.ArticleListQuery{}
-	if err := protoconv.Encode(req, in); err != nil {
+
+	actor, err := l.svcCtx.Require(l.ctx, "blog:article:list", "admin", false)
+	if err != nil {
+		return nil, err
+	}
+	var input domain.ArticleListQuery
+	if err := decodeRequest(req, &input); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
-	out, err := l.svcCtx.RPC.AdminArticles(rpcx.Outgoing(l.ctx, l.svcCtx.Config.ServiceKey), in)
-	if err != nil {
-		return nil, err
-	}
-	value, err := protoconv.Value(out)
-	if err != nil {
-		return nil, err
-	}
-	return &types.Response{Code: 0, Message: "ok", Data: value}, nil
+	value, err := l.svcCtx.Core.Articles.BrowseEditor(ArticleActor(actor), input)
+	return ReplyAs[payload.ArticlePage](value, err)
 }

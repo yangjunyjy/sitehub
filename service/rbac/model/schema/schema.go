@@ -19,5 +19,5 @@ func Apply(db *gorm.DB) error {
 			return err
 		}
 	}
-	return db.AutoMigrate(&entity.SysUser{}, &entity.SysRole{}, &entity.SysMenu{}, &entity.SysDept{}, &entity.SysPost{}, &entity.SysUserRole{}, &entity.SysRoleMenu{}, &entity.SysUserPost{}, &entity.SysLoginLog{}, &entity.SysOperationLog{}, &entity.IPBlacklist{}, &domain.Member{}, &domain.MemberVerification{}, &domain.MemberSession{}, &settingsmodel.SystemConfig{})
+	return db.AutoMigrate(&entity.SysSystem{}, &entity.SysUser{}, &entity.SysRole{}, &entity.SysMenu{}, &entity.SysDept{}, &entity.SysPost{}, &entity.SysUserRole{}, &entity.SysRoleMenu{}, &entity.SysUserPost{}, &entity.SysLoginLog{}, &entity.SysOperationLog{}, &entity.IPBlacklist{}, &domain.Member{}, &domain.MemberVerification{}, &domain.MemberSession{}, &settingsmodel.SystemConfig{})
 }

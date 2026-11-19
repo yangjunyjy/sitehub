@@ -182,7 +182,7 @@ defineExpose({
   focus: () => editor?.focus(),
 })
 </script>
-<style scoped>
+<style lang="scss" scoped>
 .markdown-editor {
   min-width: 0;
   flex: 1;

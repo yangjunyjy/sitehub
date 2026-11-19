@@ -13,9 +13,9 @@ type SysMenuRepository interface {
 	// FindByCode 根据菜单编码查找菜单
 	FindByCode(code string) (*rbacentity.SysMenu, error)
 	// FindByName 根据菜单名称查找菜单
-	FindByName(name string) (*rbacentity.SysMenu, error)
+	FindByName(system string, parentID uint64, name string) (*rbacentity.SysMenu, error)
 	// FindByPath 根据菜单路径查找菜单
-	FindByPath(path string) (*rbacentity.SysMenu, error)
+	FindByPath(system string, parentID uint64, path string) (*rbacentity.SysMenu, error)
 	// List 查询菜单列表
 	List(page, pageSize int) ([]*rbacentity.SysMenu, int64, error)
 	// GetMenuTree 获取菜单树

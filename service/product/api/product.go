@@ -27,11 +27,17 @@ func run(parent context.Context, c config.Config) error {
 	managed.AttachHTTP(s)
 	s.Use(rpcx.HTTPContextWithProxies(c.TrustedProxyCIDRs))
 	apiresponse.Install()
-	ctx := svc.NewServiceContext(c)
+	ctx, err := svc.NewServiceContext(c)
+	if err != nil {
+		return err
+	}
+	defer ctx.Close()
+	s.Use(ctx.ClientPolicy)
 	managed.SetReadiness(func(probeCtx context.Context) error {
 		_, err := healthlogic.NewHealthLogic(probeCtx, ctx).Health()
 		return err
 	})
 	handler.RegisterHandlers(s, ctx)
+	handler.RegisterInternalHandlers(s, ctx)
 	return managed.Serve(parent, fmt.Sprintf("%s:%d", c.Host, c.Port), s.Start)
 }

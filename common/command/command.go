@@ -5,11 +5,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	center "sitehub/common/configcenter/nacos"
+	"os"
+	"sitehub/common/configcenter"
 	"sitehub/common/configloader"
+	"sitehub/common/controlplane"
 	"sitehub/common/governance"
 	"sitehub/common/runtimeconfig"
-	"os"
 	"strings"
 	"sync"
 
@@ -31,28 +32,34 @@ func New[C any](name, defaultConfig string, run func(context.Context, C) error) 
 			newSettings := func() *viper.Viper {
 				settings := viper.New()
 				settings.SetConfigFile(configFile)
-				// An unchanged empty flag must not replace go-zero's default mode.
+				// 未改变的空参数不会覆盖go-zero默认值，避免配置文件中缺失的参数被覆盖为零值
 				if cmd.Flags().Changed("mode") {
 					_ = settings.BindPFlag("Mode", cmd.Flags().Lookup("mode"))
 				}
 				return settings
 			}
 			var config C
+
 			prefix := strings.ToUpper(strings.ReplaceAll(name, "-", "_"))
 			var bootstrap governance.Config
+
+			// 加载配置
 			if err := configloader.Load(newSettings(), prefix, &bootstrap); err != nil {
 				return err
 			}
 			var remote []byte
-			var client *center.Client
+			var client *configcenter.Proxy
 			if bootstrap.ConfigCenter.Enabled {
+				if bootstrap.ConfigCenter.Key == "" {
+					return fmt.Errorf("ConfigCenter.Key is required")
+				}
 				var err error
-				client, err = center.New(name, bootstrap.Nacos, bootstrap.ConfigCenter)
+				client, err = controlplane.NewConfigCenter(bootstrap.ControlPlane)
 				if err != nil {
 					return err
 				}
 				defer client.Close()
-				remote, err = client.Get()
+				remote, err = client.Get(cmd.Context(), bootstrap.ConfigCenter.Key)
 				if err != nil {
 					return err
 				}
@@ -70,7 +77,7 @@ func New[C any](name, defaultConfig string, run func(context.Context, C) error) 
 			}
 			source := "local"
 			if client != nil {
-				source = "nacos:" + settings.ConfigCenter.DataID
+				source = settings.ControlPlane.Provider + ":" + settings.ConfigCenter.Key
 			}
 			encoded, _ := json.Marshal(config)
 			traffic, err := runtimeconfig.New(settings.Runtime, runtimeconfig.Version(encoded), source)
@@ -85,10 +92,14 @@ func New[C any](name, defaultConfig string, run func(context.Context, C) error) 
 			if client != nil {
 				base := staticVersion(config)
 				var reload sync.Mutex
-				apply := func(data []byte) {
+				apply := func(data []byte, watchErr error) {
 					reload.Lock()
 					defer reload.Unlock()
 					version := runtimeconfig.Version(data)
+					if watchErr != nil {
+						traffic.Reject(version, "configuration center is unavailable")
+						return
+					}
 					if len(data) == 0 {
 						traffic.Reject(version, "remote configuration was deleted or empty")
 						return
@@ -108,15 +119,13 @@ func New[C any](name, defaultConfig string, run func(context.Context, C) error) 
 						traffic.Reject(version, err.Error())
 					}
 				}
-				if err := client.Watch(apply); err != nil {
+				cancel, err := client.Watch(cmd.Context(), settings.ConfigCenter.Key, apply)
+				if err != nil {
 					return fmt.Errorf("watch remote configuration failed")
 				}
-				// Read after subscribing to close the initial Get/Listen race.
-				if latest, err := client.Get(); err != nil {
-					return err
-				} else {
-					apply(latest)
-				}
+				// The provider reads a snapshot and watches from its next revision,
+				// so changes between the initial Get and Watch are never lost.
+				defer cancel()
 			}
 			return run(governance.WithContext(cmd.Context(), runtime), config)
 		},

@@ -1,5 +1,16 @@
 {
   "version": 1,
+  "plugins": {
+    "deny-paths": {
+      "paths": [
+        "/healthz",
+        "/readyz",
+        "/metrics",
+        "/internal",
+        "/internal/*"
+      ]
+    }
+  },
   "upstreams": {
     "rbac": {
       "connect_timeout_ms": 3000,
@@ -31,17 +42,7 @@
       "service": "product-api",
       "io_timeout_ms": 600000
     },
-    "file": {
-      "connect_timeout_ms": 3000,
-      "response_header_timeout_ms": 600000,
-      "health_path": "/readyz",
-      "health_interval_ms": 2000,
-      "health_timeout_ms": 1000,
-      "health_failures": 2,
-      "service": "file-api",
-      "io_timeout_ms": 600000
-    },
-    "web-site": {
+    "web-product": {
       "connect_timeout_ms": 3000,
       "response_header_timeout_ms": 10000,
       "health_path": "/healthz",
@@ -50,7 +51,7 @@
       "health_failures": 2,
       "nodes": [
         {
-          "url": "http://web-site:3000",
+          "url": "http://web-product:3000",
           "weight": 1
         }
       ],
@@ -70,6 +71,21 @@
         }
       ],
       "io_timeout_ms": 10000
+    },
+    "web-blog": {
+      "connect_timeout_ms": 3000,
+      "response_header_timeout_ms": 10000,
+      "health_path": "/healthz",
+      "health_interval_ms": 2000,
+      "health_timeout_ms": 1000,
+      "health_failures": 2,
+      "nodes": [
+        {
+          "url": "http://web-blog:3000",
+          "weight": 1
+        }
+      ],
+      "io_timeout_ms": 10000
     }
   },
   "profiles": {
@@ -80,7 +96,13 @@
           "http://sitehub.local:8082",
           "https://sitehub.local",
           "http://127.0.0.1:4310",
-          "http://localhost:4310"
+          "http://localhost:4310",
+          "https://product.sitehub.local",
+          "http://product.sitehub.local:8082",
+          "https://blog.sitehub.local",
+          "http://blog.sitehub.local:8082",
+          "http://localhost:4312",
+          "http://127.0.0.1:4312"
         ]
       },
       "request-id": {},
@@ -160,7 +182,7 @@
         "/v1/file/*"
       ],
       "priority": 100,
-      "upstream": "file",
+      "upstream": "blog",
       "profile": "site"
     },
     {
@@ -208,7 +230,7 @@
         "GET",
         "HEAD"
       ],
-      "upstream": "web-site",
+      "upstream": "web-product",
       "plugins": {
         "strip-credentials": {}
       }
@@ -254,7 +276,7 @@
         "/v1/file/*"
       ],
       "priority": 100,
-      "upstream": "file",
+      "upstream": "blog",
       "profile": "admin"
     },
     {
@@ -334,6 +356,228 @@
       "priority": 200,
       "upstream": "rbac",
       "profile": "admin",
+      "plugins": {
+        "limit-count": {
+          "count": 10,
+          "window_seconds": 60
+        }
+      }
+    },
+    {
+      "id": "blog-rbac",
+      "host": "blog.sitehub.local",
+      "paths": [
+        "/v1/rbac",
+        "/v1/rbac/*"
+      ],
+      "priority": 100,
+      "upstream": "rbac",
+      "profile": "site"
+    },
+    {
+      "id": "blog-blog",
+      "host": "blog.sitehub.local",
+      "paths": [
+        "/v1/blog",
+        "/v1/blog/*"
+      ],
+      "priority": 100,
+      "upstream": "blog",
+      "profile": "site"
+    },
+    {
+      "id": "blog-product",
+      "host": "blog.sitehub.local",
+      "paths": [
+        "/v1/product",
+        "/v1/product/*"
+      ],
+      "priority": 100,
+      "upstream": "product",
+      "profile": "site"
+    },
+    {
+      "id": "blog-file",
+      "host": "blog.sitehub.local",
+      "paths": [
+        "/v1/file",
+        "/v1/file/*"
+      ],
+      "priority": 100,
+      "upstream": "blog",
+      "profile": "site"
+    },
+    {
+      "id": "blog-unknown",
+      "host": "blog.sitehub.local",
+      "paths": [
+        "/v1"
+      ],
+      "priority": 50,
+      "plugins": {
+        "static-response": {
+          "status": 404,
+          "body": "{\"code\":404,\"message\":\"Unknown API route\"}",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      }
+    },
+    {
+      "id": "blog-unknownall",
+      "host": "blog.sitehub.local",
+      "paths": [
+        "/v1/*"
+      ],
+      "priority": 50,
+      "plugins": {
+        "static-response": {
+          "status": 404,
+          "body": "{\"code\":404,\"message\":\"Unknown API route\"}",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      }
+    },
+    {
+      "id": "blog-web",
+      "host": "blog.sitehub.local",
+      "paths": [
+        "/*"
+      ],
+      "priority": 0,
+      "methods": [
+        "GET",
+        "HEAD"
+      ],
+      "upstream": "web-blog",
+      "plugins": {
+        "strip-credentials": {}
+      }
+    },
+    {
+      "id": "blog-login",
+      "host": "blog.sitehub.local",
+      "paths": [
+        "/v1/rbac/members/login",
+        "/v1/rbac/members/register"
+      ],
+      "priority": 200,
+      "upstream": "rbac",
+      "profile": "site",
+      "plugins": {
+        "limit-count": {
+          "count": 10,
+          "window_seconds": 60
+        }
+      }
+    },
+    {
+      "id": "product-rbac",
+      "host": "product.sitehub.local",
+      "paths": [
+        "/v1/rbac",
+        "/v1/rbac/*"
+      ],
+      "priority": 100,
+      "upstream": "rbac",
+      "profile": "site"
+    },
+    {
+      "id": "product-blog",
+      "host": "product.sitehub.local",
+      "paths": [
+        "/v1/blog",
+        "/v1/blog/*"
+      ],
+      "priority": 100,
+      "upstream": "blog",
+      "profile": "site"
+    },
+    {
+      "id": "product-product",
+      "host": "product.sitehub.local",
+      "paths": [
+        "/v1/product",
+        "/v1/product/*"
+      ],
+      "priority": 100,
+      "upstream": "product",
+      "profile": "site"
+    },
+    {
+      "id": "product-file",
+      "host": "product.sitehub.local",
+      "paths": [
+        "/v1/file",
+        "/v1/file/*"
+      ],
+      "priority": 100,
+      "upstream": "blog",
+      "profile": "site"
+    },
+    {
+      "id": "product-unknown",
+      "host": "product.sitehub.local",
+      "paths": [
+        "/v1"
+      ],
+      "priority": 50,
+      "plugins": {
+        "static-response": {
+          "status": 404,
+          "body": "{\"code\":404,\"message\":\"Unknown API route\"}",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      }
+    },
+    {
+      "id": "product-unknownall",
+      "host": "product.sitehub.local",
+      "paths": [
+        "/v1/*"
+      ],
+      "priority": 50,
+      "plugins": {
+        "static-response": {
+          "status": 404,
+          "body": "{\"code\":404,\"message\":\"Unknown API route\"}",
+          "headers": {
+            "Content-Type": "application/json"
+          }
+        }
+      }
+    },
+    {
+      "id": "product-web",
+      "host": "product.sitehub.local",
+      "paths": [
+        "/*"
+      ],
+      "priority": 0,
+      "methods": [
+        "GET",
+        "HEAD"
+      ],
+      "upstream": "web-product",
+      "plugins": {
+        "strip-credentials": {}
+      }
+    },
+    {
+      "id": "product-login",
+      "host": "product.sitehub.local",
+      "paths": [
+        "/v1/rbac/members/login",
+        "/v1/rbac/members/register"
+      ],
+      "priority": 200,
+      "upstream": "rbac",
+      "profile": "site",
       "plugins": {
         "limit-count": {
           "count": 10,

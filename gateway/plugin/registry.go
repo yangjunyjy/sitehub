@@ -18,6 +18,7 @@ type Factory func(json.RawMessage) (Middleware, error)
 type registration struct {
 	priority int
 	factory  Factory
+	terminal bool
 }
 
 type Registry struct {
@@ -28,6 +29,17 @@ type Registry struct {
 func NewRegistry() *Registry { return &Registry{plugins: make(map[string]registration)} }
 
 func (r *Registry) Register(name string, priority int, factory Factory) error {
+	return r.register(name, priority, factory, false)
+}
+
+// RegisterTerminal registers a plugin that produces the response instead of
+// forwarding to an upstream. Routing validation uses this metadata, so adding
+// another response-producing plugin does not require changes to the router.
+func (r *Registry) RegisterTerminal(name string, priority int, factory Factory) error {
+	return r.register(name, priority, factory, true)
+}
+
+func (r *Registry) register(name string, priority int, factory Factory, terminal bool) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if name == "" || factory == nil {
@@ -36,7 +48,10 @@ func (r *Registry) Register(name string, priority int, factory Factory) error {
 	if _, exists := r.plugins[name]; exists {
 		return fmt.Errorf("plugin %s already registered", name)
 	}
-	r.plugins[name] = registration{priority: priority, factory: factory}
+	if r.plugins == nil {
+		r.plugins = make(map[string]registration)
+	}
+	r.plugins[name] = registration{priority: priority, factory: factory, terminal: terminal}
 	return nil
 }
 
@@ -48,15 +63,17 @@ func DefaultRegistry() *Registry {
 		factory  Factory
 	}{
 		{"request-id", 1000, requestID},
+		{"deny-paths", 950, denyPaths},
 		{"browser-session", 900, browserSession},
 		{"strip-credentials", 850, stripCredentials},
 		{"rate-limit", 800, rateLimit},
 		{"limit-count", 700, limitCount},
+		{"proxy-rewrite", 600, proxyRewrite},
 		{"circuit-breaker", 500, circuitBreaker},
-		{"static-response", 100, staticResponse},
 	} {
 		_ = r.Register(item.name, item.priority, item.factory)
 	}
+	_ = r.RegisterTerminal("static-response", 100, staticResponse)
 	return r
 }
 
@@ -65,9 +82,53 @@ func (r *Registry) Validate(configs map[string]json.RawMessage) error {
 	return err
 }
 
+// ValidateOverrides checks a configuration layer before inheritance is
+// resolved. An explicit null disables an inherited plugin, but its name must
+// still be registered so spelling mistakes cannot silently remove protection.
+func (r *Registry) ValidateOverrides(configs map[string]json.RawMessage) error {
+	active := make(map[string]json.RawMessage, len(configs))
+	r.mu.RLock()
+	for name, raw := range configs {
+		if _, exists := r.plugins[name]; !exists {
+			r.mu.RUnlock()
+			return fmt.Errorf("unknown plugin %s", name)
+		}
+		if !bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+			active[name] = raw
+		}
+	}
+	r.mu.RUnlock()
+	return r.Validate(active)
+}
+
+// Terminal reports whether the effective configuration has a response-producing
+// plugin. It checks registration metadata only; parameter validation is done by
+// Validate or Build. At most one terminal plugin may be active on a route.
+func (r *Registry) Terminal(configs map[string]json.RawMessage) (bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	count := 0
+	for name, raw := range configs {
+		entry, exists := r.plugins[name]
+		if !exists {
+			return false, fmt.Errorf("unknown plugin %s", name)
+		}
+		if entry.terminal && !bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+			count++
+		}
+	}
+	if count > 1 {
+		return false, fmt.Errorf("a route may configure only one terminal plugin")
+	}
+	return count == 1, nil
+}
+
 // Build constructs state once. The returned middleware may wrap several
 // handlers, preserving shared counters, and is safe for concurrent requests.
 func (r *Registry) Build(configs map[string]json.RawMessage) (Middleware, error) {
+	if _, err := r.Terminal(configs); err != nil {
+		return nil, err
+	}
 	type selected struct {
 		name string
 		registration
@@ -91,6 +152,9 @@ func (r *Registry) Build(configs map[string]json.RawMessage) (Middleware, error)
 	})
 	chain := make([]Middleware, 0, len(entries))
 	for _, entry := range entries {
+		if bytes.Equal(bytes.TrimSpace(configs[entry.name]), []byte("null")) {
+			return nil, fmt.Errorf("plugin %s: null is only valid in an inheritance layer", entry.name)
+		}
 		middleware, err := entry.factory(configs[entry.name])
 		if err != nil {
 			return nil, fmt.Errorf("plugin %s: %w", entry.name, err)

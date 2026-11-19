@@ -41,6 +41,8 @@ type (
 	PageRequest                  = rbac.PageRequest
 	PermissionRequest            = rbac.PermissionRequest
 	Principal                    = rbac.Principal
+	PublicMenu                   = rbac.PublicMenu
+	PublicMenuPage               = rbac.PublicMenuPage
 	RegisterMemberInput          = rbac.RegisterMemberInput
 	RoleAssignMenusRequest       = rbac.RoleAssignMenusRequest
 	RolePage                     = rbac.RolePage
@@ -51,6 +53,9 @@ type (
 	StringList                   = rbac.StringList
 	SysLoginRequest              = rbac.SysLoginRequest
 	SysVerifyEmailCaptchaRequest = rbac.SysVerifyEmailCaptchaRequest
+	SystemEntry                  = rbac.SystemEntry
+	SystemPage                   = rbac.SystemPage
+	SystemRequest                = rbac.SystemRequest
 	TOTPInfo                     = rbac.TOTPInfo
 	TokenReply                   = rbac.TokenReply
 	UpdateEmailSettingsRequest   = rbac.UpdateEmailSettingsRequest
@@ -95,7 +100,11 @@ type (
 		DeleteRole(ctx context.Context, in *IDRequest, opts ...grpc.CallOption) (*Empty, error)
 		AssignMenus(ctx context.Context, in *RoleAssignMenusRequest, opts ...grpc.CallOption) (*Empty, error)
 		RoleMenus(ctx context.Context, in *IDRequest, opts ...grpc.CallOption) (*MenuPage, error)
-		MenuTree(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*MenuPage, error)
+		MenuTree(ctx context.Context, in *SystemRequest, opts ...grpc.CallOption) (*MenuPage, error)
+		PublicMenus(ctx context.Context, in *SystemRequest, opts ...grpc.CallOption) (*PublicMenuPage, error)
+		ListSystems(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*SystemPage, error)
+		SaveSystem(ctx context.Context, in *SystemEntry, opts ...grpc.CallOption) (*Empty, error)
+		DeleteSystem(ctx context.Context, in *IDRequest, opts ...grpc.CallOption) (*Empty, error)
 		GetMenu(ctx context.Context, in *IDRequest, opts ...grpc.CallOption) (*EntitySysMenu, error)
 		CreateMenu(ctx context.Context, in *CreateSysMenuRequest, opts ...grpc.CallOption) (*Empty, error)
 		UpdateMenu(ctx context.Context, in *UpdateSysMenuRequest, opts ...grpc.CallOption) (*Empty, error)
@@ -283,9 +292,29 @@ func (m *defaultRbac) RoleMenus(ctx context.Context, in *IDRequest, opts ...grpc
 	return client.RoleMenus(ctx, in, opts...)
 }
 
-func (m *defaultRbac) MenuTree(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*MenuPage, error) {
+func (m *defaultRbac) MenuTree(ctx context.Context, in *SystemRequest, opts ...grpc.CallOption) (*MenuPage, error) {
 	client := rbac.NewRbacClient(m.cli.Conn())
 	return client.MenuTree(ctx, in, opts...)
+}
+
+func (m *defaultRbac) PublicMenus(ctx context.Context, in *SystemRequest, opts ...grpc.CallOption) (*PublicMenuPage, error) {
+	client := rbac.NewRbacClient(m.cli.Conn())
+	return client.PublicMenus(ctx, in, opts...)
+}
+
+func (m *defaultRbac) ListSystems(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*SystemPage, error) {
+	client := rbac.NewRbacClient(m.cli.Conn())
+	return client.ListSystems(ctx, in, opts...)
+}
+
+func (m *defaultRbac) SaveSystem(ctx context.Context, in *SystemEntry, opts ...grpc.CallOption) (*Empty, error) {
+	client := rbac.NewRbacClient(m.cli.Conn())
+	return client.SaveSystem(ctx, in, opts...)
+}
+
+func (m *defaultRbac) DeleteSystem(ctx context.Context, in *IDRequest, opts ...grpc.CallOption) (*Empty, error) {
+	client := rbac.NewRbacClient(m.cli.Conn())
+	return client.DeleteSystem(ctx, in, opts...)
 }
 
 func (m *defaultRbac) GetMenu(ctx context.Context, in *IDRequest, opts ...grpc.CallOption) (*EntitySysMenu, error) {

@@ -37,8 +37,13 @@ func (l *CreateMenuLogic) CreateMenu(in *pb.CreateSysMenuRequest) (*pb.Empty, er
 	input.MenuName = in.Name
 	input.MenuCode = in.Code
 	input.MenuType = entity.MenuType(in.Type)
+	input.SystemCode = in.SystemCode
+	input.Permission = in.Permission
 	input.Sort = int(in.Sort)
 	input.Remark = in.Description
+	if err := l.svcCtx.Core.Systems.ValidateMenu(l.ctx, &input); err != nil {
+		return done(err)
+	}
 	err = l.svcCtx.Core.Menus.Create(&input)
 	return done(err)
 }

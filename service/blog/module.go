@@ -1,28 +1,45 @@
 package blog
 
 import (
-	"gorm.io/gorm"
-
+	coreconfig "sitehub/common/config"
+	settings "sitehub/common/settings/contract"
 	blogservice "sitehub/service/blog/business"
+	"sitehub/service/blog/contract"
 	mysql "sitehub/service/blog/model/mysql"
-	filecontract "sitehub/service/file/contract"
+
+	"gorm.io/gorm"
 )
 
 type Module struct {
-	Articles   blogservice.ArticleService
-	Categories blogservice.CategoryService
-	Tags       blogservice.TagService
-	Statistics blogservice.StatisticsService
-	Assets     blogservice.ArticleAssetService
+	Community       *mysql.CommunityRepository
+	Articles        blogservice.ArticleService
+	Categories      blogservice.CategoryService
+	Tags            blogservice.TagService
+	Statistics      blogservice.StatisticsService
+	Assets          blogservice.ArticleAssetService
+	StorageSettings contract.Settings
+	Uploads         blogservice.UploadService
+	PrivateStorage  contract.PrivateStorage
 }
 
-func New(db *gorm.DB, storage filecontract.PrivateStorage) *Module {
+func New(db *gorm.DB, uploadConfig coreconfig.UploadConfig, settingsStore settings.Store, storageSecret string) *Module {
+	defaults := blogservice.DefaultWebsiteStorage()
+	if uploadConfig.Local.UploadPath != "" {
+		defaults.LocalPath = uploadConfig.Local.UploadPath
+	}
+	defaults.URLPrefix = uploadConfig.URLPrefix
+	storageSettings := blogservice.NewStorageSettingsWithDefaults(settingsStore, defaults)
+	privateStorage := blogservice.NewPrivateStorage(&uploadConfig, storageSettings, storageSecret)
 	articles := mysql.NewArticleRepositoryImpl(db)
 	return &Module{
-		Articles:   blogservice.NewArticleService(articles),
-		Categories: blogservice.NewCategoryService(mysql.NewCategoryRepositoryImpl(db)),
-		Tags:       blogservice.NewTagService(mysql.NewTagRepositoryImpl(db)),
-		Statistics: blogservice.NewStatisticsService(mysql.NewStatisticsRepository(db)),
-		Assets:     blogservice.NewArticleAssetService(articles, storage),
+		Community:       mysql.NewCommunityRepository(db),
+		Articles:        blogservice.NewArticleService(articles),
+		Categories:      blogservice.NewCategoryService(mysql.NewCategoryRepositoryImpl(db)),
+		Tags:            blogservice.NewTagService(mysql.NewTagRepositoryImpl(db)),
+		Statistics:      blogservice.NewStatisticsService(mysql.NewStatisticsRepository(db)),
+		Assets:          blogservice.NewArticleAssetService(articles, privateStorage),
+		StorageSettings: storageSettings,
+		Uploads:         blogservice.NewUploadService(&uploadConfig, storageSettings),
+		PrivateStorage:  privateStorage,
 	}
 }

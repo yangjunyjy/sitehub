@@ -2,11 +2,10 @@ package logic
 
 import (
 	"context"
-	"sitehub/common/protoconv"
-	"sitehub/common/rpcx"
+	"sitehub/service/blog/api/internal/payload"
 	"sitehub/service/blog/api/internal/svc"
 	"sitehub/service/blog/api/internal/types"
-	pb "sitehub/service/blog/rpc/pb/blog"
+	"sitehub/service/blog/domain"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"google.golang.org/grpc/codes"
@@ -23,17 +22,15 @@ func NewApplyArticleActionLogic(ctx context.Context, s *svc.ServiceContext) *App
 	return &ApplyArticleActionLogic{ctx, s, logx.WithContext(ctx)}
 }
 func (l *ApplyArticleActionLogic) ApplyArticleAction(req *types.ApplyArticleActionRequest) (*types.Response, error) {
-	in := &pb.ArticleAction{}
-	if err := protoconv.Encode(req, in); err != nil {
+
+	actor, err := l.svcCtx.Require(l.ctx, "", "admin", true)
+	if err != nil {
+		return nil, err
+	}
+	var input domain.ArticleAction
+	if err := decodeRequest(req, &input); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
-	out, err := l.svcCtx.RPC.ApplyArticleAction(rpcx.Outgoing(l.ctx, l.svcCtx.Config.ServiceKey), in)
-	if err != nil {
-		return nil, err
-	}
-	value, err := protoconv.Value(out)
-	if err != nil {
-		return nil, err
-	}
-	return &types.Response{Code: 0, Message: "ok", Data: value}, nil
+	value, err := l.svcCtx.Core.Articles.ActOnArticle(ArticleActor(actor), input)
+	return ReplyAs[payload.ArticleView](value, err)
 }

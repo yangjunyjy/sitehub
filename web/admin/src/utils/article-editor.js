@@ -21,7 +21,7 @@ hljs.registerLanguage('xml', xml)
 hljs.registerLanguage('css', css)
 hljs.registerLanguage('sql', sql)
 hljs.registerLanguage('python', python)
-import { createArticleRenderer } from '../../../shared/article-markdown'
+import { createArticleRenderer } from './article-markdown.js'
 
 export const renderArticle = createArticleRenderer(Marked, DOMPurify, hljs)
 export const MAX_ARTICLE_LENGTH = 500000

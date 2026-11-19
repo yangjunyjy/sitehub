@@ -13,8 +13,8 @@ const cacheable = new Set([
   'Content',
 ])
 const home = () => ({
-  path: '/dashboard/index',
-  fullPath: '/dashboard/index',
+  path: '/dashboard',
+  fullPath: '/dashboard',
   title: '工作台',
   componentName: 'Dashboard',
   affix: true,
@@ -51,16 +51,17 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (!isWorkspaceRoute(route)) return
     const path = workspacePath(route)
     const component = route.matched.at(-1)?.components?.default
-    const previous = views.value.find((view) => view.path === path)
+    const affix = route.meta.componentPath === 'dashboard/index'
+    const previous = views.value.find((view) => view.path === path || (affix && view.affix))
     const view = {
       path,
       fullPath: route.fullPath,
       title:
-        route.path.startsWith('/dashboard/docs') && route.query.version
+        route.meta.componentPath?.startsWith('product/docs/') && route.query.version
           ? `${route.meta.title} · ${route.query.version}`
           : route.meta.title,
       componentName: component?.name || component?.__name,
-      affix: path === '/dashboard/index',
+      affix,
     }
     if (previous) Object.assign(previous, view)
     else views.value.push(view)

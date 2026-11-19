@@ -1,4 +1,4 @@
-package services
+package business
 
 import (
 	"context"
@@ -19,10 +19,10 @@ import (
 	"github.com/google/uuid"
 	_ "golang.org/x/image/webp"
 
+	filecontract "sitehub/service/blog/contract"
 	blogdomain "sitehub/service/blog/domain"
 	repository "sitehub/service/blog/model"
 	blogentity "sitehub/service/blog/model/entity"
-	filecontract "sitehub/service/file/contract"
 )
 
 type ArticleAssetService interface {

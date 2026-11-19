@@ -4,7 +4,7 @@ export const workspacePath = (value) =>
 
 export function isWorkspaceRoute(route) {
   return (
-    Boolean(route.meta?.title) &&
+    Boolean(route.meta?.title) && !route.meta?.hidden && !route.meta?.missingComponent &&
     (route.matched?.some((record) => record.name === 'dashboard' || record.path === '/dashboard') ||
       route.path.startsWith('/dashboard/'))
   )

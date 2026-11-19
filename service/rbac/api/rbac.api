@@ -136,6 +136,8 @@ type GetMenuRequest {
 }
 
 type CreateMenuRequest {
+	SystemCode  string  `json:"systemCode,optional"`
+	Permission  string  `json:"permission,optional"`
 	Name        string  `json:"name,optional"`
 	Code        string  `json:"code,optional"`
 	Type        uint64  `json:"type,optional"`
@@ -150,6 +152,8 @@ type CreateMenuRequest {
 }
 
 type UpdateMenuRequest {
+	SystemCode  string  `json:"systemCode,optional"`
+	Permission  string  `json:"permission,optional"`
 	ID          uint64  `json:"id,optional"`
 	Name        string  `json:"name,optional"`
 	Code        string  `json:"code,optional"`
@@ -166,6 +170,24 @@ type UpdateMenuRequest {
 
 type DeleteMenuRequest {
 	ID uint64 `json:"id,optional"`
+}
+
+type SystemRequest {
+	System string `form:"system,optional"`
+}
+
+type SaveSystemRequest {
+	ID          uint64 `json:"id,optional"`
+	Code        string `json:"code"`
+	Name        string `json:"name"`
+	Description string `json:"description,optional"`
+	Origin      string `json:"origin,optional"`
+	Enabled     bool   `json:"enabled"`
+	Public      bool   `json:"public"`
+}
+
+type DeleteSystemRequest {
+	ID uint64 `json:"id"`
 }
 
 type SaveEmailSettingsRequest {
@@ -287,8 +309,23 @@ service rbac-api {
 	@handler RoleMenus
 	get /v1/rbac/roles/menus (RoleMenusRequest) returns (Response)
 
+	@handler MenuList
+	get /v1/rbac/menus (SystemRequest) returns (Response)
+
 	@handler MenuTree
-	get /v1/rbac/menus returns (Response)
+	get /v1/rbac/menus/tree (SystemRequest) returns (Response)
+
+	@handler PublicMenus
+	get /v1/rbac/menus/public (SystemRequest) returns (Response)
+
+	@handler ListSystems
+	get /v1/rbac/systems returns (Response)
+
+	@handler SaveSystem
+	post /v1/rbac/systems/save (SaveSystemRequest) returns (Response)
+
+	@handler DeleteSystem
+	post /v1/rbac/systems/delete (DeleteSystemRequest) returns (Response)
 
 	@handler GetMenu
 	get /v1/rbac/menus/detail (GetMenuRequest) returns (Response)

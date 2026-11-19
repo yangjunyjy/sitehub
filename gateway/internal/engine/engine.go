@@ -193,10 +193,6 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "Invalid request path")
 		return
 	}
-	if p == "/healthz" || p == "/readyz" || p == "/metrics" || p == "/internal" || strings.HasPrefix(p, "/internal/") {
-		writeError(w, 404, "Not found")
-		return
-	}
 	host := strings.ToLower(r.Host)
 	if h, _, err := net.SplitHostPort(host); err == nil {
 		host = h

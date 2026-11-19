@@ -65,3 +65,14 @@ func TestDiffUsesNativeResources(t *testing.T) {
 		}
 	}
 }
+
+func TestDiffIncludesGlobalPluginChanges(t *testing.T) {
+	old := manifest.Document{Plugins: manifest.Plugins{"rate-limit": json.RawMessage(`{"rate":10,"burst":10}`)}}
+	next := manifest.Document{Plugins: manifest.Plugins{"rate-limit": json.RawMessage(`{"rate":20,"burst":20}`)}}
+	if got := Diff(next, old); len(got) != 1 || got[0] != "~ plugins/global" {
+		t.Fatalf("global plugin change missing from diff: %v", got)
+	}
+	if got := Diff(manifest.Document{}, old); len(got) != 1 || got[0] != "- plugins/global" {
+		t.Fatalf("global plugin removal missing from diff: %v", got)
+	}
+}

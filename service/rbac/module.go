@@ -20,6 +20,7 @@ type Module struct {
 	Users       rbacservice.SysUserService
 	Roles       rbacservice.SysRoleService
 	Menus       rbacservice.SysMenuService
+	Systems     *rbacservice.SysSystemService
 	Permissions rbacservice.SysPermissionService
 	Captcha     rbacservice.SliderCaptchaService
 	Email       *rbacservice.EmailSettingsService
@@ -39,6 +40,7 @@ func New(db *gorm.DB, cache *redis.Client, cfg *config.Config, configs settingsr
 		Members: rbacservice.NewMemberService(mysql.NewMemberRepository(db), cache, cfg),
 		Users:   rbacservice.NewSysUserService(users, mysql.NewSysLogRepositoryImpl(db), impl.NewRedisCacheRepo(cache)),
 		Roles:   rbacservice.NewSysRoleService(roles), Menus: rbacservice.NewSysMenuService(menus),
+		Systems:     rbacservice.NewSysSystemService(db),
 		Permissions: rbacservice.NewSysPermissionService(users, roles, menus),
 		Captcha:     rbacservice.NewSliderCaptchaService(cache), Email: rbacservice.NewEmailSettingsService(configs, cfg),
 		Sessions: session.NewRedisSession(cache, &session.Config{CookieName: cfg.Session.CookieName, MaxAge: cfg.Session.MaxAge, Path: cfg.Session.Path, Domain: cfg.Session.Domain, Secure: cfg.Session.Secure, HttpOnly: cfg.Session.HttpOnly}),

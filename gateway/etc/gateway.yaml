@@ -1,6 +1,7 @@
 Name: gateway
 Listen: 0.0.0.0:9080
-Manifest: gateway/etc/routes.json
+Source: file
+Manifest: routes.yaml
 Log:
   ServiceName: gateway
   Mode: console
@@ -9,16 +10,17 @@ Admin:
   Listen: 127.0.0.1:9180
   Key: ${GATEWAY_ADMIN_KEY}
   AllowedCIDRs: [127.0.0.1/32, '::1/128']
-Etcd:
+ControlPlane:
+  Provider: etcd
   Endpoints: [127.0.0.1:2379]
-  Key: /sitehub/gateway/v1/config
-Nacos:
-  Servers: [127.0.0.1:8848]
-  NamespaceID: ${NACOS_NAMESPACE_ID}
+  Prefix: /sitehub
+  Namespace: sitehub-dev
   Group: SITEHUB
-  Username: ${NACOS_USERNAME}
-  Password: ${NACOS_PASSWORD}
-  StateDir: .tmp/nacos
+  Username: ${ETCD_USERNAME}
+  Password: ${ETCD_PASSWORD}
+  DialTimeout: 5s
+  RequestTimeout: 5s
+  LeaseTTL: 15
 Discovery:
   Enabled: true
   MaxStale: 30s

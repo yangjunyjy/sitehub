@@ -1,10 +1,11 @@
 package config
 
 import (
-	"github.com/zeromicro/go-zero/rest"
-	"github.com/zeromicro/go-zero/zrpc"
 	"sitehub/common/governance"
 	"sitehub/service/rbac/api/internal/session"
+
+	"github.com/zeromicro/go-zero/rest"
+	"github.com/zeromicro/go-zero/zrpc"
 )
 
 type Config struct {

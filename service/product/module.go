@@ -4,7 +4,7 @@ import (
 	"gorm.io/gorm"
 
 	settings "sitehub/common/settings/contract"
-	filecontract "sitehub/service/file/contract"
+	filecontract "sitehub/service/blog/contract"
 	productservice "sitehub/service/product/business"
 	mysql "sitehub/service/product/model/mysql"
 )

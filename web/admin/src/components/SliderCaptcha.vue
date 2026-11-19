@@ -147,7 +147,7 @@ async function loadCaptcha() {
   } catch (error) {
     if (current !== generation || !visible.value) return
     status.value = 'error'
-    message.value = '图片加载失败，请检查网络后重试'
+    message.value = '验证码加载失败，请重新加载后重试'
   }
 }
 
@@ -346,7 +346,7 @@ onBeforeUnmount(() => {
           <span class="captcha-spinner"></span><span>正在准备拼图</span>
         </div>
         <div v-else-if="status === 'error' && !challenge" class="captcha-image-overlay">
-          <el-icon :size="28"><Warning /></el-icon><span>图片暂时无法加载</span
+          <el-icon :size="28"><Warning /></el-icon><span>验证暂时不可用</span
           ><button class="captcha-retry" type="button" @click="loadCaptcha">重新加载</button>
         </div>
         <div v-else-if="status === 'success'" class="captcha-success-badge">
@@ -419,7 +419,7 @@ onBeforeUnmount(() => {
   </el-dialog>
 </template>
 
-<style>
+<style lang="scss">
 .el-dialog.captcha-dialog {
   box-sizing: border-box;
   width: min(400px, calc(100vw - 32px));

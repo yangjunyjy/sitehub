@@ -1,6 +1,6 @@
 import request from '@/utils/request'
 import { createUUID } from '@/utils/uuid'
-import { uint64 } from '../../../shared/native-api.mjs'
+import { uint64 } from '../utils/native-api.mjs'
 export const getArticleList = (params, config = {}) => request.get('/blog/admin/articles', { params, ...config })
 export const getArticleDetail = (id, config = {}) => request.get('/blog/admin/articles/detail', { params: { id }, ...config })
 export const getArticleOptions = () => request.get('/blog/admin/articles/options')

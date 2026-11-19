@@ -3,6 +3,7 @@ package mysql
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -53,24 +54,28 @@ func (r *SysMenuRepositoryImpl) FindByCode(code string) (*rbacentity.SysMenu, er
 	return &menu, nil
 }
 
-func (r *SysMenuRepositoryImpl) FindByName(name string) (*rbacentity.SysMenu, error) {
+func (r *SysMenuRepositoryImpl) FindByName(system string, parentID uint64, name string) (*rbacentity.SysMenu, error) {
 	var menu rbacentity.SysMenu
 	if name == "" {
 		return nil, fmt.Errorf("查询名称为空")
 	}
-	err := r.db.Where("menu_name = ?", name).First(&menu).Error
+	err := r.db.Where("system_code = ? AND parent_id = ? AND menu_name = ? AND deleted = 0", system, parentID, name).First(&menu).Error
 	if err != nil {
 		return nil, err
 	}
 	return &menu, nil
 }
 
-func (r *SysMenuRepositoryImpl) FindByPath(path string) (*rbacentity.SysMenu, error) {
+func (r *SysMenuRepositoryImpl) FindByPath(system string, parentID uint64, path string) (*rbacentity.SysMenu, error) {
 	var menu rbacentity.SysMenu
 	if path == "" {
 		return nil, fmt.Errorf("查询路径为空")
 	}
-	err := r.db.Where("path = ?", path).First(&menu).Error
+	query := r.db.Where("system_code = ? AND path = ? AND deleted = 0", system, path)
+	if !strings.HasPrefix(path, "/") {
+		query = query.Where("parent_id = ?", parentID)
+	}
+	err := query.First(&menu).Error
 	if err != nil {
 		return nil, err
 	}
@@ -202,6 +207,7 @@ func (r *SysMenuRepositoryImpl) Update(menu *rbacentity.SysMenu) error {
 
 func menuEditableValues(menu *rbacentity.SysMenu) map[string]any {
 	return map[string]any{
+		"system_code": menu.SystemCode, "perms": menu.Permission,
 		"parent_id": menu.ParentID, "menu_name": menu.MenuName,
 		"menu_code": menu.MenuCode, "menu_type": menu.MenuType,
 		"component": menu.Component, "path": menu.Path, "icon": menu.Icon,

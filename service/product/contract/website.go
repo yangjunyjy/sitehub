@@ -172,7 +172,7 @@ type WebsiteRequirement struct {
 type WebsiteDocs struct {
 	Modes          []WebsiteDocMode    `json:"modes"`
 	DefaultMode    string              `json:"defaultMode"`
-	Revision       uint64              `json:"revision"`
+	Revision       uint64              `json:"revision,string"`
 	DefaultVersion string              `json:"defaultVersion"`
 	Versions       []WebsiteDocVersion `json:"versions"`
 	Title          string              `json:"title"`
@@ -181,7 +181,7 @@ type WebsiteDocs struct {
 
 type WebsiteDocVersion struct {
 	ModeID   string            `json:"modeId"`
-	Revision uint64            `json:"revision"`
+	Revision uint64            `json:"revision,string"`
 	ID       string            `json:"id"`
 	Name     string            `json:"name"`
 	Status   string            `json:"status"`
@@ -197,7 +197,7 @@ type WebsiteDocMode struct {
 	Available      bool     `json:"available"`
 	DefaultVersion string   `json:"defaultVersion"`
 	SortOrder      int      `json:"sortOrder"`
-	Revision       uint64   `json:"revision"`
+	Revision       uint64   `json:"revision,string"`
 }
 type WebsiteDocModes struct {
 	Title       string           `json:"title"`
@@ -212,15 +212,15 @@ type WebsiteDocVersionSummary struct {
 }
 
 type WebsiteDocGroup struct {
-	ID       uint64               `json:"id"`
-	Revision uint64               `json:"revision"`
+	ID       uint64               `json:"id,string"`
+	Revision uint64               `json:"revision,string"`
 	Title    string               `json:"title"`
 	Items    []WebsiteDocDocument `json:"items"`
 }
 
 type WebsiteDocDocument struct {
-	Revision  uint64    `json:"revision"`
-	GroupID   uint64    `json:"groupId"`
+	Revision  uint64    `json:"revision,string"`
+	GroupID   uint64    `json:"groupId,string"`
 	UpdatedAt time.Time `json:"updatedAt"`
 	ID        string    `json:"id"`
 	Slug      string    `json:"slug"`

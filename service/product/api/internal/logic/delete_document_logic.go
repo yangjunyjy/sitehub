@@ -2,15 +2,12 @@ package logic
 
 import (
 	"context"
-	"sitehub/common/protoconv"
-	"sitehub/common/rpcx"
-	"sitehub/service/product/api/internal/svc"
-	"sitehub/service/product/api/internal/types"
-	pb "sitehub/service/product/rpc/pb/product"
 
 	"github.com/zeromicro/go-zero/core/logx"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+
+	"sitehub/service/product/api/internal/svc"
+	"sitehub/service/product/api/internal/types"
+	"sitehub/service/product/domain"
 )
 
 type DeleteDocumentLogic struct {
@@ -22,18 +19,18 @@ type DeleteDocumentLogic struct {
 func NewDeleteDocumentLogic(ctx context.Context, s *svc.ServiceContext) *DeleteDocumentLogic {
 	return &DeleteDocumentLogic{ctx, s, logx.WithContext(ctx)}
 }
+
 func (l *DeleteDocumentLogic) DeleteDocument(req *types.DeleteDocumentRequest) (*types.Response, error) {
-	in := &pb.DocumentDeleteInput{}
-	if err := protoconv.Encode(req, in); err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid request")
-	}
-	out, err := l.svcCtx.RPC.DeleteDocument(rpcx.Outgoing(l.ctx, l.svcCtx.Config.ServiceKey), in)
+	actor, err := l.svcCtx.Require(l.ctx, "website:docs:edit", "admin", true)
 	if err != nil {
 		return nil, err
 	}
-	value, err := protoconv.Value(out)
-	if err != nil {
-		return nil, err
+	input := domain.DocumentDeleteInput{
+		Version:  req.Version,
+		ID:       req.ID,
+		Revision: req.Revision,
 	}
-	return &types.Response{Code: 0, Message: "ok", Data: value}, nil
+
+	err = l.svcCtx.Core.Content.DeleteDocument(input, actor.Id)
+	return response(struct{}{}, err)
 }

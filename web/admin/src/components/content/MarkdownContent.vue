@@ -3,7 +3,7 @@
 // Only pass HTML from the shared, sanitizing Markdown renderer.
 defineProps({ html: { type: String, default: '' } })
 </script>
-<style scoped>
+<style lang="scss" scoped>
 .article-prose {
   font-size: 14px;
   line-height: 1.9;

@@ -57,6 +57,21 @@ func HTTPContextWithProxies(cidrs []string) func(http.HandlerFunc) http.HandlerF
 	}
 }
 
+func HTTPValue(ctx context.Context, name string) string {
+	h, _ := ctx.Value(identityKey{}).(headers)
+	switch name {
+	case "authorization":
+		return h.Token
+	case "x-totp-token":
+		return h.TOTP
+	case "x-client-ip":
+		return h.IP
+	case "x-client-agent":
+		return h.Agent
+	}
+	return ""
+}
+
 func Incoming(ctx context.Context, name string) string {
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		if values := md.Get(name); len(values) > 0 {
@@ -81,6 +96,19 @@ func Outgoing(ctx context.Context, serviceKey string) context.Context {
 		h.Agent = Incoming(ctx, "x-client-agent")
 	}
 	return metadata.NewOutgoingContext(ctx, metadata.Pairs("x-service-key", serviceKey, "authorization", h.Token, "x-totp-token", h.TOTP, "x-client-ip", h.IP, "x-client-agent", h.Agent))
+}
+
+func ForwardIdentity(ctx context.Context, header http.Header) {
+	identity, _ := ctx.Value(identityKey{}).(headers)
+	if identity.Token != "" {
+		header.Set("Authorization", "Bearer "+identity.Token)
+	}
+	if identity.IP != "" {
+		header.Set("X-Real-IP", identity.IP)
+	}
+	if identity.Agent != "" {
+		header.Set("User-Agent", identity.Agent)
+	}
 }
 
 func RequireService(ctx context.Context, key string) error {

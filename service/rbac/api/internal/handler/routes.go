@@ -122,7 +122,7 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			{
 				Method:  http.MethodGet,
 				Path:    "/v1/rbac/menus",
-				Handler: MenuTreeHandler(serverCtx),
+				Handler: MenuListHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodPost,
@@ -138,6 +138,16 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodGet,
 				Path:    "/v1/rbac/menus/detail",
 				Handler: GetMenuHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/v1/rbac/menus/public",
+				Handler: PublicMenusHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/v1/rbac/menus/tree",
+				Handler: MenuTreeHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodPost,
@@ -188,6 +198,21 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodPost,
 				Path:    "/v1/rbac/settings/email",
 				Handler: SaveEmailSettingsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/v1/rbac/systems",
+				Handler: ListSystemsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/v1/rbac/systems/delete",
+				Handler: DeleteSystemHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/v1/rbac/systems/save",
+				Handler: SaveSystemHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodGet,

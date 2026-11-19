@@ -2,6 +2,7 @@ package logic
 
 import (
 	"context"
+	services "sitehub/service/rbac/business"
 	"sitehub/service/rbac/rpc/internal/svc"
 	pb "sitehub/service/rbac/rpc/pb/rbac"
 
@@ -24,5 +25,6 @@ func (l *CurrentMenusLogic) CurrentMenus(in *pb.Empty) (*pb.MenuPage, error) {
 	}
 	_ = actor
 	value, err := l.svcCtx.Core.Permissions.GetUserMenus(actor.Id)
+	value = services.AdminMenuTree(value)
 	return reply[pb.MenuPage](map[string]any{"items": value}, err)
 }

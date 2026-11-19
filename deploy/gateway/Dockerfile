@@ -6,7 +6,7 @@ COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -o /out/gateway ./gateway
 
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata && rm -rf /var/lib/apt/lists/* && useradd -u 10001 -m app && mkdir -p /app/etc /data/nacos && chown -R app:app /app /data
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates tzdata && rm -rf /var/lib/apt/lists/* && useradd -u 10001 -m app && mkdir -p /app/etc && chown -R app:app /app /data
 WORKDIR /app
 COPY --from=build /out/gateway /app/gateway
 COPY deploy/gateway/gateway.yaml /app/etc/gateway.yaml

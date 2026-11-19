@@ -30,6 +30,8 @@ type ConsumeTokenRequest struct {
 }
 
 type CreateMenuRequest struct {
+	SystemCode  string  `json:"systemCode,optional"`
+	Permission  string  `json:"permission,optional"`
 	Name        string  `json:"name,optional"`
 	Code        string  `json:"code,optional"`
 	Type        uint64  `json:"type,optional"`
@@ -65,6 +67,10 @@ type DeleteMenuRequest struct {
 
 type DeleteRoleRequest struct {
 	ID uint64 `json:"id,optional"`
+}
+
+type DeleteSystemRequest struct {
+	ID uint64 `json:"id"`
 }
 
 type DeleteUserRequest struct {
@@ -136,6 +142,16 @@ type SaveEmailSettingsRequest struct {
 	Password  *string `json:"password,optional"`
 }
 
+type SaveSystemRequest struct {
+	ID          uint64 `json:"id,optional"`
+	Code        string `json:"code"`
+	Name        string `json:"name"`
+	Description string `json:"description,optional"`
+	Origin      string `json:"origin,optional"`
+	Enabled     bool   `json:"enabled"`
+	Public      bool   `json:"public"`
+}
+
 type SendAdminCodeRequest struct {
 	Email      string `json:"email,optional"`
 	CaptchaKey string `json:"captchaKey,optional"`
@@ -146,6 +162,10 @@ type SendMemberCodeRequest struct {
 	CaptchaKey string `json:"captchaKey,optional"`
 }
 
+type SystemRequest struct {
+	System string `form:"system,optional"`
+}
+
 type UnblockIPRequest struct {
 	ID     uint64 `json:"id,optional"`
 	IP     string `json:"ip,optional"`
@@ -153,6 +173,8 @@ type UnblockIPRequest struct {
 }
 
 type UpdateMenuRequest struct {
+	SystemCode  string  `json:"systemCode,optional"`
+	Permission  string  `json:"permission,optional"`
 	ID          uint64  `json:"id,optional"`
 	Name        string  `json:"name,optional"`
 	Code        string  `json:"code,optional"`

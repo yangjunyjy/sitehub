@@ -33,8 +33,9 @@ export function useDocumentWorkspace() {
   const version = computed(() =>
     manifest.value?.versions.find((item) => item.id === versionID.value),
   )
-  const location = (path, query = {}) => ({ path, query: { version: versionID.value, ...query } })
-  const selectVersion = (id) => router.replace(location(route.path, { version: id }))
+  const location = (component, query = {}) =>
+    router.page(component, { query: { version: versionID.value, ...query } })
+  const selectVersion = (id) => router.replace({ path: route.path, query: { version: id } })
   async function mutate(action, payload) {
     await action(payload)
     await resource.load()

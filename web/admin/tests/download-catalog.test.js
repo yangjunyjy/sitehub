@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { filterDownloadCatalog, downloadGroups } from '../../shared/download-catalog.mjs'
+import { filterDownloadCatalog, downloadGroups } from '../src/utils/download-catalog.mjs'
 import { normalizePackage, filterPackages } from '../src/utils/downloads.js'
 
 const groups = [{ id: 'tools', name: '工具' }, { id: 'deploy', name: 'Deploy' }]

@@ -2,15 +2,10 @@ package logic
 
 import (
 	"context"
-	"sitehub/common/protoconv"
-	"sitehub/common/rpcx"
+	"github.com/zeromicro/go-zero/core/logx"
+	"sitehub/service/blog/api/internal/payload"
 	"sitehub/service/blog/api/internal/svc"
 	"sitehub/service/blog/api/internal/types"
-	pb "sitehub/service/blog/rpc/pb/blog"
-
-	"github.com/zeromicro/go-zero/core/logx"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type PublicArticleLogic struct {
@@ -23,17 +18,7 @@ func NewPublicArticleLogic(ctx context.Context, s *svc.ServiceContext) *PublicAr
 	return &PublicArticleLogic{ctx, s, logx.WithContext(ctx)}
 }
 func (l *PublicArticleLogic) PublicArticle(req *types.PublicArticleRequest) (*types.Response, error) {
-	in := &pb.IDRequest{}
-	if err := protoconv.Encode(req, in); err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid request")
-	}
-	out, err := l.svcCtx.RPC.PublicArticle(rpcx.Outgoing(l.ctx, l.svcCtx.Config.ServiceKey), in)
-	if err != nil {
-		return nil, err
-	}
-	value, err := protoconv.Value(out)
-	if err != nil {
-		return nil, err
-	}
-	return &types.Response{Code: 0, Message: "ok", Data: value}, nil
+
+	value, err := l.svcCtx.Core.Articles.PublicDetail(req.ID)
+	return ReplyAs[payload.ArticleView](value, err)
 }

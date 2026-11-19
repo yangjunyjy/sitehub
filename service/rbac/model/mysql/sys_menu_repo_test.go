@@ -36,16 +36,36 @@ func menuSQLStore(t *testing.T) (rbacrepository.SysMenuRepository, sqlmock.Sqlmo
 func TestMenuInsertPreservesDisabledAndHiddenValues(t *testing.T) {
 	repo, mock := menuSQLStore(t)
 	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO `sys_menu` (`component`,`create_by`,`create_time`,`icon`,`is_visible`,`menu_code`,`menu_name`,`menu_type`,`parent_id`,`path`,`perms`,`remark`,`sort`,`status`,`update_by`,`update_time`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")).
-		WithArgs("", uint64(7), sqlmock.AnyArg(), "", false, "menu:unique", "directory", 1, 0, "", "", "", 0, 0, uint64(7), sqlmock.AnyArg()).
+	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO `sys_menu` (`component`,`create_by`,`create_time`,`icon`,`is_visible`,`menu_code`,`menu_name`,`menu_type`,`parent_id`,`path`,`perms`,`remark`,`sort`,`status`,`system_code`,`update_by`,`update_time`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")).
+		WithArgs("", uint64(7), sqlmock.AnyArg(), "", false, "menu:unique", "directory", 1, 0, "", "", "", 0, 0, "admin", uint64(7), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(19, 1))
 	mock.ExpectCommit()
-	menu := &rbacentity.SysMenu{BaseModel: rbacentity.BaseModel{CreateBy: 7}, MenuName: "directory", MenuCode: "menu:unique", MenuType: 1, Status: 0, IsVisible: false}
+	menu := &rbacentity.SysMenu{BaseModel: rbacentity.BaseModel{CreateBy: 7}, SystemCode: "admin", MenuName: "directory", MenuCode: "menu:unique", MenuType: 1, Status: 0, IsVisible: false}
 	if err := repo.Create(menu); err != nil {
 		t.Fatal(err)
 	}
 	if menu.ID != 19 || menu.CreateTime == nil {
 		t.Fatalf("insert result not returned: %+v", menu)
+	}
+}
+
+func TestMenuNamesAndPathsUseTheirSystemNamespace(t *testing.T) {
+	repo, mock := menuSQLStore(t)
+	row := func() *sqlmock.Rows { return sqlmock.NewRows([]string{"id"}).AddRow(5) }
+	mock.ExpectQuery("system_code = .* AND parent_id = .* AND menu_name = .* AND deleted = 0").
+		WithArgs("blog", 0, "首页", 1).WillReturnRows(row())
+	if _, err := repo.FindByName("blog", 0, "首页"); err != nil {
+		t.Fatal(err)
+	}
+	mock.ExpectQuery("system_code = .* AND path = .* AND deleted = 0").
+		WithArgs("product", "/", 1).WillReturnRows(row())
+	if _, err := repo.FindByPath("product", 9, "/"); err != nil {
+		t.Fatal(err)
+	}
+	mock.ExpectQuery("system_code = .* AND path = .* AND deleted = 0.*parent_id = ").
+		WithArgs("admin", "articles", 9, 1).WillReturnRows(row())
+	if _, err := repo.FindByPath("admin", 9, "articles"); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -57,10 +77,9 @@ func TestMenuLockedUpdatePreservesUnsubmittedColumnsAndRollsBack(t *testing.T) {
 			mock.ExpectBegin()
 			mock.ExpectQuery("SELECT .* FROM `sys_menu` .*FOR UPDATE").WithArgs(uint64(9), 1).
 				WillReturnRows(sqlmock.NewRows([]string{"id", "menu_code", "create_by", "perms"}).AddRow(9, "existing", 7, "existing:permission"))
-			// Exact column list guards against Save/upsert, metadata erasure, and
-			// clearing the separate perms column while changing a menu's name.
-			write := mock.ExpectExec(regexp.QuoteMeta("UPDATE `sys_menu` SET `component`=?,`icon`=?,`is_visible`=?,`menu_code`=?,`menu_name`=?,`menu_type`=?,`parent_id`=?,`path`=?,`remark`=?,`sort`=?,`status`=?,`update_by`=?,`update_time`=? WHERE id = ?")).
-				WithArgs("", "", false, "existing", "renamed", 1, 0, "", "", 0, 0, uint64(8), sqlmock.AnyArg(), uint64(9))
+			// System and permission are editable; creation metadata remains intact.
+			write := mock.ExpectExec(regexp.QuoteMeta("UPDATE `sys_menu` SET `component`=?,`icon`=?,`is_visible`=?,`menu_code`=?,`menu_name`=?,`menu_type`=?,`parent_id`=?,`path`=?,`perms`=?,`remark`=?,`sort`=?,`status`=?,`system_code`=?,`update_by`=?,`update_time`=? WHERE id = ?")).
+				WithArgs("", "", false, "existing", "renamed", 1, 0, "", "updated:permission", "", 0, 0, "admin", uint64(8), sqlmock.AnyArg(), uint64(9))
 			if fail {
 				write.WillReturnError(cause)
 				mock.ExpectRollback()
@@ -73,7 +92,7 @@ func TestMenuLockedUpdatePreservesUnsubmittedColumnsAndRollsBack(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				return tx.Update(&rbacentity.SysMenu{BaseModel: rbacentity.BaseModel{ID: 9, UpdateBy: 8}, MenuName: "renamed", MenuType: 1, MenuCode: row.MenuCode})
+				return tx.Update(&rbacentity.SysMenu{BaseModel: rbacentity.BaseModel{ID: 9, UpdateBy: 8}, SystemCode: "admin", Permission: "updated:permission", MenuName: "renamed", MenuType: 1, MenuCode: row.MenuCode})
 			})
 			if fail && !errors.Is(err, cause) {
 				t.Fatalf("driver cause lost: %v", err)

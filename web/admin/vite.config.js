@@ -1,13 +1,13 @@
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
-import { gatewayProxy } from '../server/dev-proxy.mjs'
+import { gatewayProxy } from './server/dev-proxy.mjs'
 
 export default defineConfig(({ mode }) => {
   const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env }
   return {
     plugins: [vue()],
     resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
-    server: { host: '127.0.0.1', port: 4311, strictPort: true, proxy: gatewayProxy('admin', env) },
+    server: { host: '127.0.0.1', port: 4311, strictPort: true, proxy: gatewayProxy(env) },
   }
 })

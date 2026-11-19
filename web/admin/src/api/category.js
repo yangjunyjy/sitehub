@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import { uint64 } from '../../../shared/native-api.mjs'
+import { uint64 } from '../utils/native-api.mjs'
 export const getCategoryList = (params, config = {}) => request.get('/blog/categories', { params: { page: 1, pageSize: 100, ...params }, ...config })
 export const getCategoryTree = () => request.get('/blog/categories/tree').then(r => ({ ...r, data: r.data.items || [] }))
 export const getCategoryDetail = id => request.get('/blog/categories/detail', { params: { id } })

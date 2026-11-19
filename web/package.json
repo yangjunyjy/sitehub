@@ -4,23 +4,23 @@
   "type": "module",
   "workspaces": [
     "admin",
-    "site"
+    "product",
+    "blog"
   ],
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   },
   "scripts": {
     "dev:admin": "npm run dev -w @sitehub/admin",
-    "dev:site": "npm run dev -w @sitehub/site",
+    "dev:product": "npm run dev -w @sitehub/product",
+    "dev:blog": "npm run dev -w @sitehub/blog",
+    "start:admin": "npm run start -w @sitehub/admin",
+    "start:product": "npm run start -w @sitehub/product",
+    "start:blog": "npm run start -w @sitehub/blog",
     "build": "npm run build --workspaces",
-    "start:admin": "npm start -w @sitehub/admin",
-    "start:site": "npm start -w @sitehub/site",
-    "test": "node --test server/*.test.mjs shared/*.test.mjs && npm test --workspaces",
-    "test:browser": "node tests/native-browser.mjs"
-  },
-  "dependencies": {
-    "sirv": "^3.0.2",
-    "json-bigint": "^1.0.0"
+    "test": "npm test --workspaces",
+    "test:browser": "node tests/native-browser.mjs",
+    "test:captcha": "node tests/captcha-browser.mjs"
   },
   "devDependencies": {
     "playwright": "1.65.0"

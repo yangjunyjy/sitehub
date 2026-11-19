@@ -7,12 +7,15 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 )
 
 type browserSessionConfig struct {
-	Audience string   `json:"audience"`
-	Origins  []string `json:"origins"`
+	Audience         string   `json:"audience"`
+	CookieName       string   `json:"cookie_name"`
+	Origins          []string `json:"origins"`
+	OriginCheckPaths []string `json:"origin_check_paths"`
 }
 
 func browserSession(raw json.RawMessage) (Middleware, error) {
@@ -20,8 +23,32 @@ func browserSession(raw json.RawMessage) (Middleware, error) {
 	if err := decode(raw, &config); err != nil {
 		return nil, err
 	}
-	if config.Audience != "admin" && config.Audience != "site" {
-		return nil, fmt.Errorf("audience must be admin or site")
+	if config.Audience != "" && config.Audience != "admin" && config.Audience != "site" {
+		return nil, fmt.Errorf("audience must be admin or site when provided")
+	}
+	wanted := config.CookieName
+	if wanted == "" {
+		if config.Audience == "" {
+			return nil, fmt.Errorf("cookie_name or audience is required")
+		}
+		wanted = "sitehub_" + config.Audience + "_session"
+	}
+	if err := (&http.Cookie{Name: wanted}).Valid(); err != nil {
+		return nil, fmt.Errorf("cookie_name must be a valid HTTP cookie name")
+	}
+	if config.OriginCheckPaths == nil {
+		// Preserve the existing browser login protection when upgrading older
+		// configurations. An explicit empty list opts out of these path checks,
+		// while cookie-authenticated write requests still require an origin.
+		config.OriginCheckPaths = []string{"/v1/rbac/auth/login", "/v1/rbac/auth/register", "/v1/rbac/members/login", "/v1/rbac/members/register"}
+	}
+	originCheckPaths := make(map[string]bool, len(config.OriginCheckPaths))
+	for _, value := range config.OriginCheckPaths {
+		clean := path.Clean(value)
+		if !strings.HasPrefix(value, "/") || strings.ContainsAny(value, "?#%\\* ") || strings.IndexFunc(value, func(c rune) bool { return c < 32 || c == 127 }) >= 0 || (clean != value && clean+"/" != value) || originCheckPaths[value] {
+			return nil, fmt.Errorf("origin_check_paths must contain unique clean absolute paths without query strings, fragments or wildcards")
+		}
+		originCheckPaths[value] = true
 	}
 	if len(config.Origins) == 0 {
 		return nil, fmt.Errorf("origins must not be empty")
@@ -34,7 +61,6 @@ func browserSession(raw json.RawMessage) (Middleware, error) {
 		}
 		origins[origin] = true
 	}
-	wanted := "sitehub_" + config.Audience + "_session"
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if len(r.Header.Values("Authorization")) > 1 || len(r.Header.Values("Cookie")) > 1 || len(r.Header.Values("Origin")) > 1 {
@@ -58,7 +84,7 @@ func browserSession(raw json.RawMessage) (Middleware, error) {
 				return
 			}
 			unsafe := r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions
-			login := r.URL.Path == "/v1/rbac/auth/login" || r.URL.Path == "/v1/rbac/auth/register" || r.URL.Path == "/v1/rbac/members/login" || r.URL.Path == "/v1/rbac/members/register"
+			login := originCheckPaths[r.URL.Path]
 			origin := r.Header.Get("Origin")
 			if unsafe && ((found && authorization == "") || (login && origin != "")) && !origins[origin] {
 				respond(w, r, http.StatusForbidden, "Cross-origin submission rejected")

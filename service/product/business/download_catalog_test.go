@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	fileservice "sitehub/service/file/business"
+	fileservice "sitehub/service/blog/business"
 	productcontract "sitehub/service/product/contract"
 )
 

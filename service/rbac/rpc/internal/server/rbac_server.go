@@ -188,9 +188,29 @@ func (s *RbacServer) RoleMenus(ctx context.Context, in *rbac.IDRequest) (*rbac.M
 	return l.RoleMenus(in)
 }
 
-func (s *RbacServer) MenuTree(ctx context.Context, in *rbac.Empty) (*rbac.MenuPage, error) {
+func (s *RbacServer) MenuTree(ctx context.Context, in *rbac.SystemRequest) (*rbac.MenuPage, error) {
 	l := logic.NewMenuTreeLogic(ctx, s.svcCtx)
 	return l.MenuTree(in)
+}
+
+func (s *RbacServer) PublicMenus(ctx context.Context, in *rbac.SystemRequest) (*rbac.PublicMenuPage, error) {
+	l := logic.NewPublicMenusLogic(ctx, s.svcCtx)
+	return l.PublicMenus(in)
+}
+
+func (s *RbacServer) ListSystems(ctx context.Context, in *rbac.Empty) (*rbac.SystemPage, error) {
+	l := logic.NewListSystemsLogic(ctx, s.svcCtx)
+	return l.ListSystems(in)
+}
+
+func (s *RbacServer) SaveSystem(ctx context.Context, in *rbac.SystemEntry) (*rbac.Empty, error) {
+	l := logic.NewSaveSystemLogic(ctx, s.svcCtx)
+	return l.SaveSystem(in)
+}
+
+func (s *RbacServer) DeleteSystem(ctx context.Context, in *rbac.IDRequest) (*rbac.Empty, error) {
+	l := logic.NewDeleteSystemLogic(ctx, s.svcCtx)
+	return l.DeleteSystem(in)
 }
 
 func (s *RbacServer) GetMenu(ctx context.Context, in *rbac.IDRequest) (*rbac.EntitySysMenu, error) {

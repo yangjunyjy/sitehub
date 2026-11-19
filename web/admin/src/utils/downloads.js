@@ -70,12 +70,6 @@ export function packageError(item) {
   return ''
 }
 
-export function websiteURL(path = '/') {
-  const configured = import.meta.env?.VITE_WEBSITE_URL
-  const base =
-    configured ||
-    `${window.location.protocol}//${window.location.hostname}:4310`
-  return new URL(path, base).href
-}
-import { normalizeDownloadURL, validDownloadName } from '../../../shared/downloads.mjs'
-export { isLocalReleaseURL, normalizeDownloadURL } from '../../../shared/downloads.mjs'
+export { websiteURL } from './website.js'
+import { normalizeDownloadURL, validDownloadName } from './download-links.mjs'
+export { isLocalReleaseURL, normalizeDownloadURL } from './download-links.mjs'

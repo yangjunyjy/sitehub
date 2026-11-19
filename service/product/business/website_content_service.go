@@ -12,7 +12,7 @@ import (
 	errorx "sitehub/common/errorx"
 	settingsservice "sitehub/common/settings/contract"
 	settingsmodel "sitehub/common/settings/model"
-	filecontract "sitehub/service/file/contract"
+	filecontract "sitehub/service/blog/contract"
 	productcontract "sitehub/service/product/contract"
 	productdomain "sitehub/service/product/domain"
 	productrepository "sitehub/service/product/model"

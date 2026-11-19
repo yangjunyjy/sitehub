@@ -71,6 +71,10 @@ func (c *Client) Publish(ctx context.Context, desired manifest.Document, expecte
 func Diff(desired, previous manifest.Document) []string {
 	flatten := func(d manifest.Document) map[string]string {
 		out := map[string]string{}
+		if len(d.Plugins) > 0 {
+			b, _ := json.Marshal(d.Plugins)
+			out["plugins/global"] = string(b)
+		}
 		for k, v := range d.Upstreams {
 			b, _ := json.Marshal(v)
 			out["upstream/"+k] = string(b)

@@ -5,6 +5,7 @@
 /uploads/
 /logs/
 /data/
+/output/cloud/
 __pycache__/
 *.py[cod]
 *.local.yaml
@@ -12,6 +13,7 @@ __pycache__/
 *.local.json
 *.local.toml
 *.exe
+/gateway/gateway
 *.test
 *.out
 *.db
@@ -50,3 +52,6 @@ Thumbs.db
 *.swo
 *.bak
 /docs
+/deploy
+/output
+*.tmp

@@ -7,31 +7,34 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"sitehub/common/controlplane"
+	"sitehub/common/registry"
+	"sitehub/common/runtimeconfig"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"github.com/zeromicro/go-zero/core/proc"
 	"github.com/zeromicro/go-zero/rest"
 	"google.golang.org/grpc/resolver"
-	registry "sitehub/common/registry/nacos"
-	"sitehub/common/runtimeconfig"
 )
 
 type contextKey struct{}
 type Runtime struct {
-	Name       string
-	Config     Config
-	Traffic    *runtimeconfig.Manager
-	naming     *registry.Client
-	resolver   *registry.Builder
-	probe      func(context.Context) error
-	ready      atomic.Bool
-	mu         sync.Mutex
-	closing    bool
-	deregister func() error
-	management *http.Server
+	Name         string
+	Config       Config
+	Traffic      *runtimeconfig.Manager
+	naming       *registry.Proxy
+	resolver     *registry.Builder
+	probe        func(context.Context) error
+	ready        atomic.Bool
+	mu           sync.Mutex
+	closing      bool
+	registration registry.Registration
+	management   *http.Server
 }
 
 func New(name string, c Config, traffic *runtimeconfig.Manager) (*Runtime, error) {
@@ -40,12 +43,12 @@ func New(name string, c Config, traffic *runtimeconfig.Manager) (*Runtime, error
 		if c.Registry.MaxStale < time.Second || c.Registry.StartupTimeout < time.Second {
 			return nil, fmt.Errorf("registry timeouts must be at least 1s")
 		}
-		naming, err := registry.New(name, c.Nacos)
+		naming, err := controlplane.NewRegistry(c.ControlPlane)
 		if err != nil {
 			return nil, err
 		}
 		r.naming = naming
-		r.resolver = &registry.Builder{Naming: naming, Group: c.Nacos.Group, MaxStale: c.Registry.MaxStale}
+		r.resolver = &registry.Builder{Naming: naming, MaxStale: c.Registry.MaxStale}
 		resolver.Register(r.resolver)
 	}
 	if c.Management.ListenOn != "" {
@@ -73,7 +76,9 @@ func New(name string, c Config, traffic *runtimeconfig.Manager) (*Runtime, error
 func WithContext(ctx context.Context, r *Runtime) context.Context {
 	return context.WithValue(ctx, contextKey{}, r)
 }
-func FromContext(ctx context.Context) *Runtime { return ctx.Value(contextKey{}).(*Runtime) }
+func FromContext(ctx context.Context) *Runtime {
+	return ctx.Value(contextKey{}).(*Runtime)
+}
 func (r *Runtime) status(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(r.Traffic.Status())
@@ -115,9 +120,21 @@ func (r *Runtime) AttachHTTP(server *rest.Server) {
 			}
 		}
 	})
-	server.AddRoute(rest.Route{Method: http.MethodGet, Path: "/healthz", Handler: r.health})
-	server.AddRoute(rest.Route{Method: http.MethodGet, Path: "/readyz", Handler: r.readiness})
-	server.AddRoute(rest.Route{Method: http.MethodGet, Path: "/internal/governance", Handler: r.status})
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/healthz",
+		Handler: r.health,
+	})
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/readyz",
+		Handler: r.readiness,
+	})
+	server.AddRoute(rest.Route{
+		Method:  http.MethodGet,
+		Path:    "/internal/governance",
+		Handler: r.status,
+	})
 }
 
 // Serve waits for the actual socket before registration. Dependency construction
@@ -165,9 +182,13 @@ func (r *Runtime) Serve(ctx context.Context, address string, start func()) error
 				r.mu.Unlock()
 				return fmt.Errorf("service is shutting down")
 			}
-			deregister, err := r.naming.Register(r.Name, ip, port)
+			protocol := "http"
+			if strings.HasSuffix(r.Name, "-rpc") {
+				protocol = "grpc"
+			}
+			registration, err := r.naming.Register(ctx, registry.Instance{Service: r.Name, IP: ip, Port: port, Weight: 100, Enabled: true, Healthy: true, Metadata: map[string]string{"protocol": protocol}})
 			if err == nil {
-				r.deregister = deregister
+				r.registration = registration
 				r.ready.Store(true)
 			}
 			r.mu.Unlock()
@@ -185,11 +206,11 @@ func (r *Runtime) Withdraw() {
 	defer r.mu.Unlock()
 	r.closing = true
 	r.ready.Store(false)
-	if r.deregister != nil {
-		if err := r.deregister(); err != nil {
+	if r.registration != nil {
+		if err := r.registration.Close(); err != nil {
 			logx.Error(err)
 		}
-		r.deregister = nil
+		r.registration = nil
 	}
 }
 func (r *Runtime) Close() {
@@ -201,6 +222,6 @@ func (r *Runtime) Close() {
 	}
 	if r.naming != nil {
 		r.resolver.Close()
-		r.naming.CloseClient()
+		_ = r.naming.Close()
 	}
 }

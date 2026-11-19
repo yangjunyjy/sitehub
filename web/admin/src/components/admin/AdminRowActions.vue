@@ -1,7 +1,7 @@
 <template>
   <div class="admin-row-actions" role="group" aria-label="行操作"><slot /></div>
 </template>
-<style scoped>
+<style lang="scss" scoped>
 .admin-row-actions {
   display: inline-flex;
   align-items: center;

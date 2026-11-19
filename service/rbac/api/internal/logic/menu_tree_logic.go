@@ -20,8 +20,8 @@ type MenuTreeLogic struct {
 func NewMenuTreeLogic(ctx context.Context, s *svc.ServiceContext) *MenuTreeLogic {
 	return &MenuTreeLogic{ctx, s, logx.WithContext(ctx)}
 }
-func (l *MenuTreeLogic) MenuTree() (*types.Response, error) {
-	in := &pb.Empty{}
+func (l *MenuTreeLogic) MenuTree(req *types.SystemRequest) (*types.Response, error) {
+	in := &pb.SystemRequest{System: req.System}
 	out, err := l.svcCtx.RPC.MenuTree(rpcx.Outgoing(l.ctx, l.svcCtx.Config.ServiceKey), in)
 	if err != nil {
 		return nil, err

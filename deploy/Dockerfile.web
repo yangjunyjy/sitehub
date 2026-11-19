@@ -1,24 +1,24 @@
 FROM node:22-alpine AS build
-ARG APP=site
+ARG APP=product
 ARG VITE_WEBSITE_URL
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 COPY web/admin/package.json ./admin/package.json
-COPY web/site/package.json ./site/package.json
+COPY web/blog/package.json ./blog/package.json
+COPY web/product/package.json ./product/package.json
 RUN npm ci --ignore-scripts
 COPY web/ ./
 RUN VITE_WEBSITE_URL=${VITE_WEBSITE_URL} npm run build --workspace=@sitehub/${APP}
 
+COPY scripts/build-frontend-runtime.mjs /src/scripts/build-frontend-runtime.mjs
+RUN node /src/scripts/build-frontend-runtime.mjs ${APP} /out/server/start.mjs
+
 FROM node:22-alpine
-ARG APP=site
+ARG APP=product
 WORKDIR /app/web
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000
-ENV FRONTEND_APP=${APP}
-COPY --from=build /src/web/package.json /src/web/package-lock.json ./
-RUN npm ci --omit=dev --ignore-scripts --workspaces=false && npm cache clean --force
-COPY --from=build /src/web/server ./server
-COPY --from=build /src/web/${APP}/dist ./${APP}/dist
+COPY --from=build /out/server ./server
+COPY --from=build /src/web/${APP}/dist ./dist
 USER node
 EXPOSE 3000
 ENTRYPOINT ["node", "server/start.mjs"]
-CMD []

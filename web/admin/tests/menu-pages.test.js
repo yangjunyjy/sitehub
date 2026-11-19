@@ -1,133 +1,220 @@
-import test from 'node:test'
-import assert from 'node:assert/strict'
-import { filterMenuTree, navigationMenus, normalizeComponent } from '../src/router/pages.js'
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readdirSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { relative, join } from "node:path";
+import { parse } from "vue/compiler-sfc";
+import { createMemoryHistory } from "vue-router";
+import {
+  componentKey,
+  filterMenuTree,
+  navigationMenus,
+} from "../src/router/pages.js";
+import { createAdminRouter } from "../src/router/runtime.js";
 
-test('legacy system directory retains supported RBAC pages and removes retired pages', () => {
+const views = fileURLToPath(new URL("../src/views/", import.meta.url));
+const modules = {};
+function discover(directory) {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const file = join(directory, entry.name);
+    if (entry.isDirectory()) discover(file);
+    else if (entry.name === "index.vue") {
+      const path = relative(views, file).replaceAll("\\", "/");
+      const source = readFileSync(file, "utf8");
+      const { descriptor, errors } = parse(source, { filename: file });
+      assert.deepEqual(errors, [], path);
+      assert(descriptor.template, path);
+      modules[`../views/${path}`] = { name: path, template: "<div />" };
+    }
+  }
+}
+discover(views);
+
+function menu(id, path, component, extra = {}) {
+  return {
+    id,
+    path,
+    component,
+    title: `页面 ${id}`,
+    type: "menu",
+    status: 1,
+    isVisible: true,
+    ...extra,
+  };
+}
+function setup(menus = []) {
+  const values = new Map([["token", "session"]]);
+  const storage = {
+    getItem: (key) => values.get(key),
+    removeItem: (key) => values.delete(key),
+  };
+  const rbac = {
+    menusLoaded: false,
+    currentMenus: [],
+    currentUser: { roleIds: [2] },
+    permissions: [],
+    async loadAllDataFromBackend() {
+      this.currentMenus = menus;
+      this.menusLoaded = true;
+    },
+    hasPermission(permission) {
+      return this.permissions.includes(permission);
+    },
+    resetAllData() {
+      this.currentMenus = [];
+      this.menusLoaded = false;
+    },
+  };
+  const router = createAdminRouter({
+    history: createMemoryHistory(),
+    modules,
+    layout: { template: "<router-view />" },
+    store: () => rbac,
+    storage,
+  });
+  return { router, rbac, values };
+}
+
+test("page discovery uses actual index.vue files and exact component paths", () => {
+  assert(Object.keys(modules).length >= 20);
+  for (const path of [
+    "system/users/index",
+    "blog/articles/create/index",
+    "blog/articles/editor/index",
+    "product/docs/groups/index",
+    "product/download-settings/index",
+  ])
+    assert(modules[componentKey(path)], path);
+  for (const old of [
+    "views/users/UserList",
+    "system/users/index.vue",
+    "/src/views/system/users/index",
+    "../login/index",
+  ])
+    assert.equal(componentKey(old), "");
+});
+
+test("first refresh waits for menus, installs them under layout and resolves the original URL", async () => {
+  const { router, rbac } = setup([
+    menu(7, "/custom/people", "system/users/index"),
+  ]);
+  let finish;
+  rbac.loadAllDataFromBackend = () =>
+    new Promise((resolve) => {
+      finish = () => {
+        rbac.currentMenus = [menu(7, "/custom/people", "system/users/index")];
+        rbac.menusLoaded = true;
+        resolve();
+      };
+    });
+  const navigation = router.push("/custom/people?search=alice");
+  while (!finish) await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(router.resolve("/custom/people").name, "NotFound");
+  finish();
+  await navigation;
+  assert.equal(router.currentRoute.value.name, "menu-7");
+  assert.equal(
+    router.currentRoute.value.fullPath,
+    "/custom/people?search=alice",
+  );
+  assert.equal(router.currentRoute.value.matched[0].name, "dashboard");
+  assert.equal(
+    router.currentRoute.value.matched.at(-1).components.default,
+    modules[componentKey("system/users/index")],
+  );
+});
+
+test("unknown components and unknown URLs show 404 inside layout without aliasing", async () => {
+  const { router } = setup([menu(9, "/broken", "views/users/UserList")]);
+  await router.push("/broken");
+  assert.equal(router.currentRoute.value.meta.missingComponent, true);
+  assert.equal(
+    router.currentRoute.value.matched.at(-1).components.default,
+    modules[componentKey("not-found/index")],
+  );
+  await router.push("/no-such-page");
+  assert.equal(router.currentRoute.value.name, "NotFound");
+  assert.equal(router.currentRoute.value.matched[0].name, "dashboard");
+});
+
+test("menu edits replace routes; revocation returns 403; logout removes all menu routes", async () => {
+  const { router, rbac, values } = setup([
+    menu(3, "/people", "system/users/index", {
+      permission: "system:user:list",
+    }),
+  ]);
+  await router.push("/people");
+  assert.equal(router.currentRoute.value.name, "Forbidden");
+  assert.equal(router.currentRoute.value.matched[0].name, "dashboard");
+  rbac.permissions = ["system:user:list"];
+  await router.push("/people");
+  assert.equal(router.currentRoute.value.name, "menu-3");
+  rbac.currentMenus = [menu(3, "/renamed", "system/users/index")];
+  await router.push("/renamed");
+  assert.equal(router.currentRoute.value.name, "menu-3");
+  assert.equal(router.resolve("/people").name, "NotFound");
+  values.delete("token");
+  await router.push("/renamed?again=1");
+  assert.equal(router.currentRoute.value.name, "Login");
+  assert.equal(router.hasRoute("menu-3"), false);
+});
+
+test("failed menu loading cannot retain stale navigation or frontend fallback pages", async () => {
+  const { router, rbac, values } = setup();
+  rbac.loadAllDataFromBackend = async () => {
+    throw new Error("offline");
+  };
+  await router.push("/dashboard/system/users");
+  assert.equal(router.currentRoute.value.name, "Login");
+  assert.equal(values.has("token"), false);
+  assert.equal(router.hasRoute("menu-3"), false);
+});
+
+test("workspace links follow renamed home, profile and parametrized editor records", async () => {
+  const { router } = setup([
+    menu(1, "/studio", "dashboard/index"),
+    menu(2, "/account", "profile/index"),
+    menu(3, "/stories/:id/edit", "blog/articles/editor/index", { isVisible: false }),
+  ]);
+  await router.push("/");
+  assert.equal(router.currentRoute.value.path, "/studio");
+  await router.push(router.page("profile/index"));
+  assert.equal(router.currentRoute.value.path, "/account");
+  await router.push(router.page("blog/articles/editor/index", {
+    params: { id: 7 }, query: { from: "drafts" },
+  }));
+  assert.equal(router.currentRoute.value.fullPath, "/stories/7/edit?from=drafts");
+  await router.push(router.page("system/users/index"));
+  assert.equal(router.currentRoute.value.name, "Forbidden");
+});
+
+test("navigation preserves only backend hierarchy, paths, order and visibility", () => {
   const source = [
     {
       id: 1,
-      type: 'directory',
-      path: '/system',
-      status: 1,
+      title: "自定义目录",
+      type: "directory",
+      path: "/custom",
       isVisible: true,
       children: [
-        { id: 2, type: 'menu', component: 'views/users/UserList', isVisible: true, status: 1 },
-        { id: 3, type: 'menu', component: 'views/system/index', isVisible: true, status: 1 },
-        { id: 4, type: 'menu', component: 'views/audit/ArticleAudit', isVisible: true, status: 1 },
-      ],
-    },
-  ]
-  const before = structuredClone(source)
-  const result = filterMenuTree(source, true)
-  assert.deepEqual(
-    result[0].children.map((menu) => menu.id),
-    [2],
-  )
-  assert.deepEqual(source, before)
-})
-
-test('persisted navigation keeps edited names, paths, hierarchy and visibility', () => {
-  const source = [
-    {
-      id: 55,
-      title: '站点管理',
-      type: 'directory',
-      path: '/site',
-      isVisible: true,
-      children: [
-        {
-          id: 43,
-          title: '自定义官网',
-          type: 'menu',
-          component: 'views/website/ContentCenter',
-          path: 'website',
+        menu(2, "people", "system/users/index", {
+          title: "自定义用户",
           sort: 2,
-          isVisible: true,
-        },
-        {
-          id: 60,
-          title: '下载管理',
-          type: 'menu',
-          component: 'views/website/DownloadCenter',
-          path: '/site/downloads',
-          sort: 1,
-          isVisible: true,
-        },
-        {
-          id: 61,
-          title: '隐藏下载',
-          type: 'menu',
-          component: 'views/website/DownloadCenter',
-          path: '/hidden',
-          isVisible: false,
-        },
-        {
-          id: 62,
-          title: '邮件服务',
-          type: 'menu',
-          component: 'views/settings/EmailSettings',
-          path: '/custom/email',
-          isVisible: true,
-        },
+        }),
+        menu(3, "/downloads", "product/downloads/index", { sort: 1 }),
+        menu(4, "/editor", "blog/articles/create/index", { isVisible: false }),
+        menu(5, "/email", "admin/settings/email/index"),
+        { id: 6, type: "button", permission: "system:user:create", status: 1 },
       ],
     },
-  ]
-  const before = structuredClone(source)
-  const result = navigationMenus(source)
+  ];
+  const before = structuredClone(source);
   assert.deepEqual(
-    result[0].children.map((menu) => [menu.title, menu.path]),
-    [
-      ['下载管理', '/site/downloads'],
-      ['自定义官网', '/site/website'],
-    ],
-  )
-  assert.equal(navigationMenus(source, true)[0].children.length, 3)
-  assert.deepEqual(source, before)
-  assert.equal(normalizeComponent('views/docs/DocumentVersions'), 'views/docs/DocumentVersions.vue')
-})
-
-test('hidden editors and buttons remain routable/authorized but stay out of sidebar', () => {
-  const menus = [
-    { id: 1, type: 'menu', component: 'articles/ArticleEditor.vue', isVisible: false, status: 1 },
-    {
-      id: 2,
-      type: 'menu',
-      component: 'views/articles/ArticleList',
-      isVisible: true,
-      status: 1,
-      children: [
-        {
-          id: 3,
-          type: 'button',
-          permission: 'content:article:create',
-          status: 1,
-          isVisible: false,
-        },
-      ],
-    },
-    { id: 4, type: 'menu', component: 'views/tags/TagList', status: 0, isVisible: true },
-  ]
-  assert.equal(filterMenuTree(menus).length, 2)
-  assert.equal(filterMenuTree(menus)[1].children[0].permission, 'content:article:create')
-  assert.deepEqual(
-    filterMenuTree(menus, true).map((menu) => menu.id),
-    [2],
-  )
-  assert.deepEqual(filterMenuTree(menus, true)[0].children, [])
-})
-
-test('unknown components and empty directories do not create broken navigation', () => {
-  assert.deepEqual(
-    filterMenuTree([
-      { type: 'directory', children: [] },
-      { type: 'menu', component: null },
-      { type: 'menu', component: 'views/host/Host' },
-      { type: 'menu', component: 'views/statistics/Overview' },
-    ]),
-    [],
-  )
-  assert.equal(
-    normalizeComponent('/src/views/articles/ArticleList'),
-    'views/articles/ArticleList.vue',
-  )
-})
+    navigationMenus(source)[0].children.map((item) => item.path),
+    ["/downloads", "/custom/people"],
+  );
+  assert.equal(navigationMenus(source, true)[0].children.length, 3);
+  assert.equal(filterMenuTree(source)[0].children.length, 5);
+  assert.deepEqual(source, before);
+  assert.deepEqual(navigationMenus([]), []);
+});

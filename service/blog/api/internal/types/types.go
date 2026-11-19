@@ -48,6 +48,11 @@ type CategoryStatsRequest struct {
 	Limit int64 `form:"limit,optional"`
 }
 
+type CommunityPage struct {
+	Page     int64 `form:"page,optional"`
+	PageSize int64 `form:"pageSize,optional"`
+}
+
 type CreateCategoryRequest struct {
 	ID          uint64  `json:"id,optional"`
 	Name        string  `json:"name,optional"`
@@ -76,6 +81,13 @@ type EditorArticleRequest struct {
 	ID uint64 `form:"id,optional"`
 }
 
+type FriendApplication struct {
+	Name        string `json:"name"`
+	URL         string `json:"url"`
+	Description string `json:"description"`
+	Avatar      string `json:"avatar,optional"`
+}
+
 type GetArticleHistoryRequest struct {
 	ID uint64 `form:"id,optional"`
 }
@@ -86,6 +98,11 @@ type GetCategoryRequest struct {
 
 type GetTagRequest struct {
 	ID uint64 `form:"id,optional"`
+}
+
+type GuestPost struct {
+	Nickname string `json:"nickname,optional"`
+	Content  string `json:"content"`
 }
 
 type HotArticleStatsRequest struct {
@@ -146,6 +163,21 @@ type SaveDraftRequest struct {
 	Version   uint64       `json:"version,optional"`
 	RequestID string       `json:"requestID,optional"`
 	Input     ArticleInput `json:"input,optional"`
+}
+
+type SaveStorageRequest struct {
+	Provider    string   `json:"provider,optional"`
+	LocalPath   string   `json:"localPath,optional"`
+	URLPrefix   string   `json:"urlPrefix,optional"`
+	CDN         string   `json:"cdn,optional"`
+	Endpoint    string   `json:"endpoint,optional"`
+	AccessKey   string   `json:"accessKey,optional"`
+	SecretKey   string   `json:"secretKey,optional"`
+	Bucket      string   `json:"bucket,optional"`
+	Region      string   `json:"region,optional"`
+	PathStyle   bool     `json:"pathStyle,optional"`
+	AllowedExts []string `json:"allowedExts,optional"`
+	MaxSize     int64    `json:"maxSize,optional"`
 }
 
 type SearchArticlesRequest struct {

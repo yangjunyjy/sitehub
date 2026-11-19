@@ -7,6 +7,13 @@ import (
 	"gorm.io/gorm"
 )
 
+func SchemaVersion(service string) int {
+	if service == "rbac" || service == "blog" {
+		return 2
+	}
+	return 1
+}
+
 // RequireOwner prevents a service from starting against another domain's database.
 func RequireOwner(ctx context.Context, db *gorm.DB, service string) error {
 	var row struct {
@@ -16,8 +23,9 @@ func RequireOwner(ctx context.Context, db *gorm.DB, service string) error {
 	if err := db.WithContext(ctx).Table("microservice_schema").Where("id = 1").Take(&row).Error; err != nil {
 		return fmt.Errorf("initialize the %s database with tools/bootstrap: %w", service, err)
 	}
-	if row.Service != service || row.Version != 1 {
-		return fmt.Errorf("database schema owner/version mismatch: expected %s version 1", service)
+	version := SchemaVersion(service)
+	if row.Service != service || row.Version != version {
+		return fmt.Errorf("database schema owner/version mismatch: expected %s version %d", service, version)
 	}
 	return nil
 }

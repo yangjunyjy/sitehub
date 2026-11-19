@@ -55,7 +55,7 @@ func newPool(config manifest.Upstream, provider *discovery.Manager) (*pool, erro
 	if config.Service != "" {
 		if provider == nil {
 			p.close()
-			return nil, fmt.Errorf("Nacos discovery is required for %s", config.Service)
+			return nil, fmt.Errorf("service discovery is required for %s", config.Service)
 		}
 		stop, err := provider.Watch(config.Service, p.update)
 		if err != nil {

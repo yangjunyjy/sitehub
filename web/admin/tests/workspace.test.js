@@ -16,28 +16,28 @@ function route(path, name, query = {}) {
 test('tabs and cached components stay synchronized while query state remains navigable', () => {
   setActivePinia(createPinia())
   const store = useWorkspaceStore()
-  store.visit(route('/dashboard/users', 'UserList'))
-  store.visit(route('/dashboard/docs', 'DocumentList', { version: 'v2' }))
-  store.visit(route('/dashboard/articles/editor/1', 'ArticleEditor'))
+  store.visit(route('/dashboard/system/users', 'UserList'))
+  store.visit(route('/dashboard/product/docs', 'DocumentList', { version: 'v2' }))
+  store.visit(route('/dashboard/blog/articles/editor/1', 'ArticleEditor'))
   assert.deepEqual(store.cachedNames, ['Dashboard', 'UserList'])
   assert.equal(
-    store.views.find((view) => view.path === '/dashboard/docs').fullPath,
-    '/dashboard/docs?version=v2',
+    store.views.find((view) => view.path === '/dashboard/product/docs').fullPath,
+    '/dashboard/product/docs?version=v2',
   )
-  store.remove('/dashboard/users')
+  store.remove('/dashboard/system/users')
   assert.deepEqual(store.cachedNames, ['Dashboard'])
-  store.remove('/dashboard/index')
+  store.remove('/dashboard')
   assert(store.views.some((view) => view.affix))
 })
 
 test('refresh targets one cached page and never remounts an editor with unsaved data', async () => {
   setActivePinia(createPinia())
   const store = useWorkspaceStore()
-  store.visit(route('/dashboard/users', 'UserList'))
-  store.visit(route('/dashboard/articles/editor/1', 'ArticleEditor'))
-  await store.refresh('/dashboard/users')
-  await store.refresh('/dashboard/articles/editor/1')
-  assert.deepEqual(store.revisions, { '/dashboard/users': 1 })
+  store.visit(route('/dashboard/system/users', 'UserList'))
+  store.visit(route('/dashboard/blog/articles/editor/1', 'ArticleEditor'))
+  await store.refresh('/dashboard/system/users')
+  await store.refresh('/dashboard/blog/articles/editor/1')
+  assert.deepEqual(store.revisions, { '/dashboard/system/users': 1 })
   assert(store.cachedNames.includes('UserList'))
   store.reset()
   assert.equal(store.views.length, 1)
@@ -47,13 +47,13 @@ test('refresh targets one cached page and never remounts an editor with unsaved 
 test('permission refresh removes revoked tabs and cached pages while preserving allowed work', async () => {
   setActivePinia(createPinia())
   const store = useWorkspaceStore()
-  store.visit(route('/dashboard/users', 'UserList'))
-  store.visit(route('/dashboard/articles', 'ArticleList'))
-  await store.refresh('/dashboard/users')
-  store.retain((view) => view.path === '/dashboard/articles')
+  store.visit(route('/dashboard/system/users', 'UserList'))
+  store.visit(route('/dashboard/blog/articles', 'ArticleList'))
+  await store.refresh('/dashboard/system/users')
+  store.retain((view) => view.path === '/dashboard/blog/articles')
   assert.deepEqual(store.cachedNames, ['Dashboard', 'ArticleList'])
   assert.equal(
-    store.views.some((view) => view.path === '/dashboard/users'),
+    store.views.some((view) => view.path === '/dashboard/system/users'),
     false,
   )
   assert.deepEqual(store.revisions, {})
@@ -62,8 +62,8 @@ test('permission refresh removes revoked tabs and cached pages while preserving 
 test('signing out during a pending refresh cannot restore the previous session workspace', async () => {
   setActivePinia(createPinia())
   const store = useWorkspaceStore()
-  store.visit(route('/dashboard/users', 'UserList'))
-  const refreshing = store.refresh('/dashboard/users')
+  store.visit(route('/dashboard/system/users', 'UserList'))
+  const refreshing = store.refresh('/dashboard/system/users')
   store.reset()
   await refreshing
   assert.deepEqual(store.cachedNames, ['Dashboard'])
@@ -88,7 +88,7 @@ test('restored tabs resolve through current routes and permissions without trust
   const values = new Map([
     [
       'deploy-admin-tabs:1',
-      JSON.stringify(['/dashboard/users', '/dashboard/roles', '//elsewhere.test', '/missing']),
+      JSON.stringify(['/dashboard/system/users', '/dashboard/system/roles', '//elsewhere.test', '/missing']),
     ],
   ])
   globalThis.sessionStorage = {
@@ -106,7 +106,7 @@ test('restored tabs resolve through current routes and permissions without trust
     store.restore(1, resolve, (item) => !item.path.endsWith('/roles'))
     assert.deepEqual(
       store.views.map((item) => item.path),
-      ['/dashboard/index', '/dashboard/users'],
+      ['/dashboard', '/dashboard/system/users'],
     )
     store.reset()
     assert.equal(values.has('deploy-admin-tabs:1'), false)

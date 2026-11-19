@@ -2,15 +2,10 @@ package logic
 
 import (
 	"context"
-	"sitehub/common/protoconv"
-	"sitehub/common/rpcx"
+	"github.com/zeromicro/go-zero/core/logx"
 	"sitehub/service/blog/api/internal/svc"
 	"sitehub/service/blog/api/internal/types"
-	pb "sitehub/service/blog/rpc/pb/blog"
-
-	"github.com/zeromicro/go-zero/core/logx"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	entity "sitehub/service/blog/model/entity"
 )
 
 type UpdateCategoryLogic struct {
@@ -23,17 +18,13 @@ func NewUpdateCategoryLogic(ctx context.Context, s *svc.ServiceContext) *UpdateC
 	return &UpdateCategoryLogic{ctx, s, logx.WithContext(ctx)}
 }
 func (l *UpdateCategoryLogic) UpdateCategory(req *types.UpdateCategoryRequest) (*types.Response, error) {
-	in := &pb.CategoryInput{}
-	if err := protoconv.Encode(req, in); err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid request")
-	}
-	out, err := l.svcCtx.RPC.UpdateCategory(rpcx.Outgoing(l.ctx, l.svcCtx.Config.ServiceKey), in)
+
+	_, err := l.svcCtx.Require(l.ctx, "blog:category:update", "admin", true)
 	if err != nil {
 		return nil, err
 	}
-	value, err := protoconv.Value(out)
-	if err != nil {
-		return nil, err
-	}
-	return &types.Response{Code: 0, Message: "ok", Data: value}, nil
+	input := entity.Category{ID: uint(req.ID), ParentID: req.ParentID, SortOrder: int(req.SortOrder), Name: req.Name, Slug: req.Slug, Description: textOrEmpty(req.Description), Icon: textOrEmpty(req.Icon)}
+
+	err = l.svcCtx.Core.Categories.UpdateCategory(uint(req.ID), &input)
+	return done(err)
 }

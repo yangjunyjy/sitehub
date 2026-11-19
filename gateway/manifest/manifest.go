@@ -11,7 +11,6 @@ import (
 	"io"
 	"net"
 	"net/url"
-	"os"
 	"path"
 	"regexp"
 	"strings"
@@ -22,6 +21,7 @@ import (
 type Plugins map[string]json.RawMessage
 type Document struct {
 	Version   int                 `json:"version"`
+	Plugins   Plugins             `json:"plugins,omitempty"`
 	Upstreams map[string]Upstream `json:"upstreams"`
 	Profiles  map[string]Plugins  `json:"profiles"`
 	Routes    []Route             `json:"routes"`
@@ -53,12 +53,15 @@ type Route struct {
 }
 
 var identifier = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,64}$`)
-var serviceName = regexp.MustCompile(`^[a-z][a-z0-9-]*-api$`)
+var serviceName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$`)
 
 func Decode(data []byte) (Document, error) {
 	var d Document
 	if len(data) > 4<<20 {
 		return d, fmt.Errorf("manifest exceeds 4 MiB")
+	}
+	if err := checkJSONKeys(data); err != nil {
+		return d, fmt.Errorf("invalid gateway manifest: %w", err)
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
@@ -70,26 +73,18 @@ func Decode(data []byte) (Document, error) {
 	}
 	return d, nil
 }
-func Read(file string) (Document, error) {
-	data, err := os.ReadFile(file)
-	if err != nil {
-		return Document{}, err
-	}
-	d, err := Decode(data)
-	if err != nil {
-		return d, err
-	}
-	return d, Validate(d, plugin.DefaultRegistry())
-}
 func Bytes(d Document) []byte    { b, _ := json.Marshal(d); return b }
 func Revision(d Document) string { sum := sha256.Sum256(Bytes(d)); return hex.EncodeToString(sum[:]) }
 func EffectivePlugins(d Document, route Route) Plugins {
 	result := Plugins{}
-	for name, config := range d.Profiles[route.Profile] {
-		result[name] = config
-	}
-	for name, config := range route.Plugins {
-		result[name] = config
+	for _, values := range []Plugins{d.Plugins, d.Profiles[route.Profile], route.Plugins} {
+		for name, config := range values {
+			if bytes.Equal(bytes.TrimSpace(config), []byte("null")) {
+				delete(result, name)
+			} else {
+				result[name] = config
+			}
+		}
 	}
 	return result
 }
@@ -97,12 +92,15 @@ func Validate(d Document, plugins *plugin.Registry) error {
 	if d.Version != 1 || len(d.Routes) == 0 || len(d.Routes) > 1000 || len(d.Upstreams) > 256 || len(d.Profiles) > 256 {
 		return fmt.Errorf("manifest version must be 1 with 1..1000 routes and at most 256 upstreams/profiles")
 	}
+	if err := plugins.ValidateOverrides(d.Plugins); err != nil {
+		return fmt.Errorf("global plugins: %w", err)
+	}
 	for id, u := range d.Upstreams {
 		if !identifier.MatchString(id) || (u.Service == "") == (len(u.Nodes) == 0) {
 			return fmt.Errorf("upstream %s needs exactly one of service or nodes", id)
 		}
 		if u.Service != "" && !serviceName.MatchString(u.Service) {
-			return fmt.Errorf("upstream %s must discover an API service", id)
+			return fmt.Errorf("upstream %s has an invalid discovery service name", id)
 		}
 		if len(u.Nodes) > 128 {
 			return fmt.Errorf("too many nodes in upstream %s", id)
@@ -123,7 +121,7 @@ func Validate(d Document, plugins *plugin.Registry) error {
 		if !identifier.MatchString(name) {
 			return fmt.Errorf("invalid profile id")
 		}
-		if err := plugins.Validate(values); err != nil {
+		if err := plugins.ValidateOverrides(values); err != nil {
 			return fmt.Errorf("profile %s: %w", name, err)
 		}
 	}
@@ -154,13 +152,19 @@ func Validate(d Document, plugins *plugin.Registry) error {
 				return fmt.Errorf("unknown profile for %s", r.ID)
 			}
 		}
+		if err := plugins.ValidateOverrides(r.Plugins); err != nil {
+			return fmt.Errorf("route %s: %w", r.ID, err)
+		}
 		effective := EffectivePlugins(d, r)
 		if err := plugins.Validate(effective); err != nil {
 			return fmt.Errorf("route %s: %w", r.ID, err)
 		}
-		_, terminal := effective["static-response"]
+		terminal, err := plugins.Terminal(effective)
+		if err != nil {
+			return fmt.Errorf("route %s: %w", r.ID, err)
+		}
 		if terminal == (r.Upstream != "") {
-			return fmt.Errorf("route %s needs exactly one upstream or static-response", r.ID)
+			return fmt.Errorf("route %s needs exactly one upstream or terminal plugin", r.ID)
 		}
 		if r.Upstream != "" {
 			if _, ok := d.Upstreams[r.Upstream]; !ok {

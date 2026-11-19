@@ -2,15 +2,12 @@ package logic
 
 import (
 	"context"
-	"sitehub/common/protoconv"
-	"sitehub/common/rpcx"
+	"sitehub/service/blog/api/internal/payload"
 	"sitehub/service/blog/api/internal/svc"
 	"sitehub/service/blog/api/internal/types"
-	pb "sitehub/service/blog/rpc/pb/blog"
+	"sitehub/service/blog/domain"
 
 	"github.com/zeromicro/go-zero/core/logx"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type HotArticlesLogic struct {
@@ -23,17 +20,7 @@ func NewHotArticlesLogic(ctx context.Context, s *svc.ServiceContext) *HotArticle
 	return &HotArticlesLogic{ctx, s, logx.WithContext(ctx)}
 }
 func (l *HotArticlesLogic) HotArticles(req *types.HotArticlesRequest) (*types.Response, error) {
-	in := &pb.LimitRequest{}
-	if err := protoconv.Encode(req, in); err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid request")
-	}
-	out, err := l.svcCtx.RPC.HotArticles(rpcx.Outgoing(l.ctx, l.svcCtx.Config.ServiceKey), in)
-	if err != nil {
-		return nil, err
-	}
-	value, err := protoconv.Value(out)
-	if err != nil {
-		return nil, err
-	}
-	return &types.Response{Code: 0, Message: "ok", Data: value}, nil
+
+	value, err := l.svcCtx.Core.Articles.BrowsePublic(domain.ArticleListQuery{Page: 1, PageSize: int(req.Limit), Sort: "hot"})
+	return ReplyAs[payload.ArticlePage](value, err)
 }

@@ -2,15 +2,14 @@ package logic
 
 import (
 	"context"
-	"sitehub/common/protoconv"
-	"sitehub/common/rpcx"
-	"sitehub/service/product/api/internal/svc"
-	"sitehub/service/product/api/internal/types"
-	pb "sitehub/service/product/rpc/pb/product"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"sitehub/service/product/api/internal/svc"
+	"sitehub/service/product/api/internal/types"
+	"sitehub/service/product/contract"
 )
 
 type SaveContentLogic struct {
@@ -22,18 +21,17 @@ type SaveContentLogic struct {
 func NewSaveContentLogic(ctx context.Context, s *svc.ServiceContext) *SaveContentLogic {
 	return &SaveContentLogic{ctx, s, logx.WithContext(ctx)}
 }
+
 func (l *SaveContentLogic) SaveContent(req *types.SaveContentRequest) (*types.Response, error) {
-	in := &pb.WebsiteContent{}
-	if err := protoconv.Encode(req, in); err != nil {
+	_, err := l.svcCtx.Require(l.ctx, "website:content:edit", "admin", true)
+	if err != nil {
+		return nil, err
+	}
+	var input contract.WebsiteContent
+	if err := copyManifest(req, &input); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid request")
 	}
-	out, err := l.svcCtx.RPC.SaveContent(rpcx.Outgoing(l.ctx, l.svcCtx.Config.ServiceKey), in)
-	if err != nil {
-		return nil, err
-	}
-	value, err := protoconv.Value(out)
-	if err != nil {
-		return nil, err
-	}
-	return &types.Response{Code: 0, Message: "ok", Data: value}, nil
+
+	err = l.svcCtx.Core.Content.SaveContent(input)
+	return response(struct{}{}, err)
 }

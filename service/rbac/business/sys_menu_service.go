@@ -100,6 +100,14 @@ func prepareMenu(menu *rbacentity.SysMenu) error {
 		return errorx.Invalid("菜单信息不能为空")
 	}
 	menu.MenuName = strings.TrimSpace(menu.MenuName)
+	menu.SystemCode = strings.TrimSpace(menu.SystemCode)
+	if menu.SystemCode == "" {
+		menu.SystemCode = "admin"
+	}
+	if !systemCodePattern.MatchString(menu.SystemCode) {
+		return errorx.Invalid("系统代码无效")
+	}
+	menu.Permission = strings.TrimSpace(menu.Permission)
 	menu.MenuCode = strings.TrimSpace(menu.MenuCode)
 	menu.Path = strings.TrimSpace(menu.Path)
 	if menu.MenuName == "" || utf8.RuneCountInString(menu.MenuName) > 50 {
@@ -111,7 +119,7 @@ func prepareMenu(menu *rbacentity.SysMenu) error {
 	if menu.Status != 0 && menu.Status != 1 {
 		return errorx.Invalid("菜单状态无效")
 	}
-	if menu.MenuType == 3 && menu.MenuCode == "" {
+	if menu.MenuType == 3 && menu.Permission == "" {
 		return errorx.Invalid("按钮权限标识不能为空")
 	}
 	if utf8.RuneCountInString(menu.MenuCode) > 100 || utf8.RuneCountInString(menu.Icon) > 100 ||
@@ -130,10 +138,14 @@ func checkMenuUniqueness(repo rbacrepository.SysMenuRepository, menu *rbacentity
 	}
 	checks := []uniquenessCheck{
 		{menu.MenuCode, repo.FindByCode, "菜单编码已存在，请使用其他编码"},
-		{menu.MenuName, repo.FindByName, "菜单名称已存在，请使用其他名称"},
+		{menu.MenuName, func(name string) (*rbacentity.SysMenu, error) {
+			return repo.FindByName(menu.SystemCode, menu.ParentID, name)
+		}, "同级菜单名称已存在，请使用其他名称"},
 	}
 	if menu.MenuType != 3 && menu.Path != "" {
-		checks = append(checks, uniquenessCheck{menu.Path, repo.FindByPath, "菜单路径已被使用，请使用其他路径"})
+		checks = append(checks, uniquenessCheck{menu.Path, func(path string) (*rbacentity.SysMenu, error) {
+			return repo.FindByPath(menu.SystemCode, menu.ParentID, path)
+		}, "菜单路径已被使用，请使用其他路径"})
 	}
 	for _, check := range checks {
 		existing, err := check.find(check.value)

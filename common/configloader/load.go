@@ -57,7 +57,7 @@ func LoadRemote(settings *viper.Viper, envPrefix string, target any, remote []by
 			return err
 		}
 		// Connection credentials and the config source are local bootstrap data.
-		for _, key := range []string{"nacos", "configcenter"} {
+		for _, key := range []string{"controlplane", "configcenter"} {
 			if layer.IsSet(key) {
 				return fmt.Errorf("remote configuration cannot set %s", key)
 			}

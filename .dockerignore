@@ -1,11 +1,13 @@
 .git
 .tmp
+output/cloud
 bin
 data
 uploads
 logs
 .env
 *.exe
+gateway/gateway
 *.db
 *.local.yaml
 **/node_modules
@@ -43,7 +45,8 @@ web/test-results
 tests
 web/tests
 web/admin/tests
-web/site/tests
+web/product/tests
+web/blog/tests
 **/*_test.go
 **/*.test.mjs
 **/*.test.js

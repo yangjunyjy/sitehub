@@ -5,6 +5,7 @@ import (
 	"github.com/spf13/viper"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -32,7 +33,27 @@ func TestRemotePrecedenceAndBootstrapProtection(t *testing.T) {
 	if err := LoadRemote(v, "REMOTE_TEST", &c, []byte("Name: remote\nPort: 81\n")); err != nil || c.Port != 83 {
 		t.Fatalf("flag: %+v %v", c, err)
 	}
-	if err := LoadRemote(fresh(), "REMOTE_TEST", &c, []byte("Nacos:\n  Password: forbidden\n")); err == nil {
+	if err := LoadRemote(fresh(), "REMOTE_TEST", &c, []byte("ControlPlane:\n  Password: forbidden\n")); err == nil {
 		t.Fatal("remote bootstrap override accepted")
+	}
+}
+
+func TestRemoteCannotRepointBootstrap(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "service.yaml")
+	if err := os.WriteFile(path, []byte("Name: local\nControlPlane:\n  Password: local\nConfigCenter:\n  Key: local.yaml\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	type config struct {
+		Name         string
+		ControlPlane struct{ Password string }
+		ConfigCenter struct{ Key string }
+	}
+	for _, remote := range []string{"ControlPlane:\n  Password: remote\n", "ConfigCenter:\n  Key: other.yaml\n"} {
+		settings := viper.New()
+		settings.SetConfigFile(path)
+		var c config
+		if err := LoadRemote(settings, "BOOTSTRAP_TEST", &c, []byte(remote)); err == nil || !strings.Contains(err.Error(), "remote configuration cannot set") {
+			t.Fatalf("known bootstrap field must be rejected by bootstrap protection, got %v", err)
+		}
 	}
 }

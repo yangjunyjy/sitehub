@@ -1,4 +1,0 @@
-Runtime:
-  Maintenance: false
-  MaxConcurrentRequests: 1000
-Timeout: 30000

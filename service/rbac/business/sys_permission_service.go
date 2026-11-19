@@ -97,7 +97,7 @@ func (s *sysPermissionService) IsSuperAdmin(userID uint64) bool {
 
 func (s *sysPermissionService) checkMenuPermission(menus []*rbacentity.SysMenu, menuCode string) bool {
 	for _, menu := range menus {
-		if menu.MenuCode == menuCode || menu.Permission == menuCode {
+		if menu.Permission == menuCode {
 			return true
 		}
 		if len(menu.Children) > 0 {
@@ -111,9 +111,6 @@ func (s *sysPermissionService) checkMenuPermission(menus []*rbacentity.SysMenu, 
 
 func (s *sysPermissionService) extractPermissions(menu *rbacentity.SysMenu) []string {
 	var permissions []string
-	if menu.MenuCode != "" {
-		permissions = append(permissions, menu.MenuCode)
-	}
 	if menu.Permission != "" {
 		permissions = append(permissions, menu.Permission)
 	}

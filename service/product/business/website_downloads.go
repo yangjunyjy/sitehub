@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	errorx "sitehub/common/errorx"
-	filecontract "sitehub/service/file/contract"
+	filecontract "sitehub/service/blog/contract"
 	productcontract "sitehub/service/product/contract"
 )
 

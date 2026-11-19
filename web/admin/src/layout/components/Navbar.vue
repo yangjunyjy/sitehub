@@ -10,8 +10,8 @@
         <el-icon><Fold v-if="!isCollapse" /><Expand v-else /></el-icon>
       </button>
       <el-breadcrumb class="workspace-breadcrumb" separator="/">
-        <el-breadcrumb-item :to="{ path: '/dashboard/index' }">首页</el-breadcrumb-item>
-        <el-breadcrumb-item v-if="route.path !== '/dashboard/index'">{{
+        <el-breadcrumb-item :to="{ path: '/dashboard' }">首页</el-breadcrumb-item>
+        <el-breadcrumb-item v-if="route.meta.componentPath !== 'dashboard/index'">{{
           route.meta.title
         }}</el-breadcrumb-item>
       </el-breadcrumb>
@@ -66,7 +66,7 @@
                   : '目前没有待发布的文章草稿'
               }}
             </p>
-            <el-button link type="primary" @click="router.push('/dashboard/articles?status=0')"
+            <el-button link type="primary" @click="router.push(router.page('blog/articles/index', { query: { status: 0 } }))"
               >查看文章草稿 →</el-button
             ></template
           >
@@ -104,7 +104,7 @@
         class="nav-icon"
         type="button"
         aria-label="个人设置"
-        @click="router.push('/dashboard/profile')"
+        @click="router.push(router.page('profile/index'))"
       >
         <el-icon><Setting /></el-icon>
       </button>
@@ -131,8 +131,7 @@ import { logout } from '@/api/auth'
 import { getArticleStats } from '@/api/statistics'
 import { useRbacStore } from '@/store/rbac'
 import { navigationMenus } from '@/router/pages'
-import { nativeNavigation } from '@/router/navigation'
-import { isSuperAdmin } from '@/router/console'
+import { isSuperAdmin } from '@/router/pages'
 import { previewWebsite } from '@/utils/website'
 defineProps({ isCollapse: Boolean })
 defineEmits(['toggle-collapse'])
@@ -155,7 +154,7 @@ const pages = computed(() => {
         result.push({ value: menu.title, path: menu.path, section: '管理页面' })
       if (menu.children) visit(menu.children)
     })
-  visit(navigationMenus(nativeNavigation(userInfo.value, rbac.currentPermissions, rbac.currentMenus), isSuperAdmin(userInfo.value)))
+  visit(navigationMenus(rbac.currentMenus, isSuperAdmin(userInfo.value)))
   return [...new Map(result.map((item) => [item.path, item])).values()]
 })
 function suggestions(query, callback) {
@@ -166,7 +165,7 @@ function suggestions(query, callback) {
   callback(list.slice(0, 10))
 }
 function navigate(item) {
-  if (item.keyword) router.push({ path: '/dashboard/articles', query: { keyword: item.keyword } })
+  if (item.keyword) router.push(router.page('blog/articles/index', { query: { keyword: item.keyword } }))
   else router.push(item.path)
   search.value = ''
   searchOpen.value = false
@@ -201,7 +200,7 @@ async function toggleFullscreen() {
 }
 async function handleCommand(command) {
   if (command === 'profile') {
-    router.push('/dashboard/profile')
+    router.push(router.page('profile/index'))
     return
   }
   if (command === 'website') {
@@ -226,7 +225,6 @@ async function handleCommand(command) {
     rbac.resetAllData()
     sessionStorage.removeItem('token')
     sessionStorage.removeItem('userInfo')
-    sessionStorage.setItem('routeInitialized', 'false')
     const { resetRoutes } = await import('@/router/index')
     resetRoutes()
     await router.push('/login')
@@ -236,7 +234,7 @@ async function handleCommand(command) {
   }
 }
 </script>
-<style scoped>
+<style lang="scss" scoped>
 .navbar {
   height: 48px;
   flex: 0 0 48px;

@@ -201,7 +201,7 @@ async function perform(command, path) {
           .reverse()
           .find((view) => !removed.includes(view.path)) ||
         remaining[0]
-      const failure = await router.push(destination?.fullPath || '/dashboard/index')
+      const failure = await router.push(destination?.fullPath || '/dashboard')
       // A rejected dirty-form guard must leave the page and all tabs intact.
       if (isNavigationFailure(failure)) return
     }
@@ -305,7 +305,7 @@ onBeforeUnmount(() => {
 })
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .tags-view {
   display: flex;
   align-items: center;

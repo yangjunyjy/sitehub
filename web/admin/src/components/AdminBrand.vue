@@ -10,7 +10,7 @@
     />
   </svg>
 </template>
-<style scoped>
+<style lang="scss" scoped>
 .admin-brand {
   width: 32px;
   height: 32px;

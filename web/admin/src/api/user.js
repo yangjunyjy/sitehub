@@ -1,5 +1,5 @@
 import request from '@/utils/request'
-import { uint64, allPages } from '../../../shared/native-api.mjs'
+import { uint64, allPages } from '../utils/native-api.mjs'
 export const getUserList = (params, config = {}) => request.get('/rbac/users', { params: { page: 1, pageSize: 20, ...params }, ...config })
 export const getUserDetail = id => request.get('/rbac/users/detail', { params: { id } })
 export const createUser = data => request.post('/rbac/users/create', data)

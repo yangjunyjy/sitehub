@@ -2,13 +2,11 @@ package logic
 
 import (
 	"context"
-	"sitehub/common/protoconv"
-	"sitehub/common/rpcx"
-	"sitehub/service/product/api/internal/svc"
-	"sitehub/service/product/api/internal/types"
-	pb "sitehub/service/product/rpc/pb/product"
 
 	"github.com/zeromicro/go-zero/core/logx"
+
+	"sitehub/service/product/api/internal/svc"
+	"sitehub/service/product/api/internal/types"
 )
 
 type HealthLogic struct {
@@ -20,15 +18,11 @@ type HealthLogic struct {
 func NewHealthLogic(ctx context.Context, s *svc.ServiceContext) *HealthLogic {
 	return &HealthLogic{ctx, s, logx.WithContext(ctx)}
 }
+
 func (l *HealthLogic) Health() (*types.Response, error) {
-	in := &pb.HealthRequest{}
-	out, err := l.svcCtx.RPC.Health(rpcx.Outgoing(l.ctx, l.svcCtx.Config.ServiceKey), in)
+	pool, err := l.svcCtx.DB.DB()
 	if err != nil {
 		return nil, err
 	}
-	value, err := protoconv.Value(out)
-	if err != nil {
-		return nil, err
-	}
-	return &types.Response{Code: 0, Message: "ok", Data: value}, nil
+	return response(map[string]string{"service": "product-api", "status": "ok"}, pool.PingContext(l.ctx))
 }

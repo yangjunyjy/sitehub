@@ -52,21 +52,23 @@ import Navbar from './components/Navbar.vue'
 import TagsView from './components/TagsView.vue'
 import { useWorkspaceStore } from '@/store/workspace'
 import { useRbacStore } from '@/store/rbac'
-import { isSuperAdmin } from '@/router/console'
+import { isSuperAdmin } from '@/router/pages'
 import { workspacePath } from '@/utils/workspace-route'
 
 const route = useRoute()
 const workspace = useWorkspaceStore()
 const rbac = useRbacStore()
 const router = useRouter()
-function canOpen(target) {
+function allowedRoute(target) {
   const { meta } = target
   return (
-    Boolean(meta.title) &&
     (!meta.superAdmin || isSuperAdmin(rbac.currentUser)) &&
     (!meta.permission || rbac.hasPermission(meta.permission)) &&
     (!meta.permissionsAny || meta.permissionsAny.some(rbac.hasPermission))
   )
+}
+function canOpen(target) {
+  return Boolean(target.meta.title) && !target.meta.hidden && !target.meta.missingComponent && allowedRoute(target)
 }
 watch(
   () => rbac.currentUser?.id,
@@ -81,7 +83,7 @@ watch(
   () => {
     workspace.retain((view) => canOpen(router.resolve(view.fullPath)))
     // Reuse the normal router guard, including editor unsaved-change prompts.
-    if (!canOpen(route)) router.replace('/dashboard/index')
+    if (!allowedRoute(route)) router.replace('/403')
   },
   { deep: true },
 )

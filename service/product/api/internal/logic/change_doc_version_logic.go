@@ -2,15 +2,12 @@ package logic
 
 import (
 	"context"
-	"sitehub/common/protoconv"
-	"sitehub/common/rpcx"
-	"sitehub/service/product/api/internal/svc"
-	"sitehub/service/product/api/internal/types"
-	pb "sitehub/service/product/rpc/pb/product"
 
 	"github.com/zeromicro/go-zero/core/logx"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+
+	"sitehub/service/product/api/internal/svc"
+	"sitehub/service/product/api/internal/types"
+	"sitehub/service/product/domain"
 )
 
 type ChangeDocVersionLogic struct {
@@ -22,18 +19,22 @@ type ChangeDocVersionLogic struct {
 func NewChangeDocVersionLogic(ctx context.Context, s *svc.ServiceContext) *ChangeDocVersionLogic {
 	return &ChangeDocVersionLogic{ctx, s, logx.WithContext(ctx)}
 }
+
 func (l *ChangeDocVersionLogic) ChangeDocVersion(req *types.ChangeDocVersionRequest) (*types.Response, error) {
-	in := &pb.DocVersionInput{}
-	if err := protoconv.Encode(req, in); err != nil {
-		return nil, status.Error(codes.InvalidArgument, "invalid request")
-	}
-	out, err := l.svcCtx.RPC.ChangeDocVersion(rpcx.Outgoing(l.ctx, l.svcCtx.Config.ServiceKey), in)
+	actor, err := l.svcCtx.Require(l.ctx, "website:docs:edit", "admin", true)
 	if err != nil {
 		return nil, err
 	}
-	value, err := protoconv.Value(out)
-	if err != nil {
-		return nil, err
+	input := domain.DocVersionInput{
+		Action:   req.Action,
+		ID:       req.ID,
+		Name:     req.Name,
+		Status:   req.Status,
+		Source:   req.Source,
+		ModeID:   req.ModeID,
+		Revision: req.Revision,
 	}
-	return &types.Response{Code: 0, Message: "ok", Data: value}, nil
+
+	err = l.svcCtx.Core.Content.ChangeDocVersion(input, actor.Id)
+	return response(struct{}{}, err)
 }

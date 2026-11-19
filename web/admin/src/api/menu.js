@@ -1,6 +1,6 @@
 import request from '@/utils/request'
-import { uint64 } from '../../../shared/native-api.mjs'
-export const getMenuTree = (config = {}) => request.get('/rbac/menus', config).then(r => ({ ...r, data: r.data.items || [] }))
+import { uint64 } from '../utils/native-api.mjs'
+export const getMenuTree = (config = {}) => request.get('/rbac/menus/tree', config).then(r => ({ ...r, data: r.data.items || [] }))
 const flatten = items => items.flatMap(item => [item, ...flatten(item.children || [])])
 export const getAllMenus = config => getMenuTree(config).then(r => ({ ...r, data: flatten(r.data) }))
 const input = data => ({ ...data, ...(data.id ? { id: uint64(data.id) } : {}), parent_id: uint64(data.parent_id) })

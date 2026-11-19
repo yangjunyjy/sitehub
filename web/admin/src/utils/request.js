@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import router from '@/router'
-import { queryString, stringifyJSON, viewValues } from '../../../shared/native-api.mjs'
+import { queryString, stringifyJSON, viewValues } from './native-api.mjs'
 
 const request = axios.create({ baseURL: '/v1', timeout: 30000, paramsSerializer: { serialize: queryString } })
 let totpStatus
@@ -41,7 +41,7 @@ request.interceptors.response.use(response => {
   if (error.response?.data && status >= 500) error.response.data.message = message
   if (status === 401 && sessionStorage.getItem('token')) {
     sessionStorage.removeItem('token'); sessionStorage.removeItem('userInfo')
-    sessionStorage.setItem('routeInitialized', 'false'); totpStatus = undefined
+    router.resetMenus(); totpStatus = undefined
     router.replace('/login')
   }
   if (!error.config?.silentError) ElMessage.error(message)

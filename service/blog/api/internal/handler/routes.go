@@ -21,6 +21,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodGet,
+				Path:    "/v1/blog/about",
+				Handler: GetAboutHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
 				Path:    "/v1/blog/admin/articles",
 				Handler: AdminArticlesHandler(serverCtx),
 			},
@@ -116,6 +121,26 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodGet,
+				Path:    "/v1/blog/friends",
+				Handler: ListFriendsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/v1/blog/friends",
+				Handler: ApplyFriendHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/v1/blog/messages",
+				Handler: ListMessagesHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/v1/blog/messages",
+				Handler: SendMessageHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
 				Path:    "/v1/blog/statistics/articlestats",
 				Handler: GetArticleStatsHandler(serverCtx),
 			},
@@ -178,6 +203,16 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Method:  http.MethodPost,
 				Path:    "/v1/blog/tags/update",
 				Handler: UpdateTagHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/v1/file/settings",
+				Handler: GetStorageHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/v1/file/settings",
+				Handler: SaveStorageHandler(serverCtx),
 			},
 		},
 	)

@@ -2,13 +2,11 @@ package logic
 
 import (
 	"context"
-	"sitehub/common/protoconv"
-	"sitehub/common/rpcx"
-	"sitehub/service/product/api/internal/svc"
-	"sitehub/service/product/api/internal/types"
-	pb "sitehub/service/product/rpc/pb/product"
 
 	"github.com/zeromicro/go-zero/core/logx"
+
+	"sitehub/service/product/api/internal/svc"
+	"sitehub/service/product/api/internal/types"
 )
 
 type AdminDownloadsLogic struct {
@@ -20,15 +18,12 @@ type AdminDownloadsLogic struct {
 func NewAdminDownloadsLogic(ctx context.Context, s *svc.ServiceContext) *AdminDownloadsLogic {
 	return &AdminDownloadsLogic{ctx, s, logx.WithContext(ctx)}
 }
+
 func (l *AdminDownloadsLogic) AdminDownloads() (*types.Response, error) {
-	in := &pb.Empty{}
-	out, err := l.svcCtx.RPC.AdminDownloads(rpcx.Outgoing(l.ctx, l.svcCtx.Config.ServiceKey), in)
+	_, err := l.svcCtx.Require(l.ctx, "website:downloads:edit", "admin", false)
 	if err != nil {
 		return nil, err
 	}
-	value, err := protoconv.Value(out)
-	if err != nil {
-		return nil, err
-	}
-	return &types.Response{Code: 0, Message: "ok", Data: value}, nil
+	value, err := l.svcCtx.Core.Content.GetDownloads()
+	return response(value, err)
 }
