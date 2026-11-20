@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from "vue";
+import { computed, onMounted, onBeforeUnmount, ref } from "vue";
 import { Marked } from "marked";
 import DOMPurify from "dompurify";
 import { createArticleRenderer } from "@/utils/article-markdown";
@@ -12,6 +12,27 @@ const rendered = computed(() =>
   ),
 );
 const notice = ref("");
+const body = ref(null), progress = ref(0);
+let resizeObserver, scrollFrame = 0;
+function measure() {
+  scrollFrame = 0;
+  const end = body.value.getBoundingClientRect().bottom + window.scrollY - window.innerHeight;
+  progress.value = Math.round(Math.max(0, Math.min(1, end > 0 ? window.scrollY / end : 1)) * 100);
+}
+function schedule() { if (!scrollFrame) scrollFrame = requestAnimationFrame(measure); }
+onMounted(() => {
+  resizeObserver = new ResizeObserver(schedule);
+  resizeObserver.observe(body.value);
+  window.addEventListener('scroll', schedule, { passive: true });
+  window.addEventListener('resize', schedule);
+  measure();
+});
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect();
+  window.removeEventListener('scroll', schedule);
+  window.removeEventListener('resize', schedule);
+  cancelAnimationFrame(scrollFrame);
+});
 async function copyCode(event) {
   const button = event.target.closest(".code-copy-btn");
   if (!button) return;
@@ -27,7 +48,8 @@ async function copyCode(event) {
 </script>
 <template>
   <div class="article-reading">
-    <article class="article-body" @click="copyCode">
+    <Teleport to="body"><div class="reading-progress" role="progressbar" aria-label="文章阅读进度" :aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100"><span :style="{ transform: `scaleX(${progress/100})` }" /></div></Teleport>
+    <article ref="body" class="article-body" @click="copyCode">
       <div v-if="article.summary" class="article-intro">
         {{ article.summary }}
       </div>
@@ -51,6 +73,8 @@ async function copyCode(event) {
   </div>
 </template>
 <style lang="scss">
+.reading-progress { position: fixed; z-index: 2000; inset: 0 0 auto; height: 4px; pointer-events: none; background: #a299b84a; }
+.reading-progress span { display: block; height: 100%; transform-origin: left; background: linear-gradient(90deg, #a883d2, #f4b4b8, #ffc886); }
 .article-reading {
   display: flex;
   gap: 65px;

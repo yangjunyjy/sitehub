@@ -474,6 +474,8 @@ type CreateSysMenuRequest struct {
 	Icon          string                 `protobuf:"bytes,11,opt,name=icon,proto3" json:"icon,omitempty"`
 	Permission    string                 `protobuf:"bytes,12,opt,name=permission,proto3" json:"permission,omitempty"`
 	SystemCode    string                 `protobuf:"bytes,13,opt,name=system_code,json=systemCode,proto3" json:"system_code,omitempty"`
+	PageType      string                 `protobuf:"bytes,14,opt,name=page_type,json=pageType,proto3" json:"page_type,omitempty"`
+	ExternalUrl   string                 `protobuf:"bytes,15,opt,name=external_url,json=externalUrl,proto3" json:"external_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -595,6 +597,20 @@ func (x *CreateSysMenuRequest) GetPermission() string {
 func (x *CreateSysMenuRequest) GetSystemCode() string {
 	if x != nil {
 		return x.SystemCode
+	}
+	return ""
+}
+
+func (x *CreateSysMenuRequest) GetPageType() string {
+	if x != nil {
+		return x.PageType
+	}
+	return ""
+}
+
+func (x *CreateSysMenuRequest) GetExternalUrl() string {
+	if x != nil {
+		return x.ExternalUrl
 	}
 	return ""
 }
@@ -1006,6 +1022,8 @@ type EntitySysMenu struct {
 	Children      []*EntitySysMenu       `protobuf:"bytes,19,rep,name=children,proto3" json:"children,omitempty"`
 	Roles         []*EntitySysRole       `protobuf:"bytes,20,rep,name=roles,proto3" json:"roles,omitempty"`
 	SystemCode    string                 `protobuf:"bytes,21,opt,name=system_code,json=systemCode,proto3" json:"system_code,omitempty"`
+	PageType      string                 `protobuf:"bytes,22,opt,name=page_type,json=pageType,proto3" json:"page_type,omitempty"`
+	ExternalUrl   string                 `protobuf:"bytes,23,opt,name=external_url,json=externalUrl,proto3" json:"external_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1183,6 +1201,20 @@ func (x *EntitySysMenu) GetRoles() []*EntitySysRole {
 func (x *EntitySysMenu) GetSystemCode() string {
 	if x != nil {
 		return x.SystemCode
+	}
+	return ""
+}
+
+func (x *EntitySysMenu) GetPageType() string {
+	if x != nil {
+		return x.PageType
+	}
+	return ""
+}
+
+func (x *EntitySysMenu) GetExternalUrl() string {
+	if x != nil {
+		return x.ExternalUrl
 	}
 	return ""
 }
@@ -2193,6 +2225,8 @@ type PublicMenu struct {
 	IsVisible     bool                   `protobuf:"varint,6,opt,name=is_visible,json=isVisible,proto3" json:"is_visible,omitempty"`
 	SystemCode    string                 `protobuf:"bytes,7,opt,name=system_code,json=systemCode,proto3" json:"system_code,omitempty"`
 	Children      []*PublicMenu          `protobuf:"bytes,8,rep,name=children,proto3" json:"children,omitempty"`
+	PageType      string                 `protobuf:"bytes,9,opt,name=page_type,json=pageType,proto3" json:"page_type,omitempty"`
+	ExternalUrl   string                 `protobuf:"bytes,10,opt,name=external_url,json=externalUrl,proto3" json:"external_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2281,6 +2315,20 @@ func (x *PublicMenu) GetChildren() []*PublicMenu {
 		return x.Children
 	}
 	return nil
+}
+
+func (x *PublicMenu) GetPageType() string {
+	if x != nil {
+		return x.PageType
+	}
+	return ""
+}
+
+func (x *PublicMenu) GetExternalUrl() string {
+	if x != nil {
+		return x.ExternalUrl
+	}
+	return ""
 }
 
 type PublicMenuPage struct {
@@ -3495,6 +3543,8 @@ type UpdateSysMenuRequest struct {
 	Icon          string                 `protobuf:"bytes,12,opt,name=icon,proto3" json:"icon,omitempty"`
 	Permission    string                 `protobuf:"bytes,13,opt,name=permission,proto3" json:"permission,omitempty"`
 	SystemCode    string                 `protobuf:"bytes,14,opt,name=system_code,json=systemCode,proto3" json:"system_code,omitempty"`
+	PageType      string                 `protobuf:"bytes,15,opt,name=page_type,json=pageType,proto3" json:"page_type,omitempty"`
+	ExternalUrl   string                 `protobuf:"bytes,16,opt,name=external_url,json=externalUrl,proto3" json:"external_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3623,6 +3673,20 @@ func (x *UpdateSysMenuRequest) GetPermission() string {
 func (x *UpdateSysMenuRequest) GetSystemCode() string {
 	if x != nil {
 		return x.SystemCode
+	}
+	return ""
+}
+
+func (x *UpdateSysMenuRequest) GetPageType() string {
+	if x != nil {
+		return x.PageType
+	}
+	return ""
+}
+
+func (x *UpdateSysMenuRequest) GetExternalUrl() string {
+	if x != nil {
+		return x.ExternalUrl
 	}
 	return ""
 }
@@ -3972,7 +4036,7 @@ const file_rbac_proto_rawDesc = "" +
 	"\trole_code\x18\x01 \x01(\tR\trole_code\x12\x1c\n" +
 	"\trole_name\x18\x02 \x01(\tR\trole_name\x12\x1c\n" +
 	"\trole_desc\x18\x03 \x01(\tR\trole_desc\x12\x16\n" +
-	"\x06status\x18\x04 \x01(\x03R\x06status\"\xf4\x02\n" +
+	"\x06status\x18\x04 \x01(\x03R\x06status\"\xb4\x03\n" +
 	"\x14CreateSysMenuRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12\x12\n" +
@@ -3991,7 +4055,9 @@ const file_rbac_proto_rawDesc = "" +
 	"permission\x18\f \x01(\tR\n" +
 	"permission\x12\x1f\n" +
 	"\vsystem_code\x18\r \x01(\tR\n" +
-	"systemCodeB\t\n" +
+	"systemCode\x12\x1b\n" +
+	"\tpage_type\x18\x0e \x01(\tR\bpageType\x12!\n" +
+	"\fexternal_url\x18\x0f \x01(\tR\vexternalUrlB\t\n" +
 	"\a_status\"\xb0\x01\n" +
 	"\x14CreateSysUserRequest\x12\x1a\n" +
 	"\busername\x18\x01 \x01(\tR\busername\x12\x1a\n" +
@@ -4030,7 +4096,7 @@ const file_rbac_proto_rawDesc = "" +
 	"\x05email\x18\x0e \x01(\tR\x05email\x12\x16\n" +
 	"\x06status\x18\x0f \x01(\x03R\x06status\x12/\n" +
 	"\bchildren\x18\x10 \x03(\v2\x13.rbac.EntitySysDeptR\bchildren\x12)\n" +
-	"\x05users\x18\x11 \x03(\v2\x13.rbac.EntitySysUserR\x05users\"\xac\x05\n" +
+	"\x05users\x18\x11 \x03(\v2\x13.rbac.EntitySysUserR\x05users\"\xec\x05\n" +
 	"\rEntitySysMenu\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12;\n" +
 	"\vcreate_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
@@ -4060,7 +4126,9 @@ const file_rbac_proto_rawDesc = "" +
 	"\bchildren\x18\x13 \x03(\v2\x13.rbac.EntitySysMenuR\bchildren\x12)\n" +
 	"\x05roles\x18\x14 \x03(\v2\x13.rbac.EntitySysRoleR\x05roles\x12\x1f\n" +
 	"\vsystem_code\x18\x15 \x01(\tR\n" +
-	"systemCode\"\xd4\x01\n" +
+	"systemCode\x12\x1b\n" +
+	"\tpage_type\x18\x16 \x01(\tR\bpageType\x12!\n" +
+	"\fexternal_url\x18\x17 \x01(\tR\vexternalUrl\"\xd4\x01\n" +
 	"\rEntitySysPost\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x1c\n" +
 	"\tpost_name\x18\x02 \x01(\tR\tpost_name\x12\x1c\n" +
@@ -4149,7 +4217,7 @@ const file_rbac_proto_rawDesc = "" +
 	"\x06public\x18\a \x01(\bR\x06public\"5\n" +
 	"\n" +
 	"SystemPage\x12'\n" +
-	"\x05items\x18\x01 \x03(\v2\x11.rbac.SystemEntryR\x05items\"\xe4\x01\n" +
+	"\x05items\x18\x01 \x03(\v2\x11.rbac.SystemEntryR\x05items\"\xa4\x02\n" +
 	"\n" +
 	"PublicMenu\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x12\n" +
@@ -4161,7 +4229,10 @@ const file_rbac_proto_rawDesc = "" +
 	"is_visible\x18\x06 \x01(\bR\tisVisible\x12\x1f\n" +
 	"\vsystem_code\x18\a \x01(\tR\n" +
 	"systemCode\x12,\n" +
-	"\bchildren\x18\b \x03(\v2\x10.rbac.PublicMenuR\bchildren\"8\n" +
+	"\bchildren\x18\b \x03(\v2\x10.rbac.PublicMenuR\bchildren\x12\x1b\n" +
+	"\tpage_type\x18\t \x01(\tR\bpageType\x12!\n" +
+	"\fexternal_url\x18\n" +
+	" \x01(\tR\vexternalUrl\"8\n" +
 	"\x0ePublicMenuPage\x12&\n" +
 	"\x05items\x18\x01 \x03(\v2\x10.rbac.PublicMenuR\x05items\">\n" +
 	"\vPageRequest\x12\x12\n" +
@@ -4259,7 +4330,7 @@ const file_rbac_proto_rawDesc = "" +
 	"\trole_code\x18\x02 \x01(\tR\trole_code\x12\x1c\n" +
 	"\trole_name\x18\x03 \x01(\tR\trole_name\x12\x1c\n" +
 	"\trole_desc\x18\x04 \x01(\tR\trole_desc\x12\x16\n" +
-	"\x06status\x18\x05 \x01(\x03R\x06status\"\x84\x03\n" +
+	"\x06status\x18\x05 \x01(\x03R\x06status\"\xc4\x03\n" +
 	"\x14UpdateSysMenuRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x12\n" +
@@ -4279,7 +4350,9 @@ const file_rbac_proto_rawDesc = "" +
 	"permission\x18\r \x01(\tR\n" +
 	"permission\x12\x1f\n" +
 	"\vsystem_code\x18\x0e \x01(\tR\n" +
-	"systemCodeB\t\n" +
+	"systemCode\x12\x1b\n" +
+	"\tpage_type\x18\x0f \x01(\tR\bpageType\x12!\n" +
+	"\fexternal_url\x18\x10 \x01(\tR\vexternalUrlB\t\n" +
 	"\a_status\"\xc0\x01\n" +
 	"\x14UpdateSysUserRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x1a\n" +

@@ -30,6 +30,8 @@ type ConsumeTokenRequest struct {
 }
 
 type CreateMenuRequest struct {
+	PageType    string  `json:"pageType,optional"`
+	ExternalURL string  `json:"externalUrl,optional"`
 	SystemCode  string  `json:"systemCode,optional"`
 	Permission  string  `json:"permission,optional"`
 	Name        string  `json:"name,optional"`
@@ -173,6 +175,8 @@ type UnblockIPRequest struct {
 }
 
 type UpdateMenuRequest struct {
+	PageType    string  `json:"pageType,optional"`
+	ExternalURL string  `json:"externalUrl,optional"`
 	SystemCode  string  `json:"systemCode,optional"`
 	Permission  string  `json:"permission,optional"`
 	ID          uint64  `json:"id,optional"`

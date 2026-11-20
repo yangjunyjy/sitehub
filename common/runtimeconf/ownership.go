@@ -8,8 +8,11 @@ import (
 )
 
 func SchemaVersion(service string) int {
-	if service == "rbac" || service == "blog" {
-		return 2
+	if service == "blog" {
+		return 4
+	}
+	if service == "rbac" {
+		return 3
 	}
 	return 1
 }

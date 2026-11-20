@@ -54,6 +54,7 @@
               ><el-input v-model="form.footer.statement" /></el-form-item
           ></el-form>
         </AdminFormSection>
+        <BlogHomeSettings ref="blogSettings" />
       </div>
       <aside class="help-card">
         <el-icon><Setting /></el-icon>
@@ -67,6 +68,7 @@
   </AdminPage>
 </template>
 <script setup>
+import BlogHomeSettings from './components/BlogHomeSettings.vue'
 import AdminFormSection from '@/components/admin/AdminFormSection.vue'
 import { reactive, ref } from 'vue'
 import { Setting } from '@element-plus/icons-vue'
@@ -77,8 +79,9 @@ import { clone } from '@/utils/website'
 const { data, loading, saving, error, load, save } = useAdminResource(getWebsiteContent)
 const form = reactive({ brand: {}, footer: {} }),
   baseline = ref('')
+const blogSettings = ref(null)
 const confirmLeave = useUnsavedChanges(
-  () => !!baseline.value && JSON.stringify(form) !== baseline.value,
+  () => blogSettings.value?.dirty || (!!baseline.value && JSON.stringify(form) !== baseline.value),
 )
 async function initialize() {
   await load()
@@ -89,11 +92,13 @@ async function initialize() {
   }
 }
 async function reload() {
-  if (await confirmLeave()) await initialize()
+  if (await confirmLeave()) await Promise.all([initialize(), blogSettings.value?.load()])
 }
 async function submit() {
   await save(async () => {
     if (!form.brand.name?.trim()) throw new Error('请填写产品简称')
+    await blogSettings.value?.persist()
+    if (JSON.stringify(form) === baseline.value) return
     const content = (await getWebsiteContent()).data.content
     content.brand = clone(form.brand)
     content.footer = clone(form.footer)

@@ -30,7 +30,6 @@ async function submit() {
 <template>
   <section id="apply" class="friend-application">
     <div class="friend-application__heading">
-      <span>LET'S BE FRIENDS</span>
       <h2>交换一份相遇</h2>
       <p>如果你也在认真记录生活，欢迎交换友链。提交后将由博主审核。</p>
     </div>
@@ -80,7 +79,8 @@ async function submit() {
   padding: 40px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  margin-top: 55px;
+  margin-top: 14px;
+  background: #ffffffd9;
   &__heading {
     margin-bottom: 30px;
     > span {

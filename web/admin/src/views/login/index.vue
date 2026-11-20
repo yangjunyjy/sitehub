@@ -183,7 +183,6 @@ import { ElMessage } from 'element-plus'
 import { Lock, Message, Key, User } from '@element-plus/icons-vue'
 import { rbacLogin, sendEmailCode } from '@/api'
 import { useRbacStore } from '@/store/rbac'
-import { initRequestInterceptors } from '@/utils/request'
 import SliderCaptcha from '@/components/SliderCaptcha.vue'
 
 const router = useRouter()
@@ -313,10 +312,10 @@ onBeforeUnmount(() => {
 })
 
 const handleLogin = async () => {
-  if (!loginFormRef.value) return
+  if (!loginFormRef.value || loading.value) return
 
   await loginFormRef.value.validate(async (valid) => {
-    if (!valid) return
+    if (!valid || loading.value) return
 
     loading.value = true
 
@@ -329,6 +328,7 @@ const handleLogin = async () => {
       })
 
       const { token, user } = res.data
+      if (typeof token !== 'string' || !token) throw new Error('登录响应缺少会话，请重试')
 
       // 记住账号
       if (loginForm.remember) {
@@ -345,7 +345,6 @@ const handleLogin = async () => {
       }
 
       // 清理旧用户的菜单和权限数据
-      const rbacStore = useRbacStore()
       rbacStore.resetAllData()
 
       router.resetMenus()
@@ -353,20 +352,12 @@ const handleLogin = async () => {
       sessionStorage.setItem('token', token)
       sessionStorage.setItem('userInfo', JSON.stringify(user))
 
-      // 登录成功后初始化TOTP状态检测
-      initRequestInterceptors().catch(() => {})
-
-      // 敏感操作按服务配置提示输入动态验证码。
-
-      // 注意：不要在这里加载菜单，让路由守卫来处理
-
-      ElMessage.success('登录成功')
-
       const redirect = route.query.redirect
-      router.push(typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//') && !redirect.startsWith('/login') ? redirect : '/dashboard')
+      const navigation = await router.replace(typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//') && !redirect.startsWith('/login') ? redirect : '/dashboard')
+      if (!navigation && router.currentRoute.value.matched.some(record => record.name === 'dashboard')) ElMessage.success('登录成功')
     } catch (error) {
       console.error('登录失败:', error)
-      ElMessage.error(error.response?.data?.message || '登录失败，请检查用户名、密码和验证码')
+      ElMessage.error(error.response?.data?.message || error.message || '登录失败，请重试')
     } finally {
       loading.value = false
     }

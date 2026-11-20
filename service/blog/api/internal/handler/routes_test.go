@@ -20,6 +20,7 @@ import (
 	"sitehub/service/blog/business"
 	blogmysql "sitehub/service/blog/model/mysql"
 	product "sitehub/service/product/contract"
+	rbacpb "sitehub/service/rbac/rpc/pb/rbac"
 	"strings"
 	"sync"
 	"testing"
@@ -54,7 +55,7 @@ func (s *productAPIServer) ResolveDownload(ctx context.Context, id string) (prod
 	}
 	return product.ProductDownload{URL: "/v1/file/local/releases/app.tgz", FileName: "app.tgz"}, nil
 }
-func unifiedAPI(t *testing.T) (http.Handler, sqlmock.Sqlmock, *productAPIServer) {
+func unifiedAPI(t *testing.T, authorizers ...rbacpb.RbacClient) (http.Handler, sqlmock.Sqlmock, *productAPIServer) {
 	t.Helper()
 	apiresponse.Install()
 	connection, mock, err := sqlmock.New()
@@ -72,6 +73,9 @@ func unifiedAPI(t *testing.T) (http.Handler, sqlmock.Sqlmock, *productAPIServer)
 	}
 	product := &productAPIServer{}
 	ctx := &svc.ServiceContext{DB: db, StorageDB: db, Product: product, Core: &blog.Module{Community: blogmysql.NewCommunityRepository(db), Uploads: releaseStore{path: release}}}
+	if len(authorizers) > 0 {
+		ctx.Rbac = authorizers[0]
+	}
 	server, err := rest.NewServer(rest.RestConf{})
 	if err != nil {
 		t.Fatal(err)

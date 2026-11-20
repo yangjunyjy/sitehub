@@ -3,6 +3,7 @@ package services
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"unicode/utf8"
 
@@ -110,6 +111,20 @@ func prepareMenu(menu *rbacentity.SysMenu) error {
 	menu.Permission = strings.TrimSpace(menu.Permission)
 	menu.MenuCode = strings.TrimSpace(menu.MenuCode)
 	menu.Path = strings.TrimSpace(menu.Path)
+	switch menu.PageType {
+	case "", "internal":
+		menu.PageType = "internal"
+		menu.ExternalURL = ""
+	case "external":
+		menu.ExternalURL = strings.TrimSpace(menu.ExternalURL)
+		address, err := url.Parse(menu.ExternalURL)
+		if menu.MenuType != 2 || len(menu.ExternalURL) > 2048 || err != nil || address.Hostname() == "" || address.User != nil || (address.Scheme != "http" && address.Scheme != "https") || strings.ContainsAny(menu.ExternalURL, "\\ \t\r\n") {
+			return errorx.Invalid("外链页面需要有效的 HTTP 或 HTTPS 链接地址")
+		}
+		menu.Path, menu.Component = "", ""
+	default:
+		return errorx.Invalid("页面类型无效")
+	}
 	if menu.MenuName == "" || utf8.RuneCountInString(menu.MenuName) > 50 {
 		return errorx.Invalid("菜单名称需为 1 至 50 个字符")
 	}

@@ -36,11 +36,11 @@ func menuSQLStore(t *testing.T) (rbacrepository.SysMenuRepository, sqlmock.Sqlmo
 func TestMenuInsertPreservesDisabledAndHiddenValues(t *testing.T) {
 	repo, mock := menuSQLStore(t)
 	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO `sys_menu` (`component`,`create_by`,`create_time`,`icon`,`is_visible`,`menu_code`,`menu_name`,`menu_type`,`parent_id`,`path`,`perms`,`remark`,`sort`,`status`,`system_code`,`update_by`,`update_time`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")).
-		WithArgs("", uint64(7), sqlmock.AnyArg(), "", false, "menu:unique", "directory", 1, 0, "", "", "", 0, 0, "admin", uint64(7), sqlmock.AnyArg()).
+	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO `sys_menu` (`component`,`create_by`,`create_time`,`external_url`,`icon`,`is_visible`,`menu_code`,`menu_name`,`menu_type`,`page_type`,`parent_id`,`path`,`perms`,`remark`,`sort`,`status`,`system_code`,`update_by`,`update_time`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")).
+		WithArgs("", uint64(7), sqlmock.AnyArg(), "https://example.org", "", false, "menu:unique", "external", 2, "external", 0, "", "", "", 0, 0, "admin", uint64(7), sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(19, 1))
 	mock.ExpectCommit()
-	menu := &rbacentity.SysMenu{BaseModel: rbacentity.BaseModel{CreateBy: 7}, SystemCode: "admin", MenuName: "directory", MenuCode: "menu:unique", MenuType: 1, Status: 0, IsVisible: false}
+	menu := &rbacentity.SysMenu{BaseModel: rbacentity.BaseModel{CreateBy: 7}, SystemCode: "admin", MenuName: "external", MenuCode: "menu:unique", MenuType: 2, PageType: "external", ExternalURL: "https://example.org", Status: 0, IsVisible: false}
 	if err := repo.Create(menu); err != nil {
 		t.Fatal(err)
 	}
@@ -78,8 +78,8 @@ func TestMenuLockedUpdatePreservesUnsubmittedColumnsAndRollsBack(t *testing.T) {
 			mock.ExpectQuery("SELECT .* FROM `sys_menu` .*FOR UPDATE").WithArgs(uint64(9), 1).
 				WillReturnRows(sqlmock.NewRows([]string{"id", "menu_code", "create_by", "perms"}).AddRow(9, "existing", 7, "existing:permission"))
 			// System and permission are editable; creation metadata remains intact.
-			write := mock.ExpectExec(regexp.QuoteMeta("UPDATE `sys_menu` SET `component`=?,`icon`=?,`is_visible`=?,`menu_code`=?,`menu_name`=?,`menu_type`=?,`parent_id`=?,`path`=?,`perms`=?,`remark`=?,`sort`=?,`status`=?,`system_code`=?,`update_by`=?,`update_time`=? WHERE id = ?")).
-				WithArgs("", "", false, "existing", "renamed", 1, 0, "", "updated:permission", "", 0, 0, "admin", uint64(8), sqlmock.AnyArg(), uint64(9))
+			write := mock.ExpectExec(regexp.QuoteMeta("UPDATE `sys_menu` SET `component`=?,`external_url`=?,`icon`=?,`is_visible`=?,`menu_code`=?,`menu_name`=?,`menu_type`=?,`page_type`=?,`parent_id`=?,`path`=?,`perms`=?,`remark`=?,`sort`=?,`status`=?,`system_code`=?,`update_by`=?,`update_time`=? WHERE id = ?")).
+				WithArgs("", "", "", false, "existing", "renamed", 1, "internal", 0, "", "updated:permission", "", 0, 0, "admin", uint64(8), sqlmock.AnyArg(), uint64(9))
 			if fail {
 				write.WillReturnError(cause)
 				mock.ExpectRollback()
@@ -92,7 +92,7 @@ func TestMenuLockedUpdatePreservesUnsubmittedColumnsAndRollsBack(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				return tx.Update(&rbacentity.SysMenu{BaseModel: rbacentity.BaseModel{ID: 9, UpdateBy: 8}, SystemCode: "admin", Permission: "updated:permission", MenuName: "renamed", MenuType: 1, MenuCode: row.MenuCode})
+				return tx.Update(&rbacentity.SysMenu{BaseModel: rbacentity.BaseModel{ID: 9, UpdateBy: 8}, SystemCode: "admin", Permission: "updated:permission", MenuName: "renamed", MenuType: 1, PageType: "internal", MenuCode: row.MenuCode})
 			})
 			if fail && !errors.Is(err, cause) {
 				t.Fatalf("driver cause lost: %v", err)

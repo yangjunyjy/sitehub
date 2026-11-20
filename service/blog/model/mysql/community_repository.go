@@ -4,10 +4,18 @@ import (
 	"context"
 	"errors"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"sitehub/service/blog/model/entity"
 )
 
 type CommunityRepository struct{ db *gorm.DB }
+
+func (repo *CommunityRepository) SaveHome(ctx context.Context, animation bool, verse string) error {
+	profile := entity.AuthorProfile{ID: 1, HomeAnimation: &animation, HomeVerse: verse}
+	return repo.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "id"}}, DoUpdates: clause.AssignmentColumns([]string{"home_animation", "home_verse"}),
+	}).Create(&profile).Error
+}
 
 func NewCommunityRepository(db *gorm.DB) *CommunityRepository { return &CommunityRepository{db: db} }
 func (repo *CommunityRepository) Profile(ctx context.Context) (entity.AuthorProfile, error) {
@@ -26,10 +34,15 @@ func (repo *CommunityRepository) PublishedFriends(ctx context.Context) ([]entity
 func (repo *CommunityRepository) Apply(ctx context.Context, link *entity.FriendLink) error {
 	return repo.db.WithContext(ctx).Create(link).Error
 }
-func (repo *CommunityRepository) PublishedMessages(ctx context.Context, offset, limit int) ([]entity.GuestMessage, error) {
+func (repo *CommunityRepository) PublishedMessages(ctx context.Context, articleID uint64, offset, limit int) ([]entity.GuestMessage, int64, error) {
 	var messages []entity.GuestMessage
-	err := repo.db.WithContext(ctx).Where("status = ?", "approved").Order("id DESC").Offset(offset).Limit(limit).Find(&messages).Error
-	return messages, err
+	var total int64
+	query := repo.db.WithContext(ctx).Model(&entity.GuestMessage{}).Where("status = ? AND article_id = ?", "approved", articleID)
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	err := query.Order("id DESC").Offset(offset).Limit(limit).Find(&messages).Error
+	return messages, total, err
 }
 func (repo *CommunityRepository) Submit(ctx context.Context, message *entity.GuestMessage) error {
 	return repo.db.WithContext(ctx).Create(message).Error

@@ -72,6 +72,7 @@
             {{ !row.is_visible ? "隐藏" : "显示" }}
           </el-tag>
         </template>
+        <template #destination="{ row }">{{ row.pageType === 'external' ? row.externalUrl : row.path }}</template>
         <template #status="{ row }">
           <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
             {{ row.status === 1 ? "启用" : "禁用" }}
@@ -126,13 +127,21 @@
           <el-form-item label="图标" prop="icon" v-if="form.type !== 3">
             <el-input v-model="form.icon" placeholder="请输入图标名称" />
           </el-form-item>
-          <el-form-item label="路径" prop="path" v-if="form.type !== 3">
+          <el-form-item v-if="form.type === 2" label="页面类型">
+            <el-radio-group v-model="form.pageType">
+              <el-radio value="internal">内部页面</el-radio><el-radio value="external">外链页面</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item v-if="isExternal" label="链接地址" prop="externalUrl" required>
+            <el-input v-model.trim="form.externalUrl" maxlength="2048" placeholder="https://example.com" />
+          </el-form-item>
+          <el-form-item label="路径" prop="path" v-if="form.type !== 3 && !isExternal">
             <el-input v-model="form.path" placeholder="请输入路由地址" />
           </el-form-item>
           <el-form-item
             label="组件路径"
             prop="component"
-            v-if="form.type === 2"
+            v-if="form.type === 2 && !isExternal"
           >
             <el-input
               v-model="form.component"
@@ -191,6 +200,7 @@
   </AdminListPage>
 </template>
 <script setup>
+import { externalAddress } from '@/utils/external-address.mjs';
 import AdminRowAction from "@/components/admin/AdminRowAction.vue";
 import AdminRowActions from "@/components/admin/AdminRowActions.vue";
 import AdminListPage from "@/components/admin/AdminListPage.vue";
@@ -251,9 +261,8 @@ const columns = computed(() => [
     align: "center",
   },
   {
-    key: "path",
-    prop: "path",
-    label: "路由地址",
+    key: "destination",
+    label: "路由 / 外链地址",
     minWidth: "280",
     showOverflowTooltip: true,
   },
@@ -366,6 +375,8 @@ const form = reactive({
   name: "",
   icon: "",
   type: "menu",
+  pageType: "internal",
+  externalUrl: "",
   path: "",
   component: "",
   code: "",
@@ -376,7 +387,9 @@ const form = reactive({
   description: "",
 });
 
+const isExternal = computed(() => form.type === 2 && form.pageType === 'external');
 const rules = {
+  externalUrl: [{ validator: (_rule, value, callback) => callback(externalAddress(value) ? undefined : new Error('请输入完整的 HTTP 或 HTTPS 地址')), trigger: 'blur' }],
   systemCode: [
     { required: true, message: "请选择所属系统", trigger: "change" },
   ],
@@ -553,6 +566,8 @@ const handleCreate = () => {
     name: "",
     icon: "",
     type: 2,
+    pageType: "internal",
+    externalUrl: "",
     path: "",
     component: "",
     code: "",
@@ -573,6 +588,8 @@ const handleEdit = (row) => {
     id: row.id,
     parent_id: row.parent_id,
     path: row.path,
+    pageType: row.pageType || "internal",
+    externalUrl: row.externalUrl || "",
     status: row.status,
     sort: row.sort,
     isVisible: row.is_visible,
@@ -611,6 +628,10 @@ const handleSubmit = async () => {
       // 构建提交数据，确保布尔值正确
       const submitData = {
         ...form,
+        pageType: isExternal.value ? 'external' : 'internal',
+        externalUrl: isExternal.value ? form.externalUrl : '',
+        path: isExternal.value ? '' : form.path,
+        component: isExternal.value ? '' : form.component,
         isVisible:
           form.isVisible === true || form.isVisible === "true" ? true : false,
       };

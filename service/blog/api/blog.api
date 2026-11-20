@@ -10,6 +10,11 @@ type Response {
 	Data    interface{} `json:"data"`
 }
 
+type HomeSettingsRequest {
+	HomeAnimation bool `json:"homeAnimation"`
+	HomeVerse string `json:"homeVerse"`
+}
+
 type FriendApplication {
 	Name        string `json:"name"`
 	URL         string `json:"url"`
@@ -18,13 +23,27 @@ type FriendApplication {
 }
 
 type GuestPost {
+	ArticleID uint64 `json:"articleId,optional"`
 	Nickname string `json:"nickname,optional"`
 	Content  string `json:"content"`
 }
 
 type CommunityPage {
+	ArticleID uint64 `form:"articleId,optional"`
 	Page     int64 `form:"page,optional"`
 	PageSize int64 `form:"pageSize,optional"`
+}
+
+type ReviewQueue {
+	Kind string `form:"kind"`
+	Status string `form:"status"`
+	Page int `form:"page,optional"`
+}
+
+type ReviewDecision {
+	Kind string `json:"kind"`
+	Status string `json:"status"`
+	ID uint64 `json:"id"`
 }
 
 type SaveStorageRequest {
@@ -216,6 +235,12 @@ service blog-api {
 	@handler ListFriends
 	get /v1/blog/friends returns (Response)
 
+	@handler CommunityReviewQueue
+	get /v1/blog/admin/community (ReviewQueue) returns (Response)
+
+	@handler ReviewCommunity
+	post /v1/blog/admin/community (ReviewDecision) returns (Response)
+
 	@handler ApplyFriend
 	post /v1/blog/friends (FriendApplication) returns (Response)
 
@@ -227,6 +252,9 @@ service blog-api {
 
 	@handler GetAbout
 	get /v1/blog/about returns (Response)
+
+	@handler SaveHomeSettings
+	post /v1/blog/home/settings (HomeSettingsRequest) returns (Response)
 
 	@handler Health
 	get /health returns (Response)

@@ -1,6 +1,11 @@
 <script setup>
 defineProps({ name: String, size: { type: [String, Number], default: 20 } });
 const paths = {
+  pause: "M8 5v14m8-14v14",
+  play: "m7 4 13 8-13 8Z",
+  home: "m2 11 10-9 10 9M5 9v12h14V9M10 21v-7h4v7",
+  info: "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0ZM12 11v6m0-10v.1",
+  message: "M5 3h14a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-8l-6 4v-4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm2 7h.1m4.9 0h.1m4.9 0h.1",
   search: "m21 21-5-5M19 10a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z",
   menu: "M3 6h18M3 12h18M3 18h18",
   close: "m6 6 12 12M6 18 18 6",

@@ -13,6 +13,7 @@ type FriendLink struct {
 }
 
 type GuestMessage struct {
+	ArticleID uint64 `gorm:"not null;default:0;index:idx_message_thread,priority:1"`
 	ID        uint64 `gorm:"primaryKey"`
 	Nickname  string `gorm:"size:40"`
 	Content   string `gorm:"type:text;not null"`
@@ -26,14 +27,16 @@ type SocialLink struct {
 }
 
 type AuthorProfile struct {
-	ID       uint64 `gorm:"primaryKey"`
-	Name     string
-	Title    string
-	Bio      string `gorm:"type:text"`
-	Content  string `gorm:"type:text"`
-	Avatar   string `gorm:"size:500"`
-	Location string
-	Email    string
-	Skills   []string     `gorm:"serializer:json"`
-	Socials  []SocialLink `gorm:"serializer:json"`
+	HomeAnimation *bool  `gorm:"column:home_animation"`
+	HomeVerse     string `gorm:"size:120"`
+	ID            uint64 `gorm:"primaryKey"`
+	Name          string
+	Title         string
+	Bio           string `gorm:"type:text"`
+	Content       string `gorm:"type:text"`
+	Avatar        string `gorm:"size:500"`
+	Location      string
+	Email         string
+	Skills        []string     `gorm:"serializer:json"`
+	Socials       []SocialLink `gorm:"serializer:json"`
 }

@@ -13,6 +13,7 @@ import (
 
 func GetAboutHandler(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
 		l := logic.NewGetAboutLogic(r.Context(), svcCtx)
 		resp, err := l.GetAbout()
 		if err != nil {

@@ -14,6 +14,8 @@ npm start
 
 首页、分类、标签、归档、搜索和文章详情使用真实博客接口。会员登录使用 `/v1/rbac/members/*`。关于、友链和留言使用 `/v1/blog/about`、`/v1/blog/friends`、`/v1/blog/messages`；提交成功以接口返回 `pending` 为准，不会把请求失败显示为成功。空内容保留空态，不注入演示文章。
 
-导航从 `/v1/rbac/menus/public?system=blog` 获取，仅展示本应用已有页面的组件路径；路由生成不依赖菜单请求。会员会话使用 RBAC 签发的 HttpOnly Cookie，浏览器不保存访问令牌。
+导航从 `/v1/rbac/menus/public?system=blog` 获取。内部页面按本应用组件路径解析，外链页面按菜单中的 HTTP 或 HTTPS 地址打开。会员会话使用 RBAC 签发的 HttpOnly Cookie。
 
-插画位于 `src/assets/skies`，Vite 会将 WebP 文件打进本应用的静态资源。首页导航和互动入口使用 Inspira UI 的 Liquid Glass，天空中的流星使用 Meteors。组件代码位于 `src/components/inspira`，许可证位于 `public/licenses`。留言页使用本地 SVG 地球和 SCSS 星空，所有页面样式、接口与启动代码均由本应用维护。
+后台「基础设置 → 博客首页」保存动画开关和短句。博客从 `/v1/blog/about` 读取设置，关闭动画或系统启用减少动态效果时显示完整短句。友链页使用已审核的友链，卡片和列表共享数据并记住访客的展示偏好。
+
+本次升级将 RBAC 和博客数据库的结构版本从 2 提升到 3。云机使用新版发布包构建镜像后，在发布目录运行 `bash init.sh database`，随后启动新版服务。旧菜单默认使用内部页面类型。

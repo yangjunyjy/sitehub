@@ -7,6 +7,7 @@ import { useRoute, useRouter } from "vue-router";
 import { useWebsiteContent } from "@/composables/useWebsiteContent";
 import { useMember } from "@/composables/useMember";
 import { getPublicMenus } from '@/api';
+import { externalAddress } from '@/utils/external-address.mjs';
 
 const { member, restoreMember } = useMember();
 
@@ -108,11 +109,13 @@ const navigation = computed(() => {
   const fromCatalog = menuItems.value !== null;
   const source = fromCatalog ? visibleMenu(menuItems.value) : website.content.navigation;
   const items = source
-    .filter(item => typeof item.path === 'string' && /^\/(?!\/)/.test(item.path) && !item.path.includes('\\'))
+    .map(item => fromCatalog && item.pageType === 'external' ? { ...item, path: externalAddress(item.externalUrl), external: true } : { ...item, external: false })
+    .filter(item => item.external ? !!item.path : typeof item.path === 'string' && /^\/(?!\/)/.test(item.path) && !item.path.includes('\\'))
     .filter(item => fromCatalog || !router.resolve(item.path).meta.notFound)
     .map((item) => ({
       label: item.title || item.name || item.label,
       to: item.path,
+      external: item.external,
     })).filter((item, index, values) => values.findIndex(value => value.to === item.to) === index);
   return items;
 });
@@ -161,13 +164,13 @@ onBeforeUnmount(() => document.documentElement.classList.remove("menu-open"));
         <SiteSearch @open="openSearch" @close="searchOpen = false" />
       </div>
       <nav class="desktop-nav" aria-label="主导航">
-        <router-link
+        <component :is="item.external ? 'a' : 'router-link'"
           v-for="item in navigation"
           :key="item.to"
-          :to="item.to"
+          v-bind="item.external ? { href: item.to, target: '_blank', rel: 'noopener noreferrer' } : { to: item.to }"
           :class="{ active: isActive(item.to) }"
           :aria-current="isActive(item.to) ? 'page' : undefined"
-          >{{ item.label }}</router-link
+          >{{ item.label }}</component
         >
       </nav>
       <div class="header-actions">
@@ -200,12 +203,12 @@ onBeforeUnmount(() => document.documentElement.classList.remove("menu-open"));
       :inert="!menuOpen"
     >
       <nav class="site-shell">
-        <router-link
+        <component :is="item.external ? 'a' : 'router-link'"
           v-for="item in navigation"
           :key="item.to"
-          :to="item.to"
+          v-bind="item.external ? { href: item.to, target: '_blank', rel: 'noopener noreferrer' } : { to: item.to }"
           @click="menuOpen = false"
-          >{{ item.label }} </router-link
+          >{{ item.label }} </component
         ><a
           v-if="website.content.brand.contactEmail"
           :href="`mailto:${website.content.brand.contactEmail}?subject=Deploy 企业版咨询`"

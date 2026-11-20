@@ -49,8 +49,9 @@ type CategoryStatsRequest struct {
 }
 
 type CommunityPage struct {
-	Page     int64 `form:"page,optional"`
-	PageSize int64 `form:"pageSize,optional"`
+	ArticleID uint64 `form:"articleId,optional"`
+	Page      int64  `form:"page,optional"`
+	PageSize  int64  `form:"pageSize,optional"`
 }
 
 type CreateCategoryRequest struct {
@@ -88,6 +89,11 @@ type FriendApplication struct {
 	Avatar      string `json:"avatar,optional"`
 }
 
+type HomeSettingsRequest struct {
+	HomeAnimation bool   `json:"homeAnimation"`
+	HomeVerse     string `json:"homeVerse"`
+}
+
 type GetArticleHistoryRequest struct {
 	ID uint64 `form:"id,optional"`
 }
@@ -101,8 +107,9 @@ type GetTagRequest struct {
 }
 
 type GuestPost struct {
-	Nickname string `json:"nickname,optional"`
-	Content  string `json:"content"`
+	ArticleID uint64 `json:"articleId,optional"`
+	Nickname  string `json:"nickname,optional"`
+	Content   string `json:"content"`
 }
 
 type HotArticleStatsRequest struct {
@@ -163,6 +170,18 @@ type SaveDraftRequest struct {
 	Version   uint64       `json:"version,optional"`
 	RequestID string       `json:"requestID,optional"`
 	Input     ArticleInput `json:"input,optional"`
+}
+
+type ReviewQueue struct {
+	Kind   string `form:"kind"`
+	Status string `form:"status"`
+	Page   int    `form:"page,optional"`
+}
+
+type ReviewDecision struct {
+	Kind   string `json:"kind"`
+	Status string `json:"status"`
+	ID     uint64 `json:"id"`
 }
 
 type SaveStorageRequest struct {

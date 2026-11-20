@@ -5,8 +5,15 @@ import { queryString, stringifyJSON, viewValues } from './native-api.mjs'
 
 const request = axios.create({ baseURL: '/v1', timeout: 30000, paramsSerializer: { serialize: queryString } })
 let totpStatus
+let totpSession
 export const initRequestInterceptors = () => {
-  totpStatus = request.get('/rbac/auth/totp', { silentError: true }).then(response => response.data.enabled)
+  const session = sessionStorage.getItem('token')
+  if (totpStatus && totpSession === session) return totpStatus
+  totpSession = session
+  totpStatus = request.get('/rbac/auth/totp', { silentError: true }).then(response => response.data.enabled).catch(error => {
+    if (totpSession === session) totpStatus = undefined
+    throw error
+  })
   return totpStatus
 }
 const publicPosts = new Set(['/rbac/auth/login', '/rbac/auth/code', '/rbac/captcha/verify', '/rbac/auth/logout'])
@@ -14,7 +21,7 @@ request.interceptors.request.use(async config => {
   const token = sessionStorage.getItem('token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   if (token && config.method !== 'get' && !publicPosts.has(config.url)) {
-    const required = await (totpStatus || initRequestInterceptors())
+    const required = await initRequestInterceptors()
     if (required) {
       const { value } = await ElMessageBox.prompt('请输入验证器中的六位动态验证码', '确认操作', {
         inputPattern: /^\d{6}$/, inputErrorMessage: '请输入六位数字', inputType: 'text',
@@ -39,10 +46,11 @@ request.interceptors.response.use(response => {
   const message = status >= 500 ? '服务暂时不可用，请稍后重试' : error.response?.data?.message || error.message || '请求失败'
   error.message = message
   if (error.response?.data && status >= 500) error.response.data.message = message
-  if (status === 401 && sessionStorage.getItem('token')) {
+  const session = sessionStorage.getItem('token')
+  if (status === 401 && session && error.config?.headers?.Authorization === `Bearer ${session}`) {
     sessionStorage.removeItem('token'); sessionStorage.removeItem('userInfo')
     router.resetMenus(); totpStatus = undefined
-    router.replace('/login')
+    if (router.currentRoute.value.path !== '/login') router.replace({ path: '/login', query: { redirect: router.currentRoute.value.fullPath } })
   }
   if (!error.config?.silentError) ElMessage.error(message)
   return Promise.reject(error)

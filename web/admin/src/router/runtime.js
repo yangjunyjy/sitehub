@@ -7,7 +7,6 @@ export function createAdminRouter({
   modules,
   layout,
   store,
-  initializeRequests = () => Promise.resolve(),
   storage = globalThis.sessionStorage,
   document = globalThis.document,
 }) {
@@ -15,6 +14,7 @@ export function createAdminRouter({
   const router = createRouter({
     history,
     routes: [
+      { path: '/access-unavailable', name: 'AccessUnavailable', component: modules['../views/access-unavailable/index.vue'], meta: { title: '后台加载失败' } },
       {
         path: "/login",
         name: "Login",
@@ -47,7 +47,6 @@ export function createAdminRouter({
   let removers = [];
   let signature = null;
   let initialized = false;
-  let initializingRequests = false;
   router.resetMenus = () => {
     for (const remove of removers) remove();
     removers = [];
@@ -72,16 +71,12 @@ export function createAdminRouter({
       if (!storage?.getItem("token")) router.resetMenus();
       return true;
     }
-    if (!storage?.getItem("token")) {
+    const session = storage?.getItem("token");
+    if (!session) {
       router.resetMenus();
       return { path: "/login", query: { redirect: to.fullPath } };
     }
-    if (!initializingRequests) {
-      initializingRequests = true;
-      Promise.resolve()
-        .then(initializeRequests)
-        .catch(() => {});
-    }
+    if (to.name === 'AccessUnavailable') return true;
     const rbac = store();
     try {
       if (!rbac.menusLoaded) await rbac.loadAllDataFromBackend();
@@ -91,9 +86,13 @@ export function createAdminRouter({
         router.installMenus(menus);
         return { path: to.path, query: to.query, hash: to.hash, replace: true };
       }
-    } catch {
+    } catch (error) {
+      if (session !== storage?.getItem('token') && storage?.getItem('token')) return false;
       router.resetMenus();
       rbac.resetAllData();
+      if (storage?.getItem('token') && error.response?.status !== 401) {
+        return { name: 'AccessUnavailable', query: { redirect: to.fullPath }, replace: true };
+      }
       storage?.removeItem("token");
       storage?.removeItem("userInfo");
       return { path: "/login", query: { redirect: to.fullPath } };

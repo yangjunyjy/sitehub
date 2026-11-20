@@ -1,3 +1,4 @@
+import { externalAddress } from './external-address.mjs';
 export function navigationLinks(items, routes) {
   const available = new Map(routes.map(({ name, path }) => [name, path]));
   const seen = new Set(),
@@ -15,16 +16,17 @@ export function navigationLinks(items, routes) {
       const component = String(node.component || "")
         .replace(/\.vue$/, "")
         .replace(/^\/+/, "");
-      const path = available.get(component);
+      const external = node.pageType === 'external';
+      const path = external ? externalAddress(node.externalUrl) : available.get(component);
       const label = node.menuName || node.menu_name || node.name || node.title;
       if (
         label &&
         path &&
-        !path.includes(":") &&
+        (external || !path.includes(":")) &&
         !seen.has(path)
       ) {
         seen.add(path);
-        result.push({ path, label: String(label) });
+        result.push({ path, label: String(label), ...(external && { external: true }) });
       }
       visit(node.children, depth + 1);
     }

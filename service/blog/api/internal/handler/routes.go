@@ -14,6 +14,9 @@ import (
 func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
+			{Method: http.MethodGet, Path: "/v1/blog/admin/community", Handler: CommunityReviewQueueHandler(serverCtx)},
+			{Method: http.MethodPost, Path: "/v1/blog/admin/community", Handler: ReviewCommunityHandler(serverCtx)},
+			{Method: http.MethodPost, Path: "/v1/blog/home/settings", Handler: SaveHomeSettingsHandler(serverCtx)},
 			{
 				Method:  http.MethodGet,
 				Path:    "/health",

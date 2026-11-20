@@ -30,6 +30,7 @@ const (
 
 // SysUserService 系统用户服务
 type SysUserService interface {
+	GetAccount(userID uint64) (*rbacentity.SysUser, error)
 	// Login 用户登录（用户名+密码）
 	Login(username, password string) (*rbacentity.SysUser, string, error)
 	// GenerateEmailCode 生成邮箱验证码
@@ -110,6 +111,10 @@ func (s *sysUserService) Login(username, password string) (*rbacentity.SysUser, 
 	})
 
 	return user, "", nil
+}
+
+func (s *sysUserService) GetAccount(userID uint64) (*rbacentity.SysUser, error) {
+	return s.userRepo.FindByID(userID)
 }
 
 func (s *sysUserService) GetUserInfo(userID uint64) (*rbacentity.SysUser, error) {

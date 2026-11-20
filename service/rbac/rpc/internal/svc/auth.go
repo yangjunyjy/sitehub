@@ -45,7 +45,7 @@ func (s *ServiceContext) Authorize(ctx context.Context, credential, permission, 
 	if err != nil {
 		return nil, rpcx.Error(err)
 	}
-	user, err := s.Core.Users.GetUserInfo(uint64(info.UserID))
+	user, err := s.Core.Users.GetAccount(uint64(info.UserID))
 	if err != nil {
 		return nil, rpcx.Error(err)
 	}

@@ -2,11 +2,11 @@
 import { ref } from "vue";
 import BlogIcon from "@/components/BlogIcon.vue";
 import { safeURL } from "@/utils/format";
-defineProps({ items: { type: Array, default: () => [] } });
+defineProps({ items: { type: Array, default: () => [] }, layout: String });
 const broken = ref(new Set());
 </script>
 <template>
-  <div class="friend-grid">
+  <div class="friend-grid" :class="{ 'friend-list': layout === 'list' }">
     <a
       v-for="friend in items"
       :key="friend.id || friend.url"
@@ -34,16 +34,27 @@ const broken = ref(new Set());
 <style lang="scss" scoped>
 .friend-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
 }
 .friend-card {
   display: flex;
   align-items: center;
   gap: 15px;
-  padding: 25px 20px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 98px;
+  padding: 18px 14px;
+  border: 1px solid #fff;
+  border-radius: 14px;
+  --wash: #e8e3f7;
+  background: linear-gradient(150deg, white, #ffffffb3);
+  box-shadow: 0 4px 12px #74769c1f;
+  &:nth-child(4n + 2) { --wash: #dbeef7; }
+  &:nth-child(4n + 3) { --wash: #f5e4dc; }
+  &:nth-child(4n) { --wash: #dceddf; }
+  &::before { content: ''; position: absolute; z-index: -1; inset: 65% -5% -18%; background: var(--wash); border-radius: 50% 70% 0 0; transform: rotate(-5deg); }
   transition:
     transform 0.25s,
     box-shadow 0.25s;
@@ -71,10 +82,16 @@ const broken = ref(new Set());
     overflow: hidden;
   }
   > span {
+    align-self: flex-start;
     color: #c0b3ca;
     font-size: 14px;
   }
 }
+.friend-grid.friend-list { grid-template-columns: 1fr; gap: 7px; }
+.friend-list .friend-card { min-height: 65px; padding: 9px 18px; }
+.friend-list .friend-card::before { inset: 0 auto 0 0; width: 5px; border-radius: 0; transform: none; }
+.friend-list .friend-avatar { height: 38px; width: 38px; }
+.friend-list h3 { margin-bottom: 2px; }
 .friend-avatar {
   width: 48px;
   height: 48px;

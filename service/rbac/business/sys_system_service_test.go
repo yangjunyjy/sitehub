@@ -30,6 +30,23 @@ func systemStore(t *testing.T) (*SysSystemService, sqlmock.Sqlmock) {
 	return NewSysSystemService(db), mock
 }
 
+func TestMenuPageDestination(t *testing.T) {
+	menu := entity.SysMenu{MenuName: "友站", MenuType: 2, PageType: "external", Path: "/old", Component: "old/index", ExternalURL: "https://example.org/notes?q=1"}
+	if err := prepareMenu(&menu); err != nil || menu.Path != "" || menu.Component != "" {
+		t.Fatalf("external destination: %+v, %v", menu, err)
+	}
+	for _, address := range []string{"", "//example.org", "javascript:alert(1)", "https://user:pass@example.org", "/relative"} {
+		menu.ExternalURL = address
+		if err := prepareMenu(&menu); err == nil {
+			t.Errorf("accepted %q", address)
+		}
+	}
+	menu.PageType = ""
+	if err := prepareMenu(&menu); err != nil || menu.PageType != "internal" || menu.ExternalURL != "" {
+		t.Fatalf("legacy destination: %+v, %v", menu, err)
+	}
+}
+
 func TestSystemOriginAndInternalAdminValidation(t *testing.T) {
 	for _, origin := range []string{"javascript:alert(1)", "https://user:secret@example.test", "https://example.test/path", "https://example.test?query=1"} {
 		if err := validateSystem(&entity.SysSystem{Code: "product", Name: "Product", Origin: origin}); err == nil {

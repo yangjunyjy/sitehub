@@ -2,6 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { navigationLinks } from "../src/utils/navigation.mjs";
 
+test('external navigation requires a public web address and no local component', () => {
+  const node = { name: '友站', pageType: 'external', externalUrl: 'https://example.org/notes' };
+  assert.deepEqual(navigationLinks([node, { ...node, externalUrl: 'javascript:alert(1)' }], []), [
+    { label: node.name, path: node.externalUrl, external: true },
+  ]);
+});
+
 test("public navigation uses real local page components and removes unavailable or hidden pages", () => {
   const pages = [
     { name: "home/index", path: "/" },

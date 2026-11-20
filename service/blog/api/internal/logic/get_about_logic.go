@@ -33,5 +33,8 @@ func (l *GetAboutLogic) GetAbout() (*types.Response, error) {
 	if profile.Socials == nil {
 		profile.Socials = []entity.SocialLink{}
 	}
-	return reply(map[string]any{"name": profile.Name, "title": profile.Title, "bio": profile.Bio, "content": profile.Content, "avatar": profile.Avatar, "location": profile.Location, "email": profile.Email, "skills": profile.Skills, "socials": profile.Socials}, nil)
+	if profile.HomeVerse == "" {
+		profile.HomeVerse = "在文字的星河里，记录生活的光与热"
+	}
+	return reply(map[string]any{"name": profile.Name, "title": profile.Title, "bio": profile.Bio, "content": profile.Content, "avatar": profile.Avatar, "location": profile.Location, "email": profile.Email, "skills": profile.Skills, "socials": profile.Socials, "homeVerse": profile.HomeVerse, "homeAnimation": profile.HomeAnimation == nil || *profile.HomeAnimation}, nil)
 }

@@ -35,7 +35,7 @@ func (l *PublicMenusLogic) PublicMenus(in *rbac.SystemRequest) (*rbac.PublicMenu
 func publicMenuItems(items []*entity.SysMenu) []*rbac.PublicMenu {
 	result := make([]*rbac.PublicMenu, 0, len(items))
 	for _, item := range items {
-		result = append(result, &rbac.PublicMenu{Id: item.ID, Name: item.MenuName, Path: item.Path, Component: item.Component, Icon: item.Icon, IsVisible: item.IsVisible, SystemCode: item.SystemCode, Children: publicMenuItems(item.Children)})
+		result = append(result, &rbac.PublicMenu{Id: item.ID, Name: item.MenuName, Path: item.Path, Component: item.Component, PageType: item.PageType, ExternalUrl: item.ExternalURL, Icon: item.Icon, IsVisible: item.IsVisible, SystemCode: item.SystemCode, Children: publicMenuItems(item.Children)})
 	}
 	return result
 }

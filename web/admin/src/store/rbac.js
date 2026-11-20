@@ -1,6 +1,6 @@
 import { filterMenuTree } from '@/router/pages'
 import { defineStore } from 'pinia'
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed } from 'vue'
 import { getUserMenus } from '@/api/permission'
 import { getUserInfo, getPermissions } from '@/api/auth'
 import { useWorkspaceStore } from './workspace'
@@ -75,7 +75,6 @@ export const useRbacStore = defineStore('rbac', () => {
   const currentMenus = ref([])
   // 菜单加载状态管理
   const menusLoaded = ref(false)
-  const menuFetchPromise = ref(null)
   const menuLastFetchTime = ref(0)
   const MENU_CACHE_DURATION = 5 * 60 * 1000 // 5分钟缓存
 
@@ -251,125 +250,38 @@ export const useRbacStore = defineStore('rbac', () => {
     return currentPermissions.value.includes('*') || currentPermissions.value.includes(permission) || (currentUser.value?.roleIds || []).some(id => Number(id) === 1) || (currentUser.value?.roles || []).some(role => Number(role.id) === 1)
   }
 
-  // 从后端加载用户菜单（支持缓存和并发控制）
-  const loadUserMenusFromBackend = async (forceRefresh = false) => {
-    // 检查缓存是否有效
-    const now = Date.now()
-    const cacheValid = !forceRefresh && 
-                      menusLoaded.value && 
-                      (now - menuLastFetchTime.value) < MENU_CACHE_DURATION
-    
-    if (cacheValid) {
-      return currentMenus.value
+  let sessionEpoch = 0
+  let pendingAccess = null
+  const loadAllDataFromBackend = (forceRefresh = false) => {
+    if (!forceRefresh && menusLoaded.value && Date.now() - menuLastFetchTime.value < MENU_CACHE_DURATION) {
+      return Promise.resolve({ user: currentUser.value, roles: roles.value, menus: currentMenus.value, permissions: currentPermissions.value })
     }
-    
-    // 如果有正在进行的请求，直接返回该Promise
-    if (menuFetchPromise.value) {
-      return menuFetchPromise.value
-    }
-    
-    // 创建新的请求Promise
-    menuFetchPromise.value = (async () => {
-      try {
-        const response = await getUserMenus()
-        if (response && response.data) {
-          // 转换后端菜单数据为前端格式
-          const formattedMenus = formatMenusForFrontend(response.data)
-          currentMenus.value = formattedMenus
-          menus.value = formattedMenus
-          saveMenus()
-          // 提取权限标识
-          const permissions = (await getPermissions()).data.items || []
-          currentPermissions.value = permissions
-          // 更新加载状态
-          menusLoaded.value = true
-          menuLastFetchTime.value = now
-          return formattedMenus
-        }
-        return []
-      } catch (error) {
-        console.error('加载用户菜单失败:', error)
-        // 清除加载状态，确保下次请求会重新尝试
-        menusLoaded.value = false
-        menuLastFetchTime.value = 0
-        throw error // 抛出错误，让调用者处理
-      } finally {
-        menuFetchPromise.value = null
-      }
-    })()
-    
-    return menuFetchPromise.value
-  }
-
-  // 从后端加载当前用户的数据（用户信息、角色、菜单）
-  const loadAllDataFromBackend = async (_forceRefresh = false) => {
-    try {
-      
-      const userInfoResponse = await getUserInfo()
-      const menusResponse = await getUserMenus()
-
-      await nextTick()
-      // 处理用户信息数据
-      let userData = null
-      let userRoles = []
-      if (userInfoResponse.code === 0 && userInfoResponse.data) {
-        userData = userInfoResponse.data
-        // 存储当前用户（单个对象）
-        users.value = [userData]
-        sessionStorage.setItem(USERS_KEY, JSON.stringify([userData]))
-        
-        // 提取用户角色
-        userRoles = userData.roles || []
-        roles.value = userRoles
-        sessionStorage.setItem(ROLES_KEY, JSON.stringify(userRoles))
-        
-        // 设置当前用户
-        currentUser.value = userData
-        
-        
-      } else {
-        console.error('用户信息加载失败:', userInfoResponse.reason)
-        users.value = []
-        roles.value = []
-      }
-      
-      // 处理菜单数据
-      if (menusResponse.code === 0 && menusResponse.data) {
-        const formattedMenus = formatMenusForFrontend(menusResponse.data)
-        menus.value = formattedMenus
-        currentMenus.value = formattedMenus  // 同步更新 currentMenus
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(formattedMenus))
-        // 设置菜单加载状态
+    if (pendingAccess) return pendingAccess
+    const epoch = sessionEpoch
+    const token = sessionStorage.getItem('token')
+    pendingAccess = Promise.all([getUserInfo(), getUserMenus(), getPermissions()])
+      .then(([profile, menuList, grants]) => {
+        if (epoch !== sessionEpoch || token !== sessionStorage.getItem('token')) throw new Error('登录状态已更改')
+        if (!profile.data || !Array.isArray(menuList.data) || !Array.isArray(grants.data?.items)) throw new Error('后台权限数据不完整，请重试')
+        const user = profile.data
+        const formatted = formatMenusForFrontend(menuList.data)
+        currentUser.value = user
+        users.value = [user]
+        roles.value = user.roles || []
+        menus.value = formatted
+        currentMenus.value = formatted
+        currentPermissions.value = grants.data.items
         menusLoaded.value = true
         menuLastFetchTime.value = Date.now()
-        
-        // 提取权限标识
-        const permissions = (await getPermissions()).data.items || []
-        currentPermissions.value = permissions
-        
-      } else {
-        console.error('菜单数据加载失败:', menusResponse.reason)
-        menus.value = []
-        currentMenus.value = []  // 同步更新 currentMenus
-        menusLoaded.value = false
-        menuLastFetchTime.value = 0
-        throw new Error('菜单数据加载失败')
-      }
-      
-      return {
-        user: userData,
-        roles: userRoles,
-        menus: menus.value,
-        permissions: currentPermissions.value
-      }
-    } catch (error) {
-      console.error('加载当前用户数据失败:', error)
-      // 确保数据为空数组，避免undefined
-      menus.value = []
-      roles.value = []
-      users.value = []
-      throw error
-    }
+        return { user, roles: roles.value, menus: formatted, permissions: currentPermissions.value }
+      })
+      .finally(() => { if (epoch === sessionEpoch) pendingAccess = null })
+    return pendingAccess
+  }
+
+  const loadUserMenusFromBackend = async (forceRefresh = false) => {
+    const access = await loadAllDataFromBackend(forceRefresh)
+    return access.menus
   }
 
   // 格式化后端菜单数据为前端格式
@@ -387,6 +299,8 @@ export const useRbacStore = defineStore('rbac', () => {
         icon: menu.icon,
         path: menu.path,
         component: menu.component,
+        pageType: menu.pageType || 'internal',
+        externalUrl: menu.externalUrl,
         permission: menu.perms || menu.permission || '',
         menuCode: menu.menu_code,
         sort: menu.sort,
@@ -428,6 +342,8 @@ export const useRbacStore = defineStore('rbac', () => {
 
   // 清除权限
   const clearPermission = () => {
+    sessionEpoch++
+    pendingAccess = null
     useWorkspaceStore().reset()
     currentUser.value = null
     currentPermissions.value = []
@@ -438,6 +354,8 @@ export const useRbacStore = defineStore('rbac', () => {
 
   // 重置所有数据到默认值
   const resetAllData = () => {
+    sessionEpoch++
+    pendingAccess = null
     useWorkspaceStore().reset()
 
     // 清除 sessionStorage 中的缓存

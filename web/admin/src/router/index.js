@@ -8,10 +8,6 @@ const router = createAdminRouter({
   modules,
   layout: () => import("../layout/Layout.vue"),
   store: useRbacStore,
-  initializeRequests: () =>
-    import("@/utils/request").then(({ initRequestInterceptors }) =>
-      initRequestInterceptors(),
-    ),
 });
 
 export const addRoutes = (menus) => router.installMenus(menus);

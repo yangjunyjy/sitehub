@@ -6,6 +6,7 @@ defineProps({
   eyebrow: String,
   scene: { type: String, default: "twilight" },
   full: Boolean,
+  homeMotion: Boolean,
 });
 </script>
 <template>
@@ -15,14 +16,15 @@ defineProps({
   >
     <div class="sky-hero__image"></div>
     <div class="sky-hero__veil"></div>
-    <Meteors :count="full ? 10 : 5" />
+    <Meteors v-if="scene === 'home'" v-show="homeMotion" :count="12" shower />
+    <Meteors v-else :count="full ? 10 : 5" />
     <div class="sky-hero__content">
       <span v-if="eyebrow" class="eyebrow">{{ eyebrow }}</span>
       <h1 v-if="title">{{ title }}</h1>
       <p v-if="subtitle">{{ subtitle }}</p>
       <slot />
     </div>
-    <div class="sky-hero__line" aria-hidden="true"></div>
+    <div v-if="scene !== 'home'" class="sky-hero__line" aria-hidden="true"></div>
   </section>
 </template>
 <style lang="scss" scoped>
@@ -90,9 +92,18 @@ defineProps({
   }
 }
 .scene-home {
-  background: #8d9dc9;
+  background: #444f83;
+  --meteor-distance: clamp(155px, 43vmin, 440px);
+  --meteor-tail: clamp(70px, 11vw, 156px);
   .sky-hero__image {
     background-image: url("../assets/skies/home.webp");
+    transform: none;
+  }
+  .sky-hero__veil {
+    background: linear-gradient(180deg, #161c52a8, #24294752 46%, #4a344c14 73%, #1d27445c);
+  }
+  .sky-hero__content {
+    padding: 64px 16px 20px;
   }
 }
 .scene-mountain {

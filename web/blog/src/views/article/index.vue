@@ -4,6 +4,7 @@ import { useRoute } from "vue-router";
 import SkyHero from "@/components/SkyHero.vue";
 import ContentState from "@/components/ContentState.vue";
 import ArticleBody from "./components/ArticleBody.vue";
+import DiscussionFeed from "@/components/DiscussionFeed.vue";
 import { articleDetail, recordView } from "@/api";
 import { articleDate } from "@/utils/format";
 const route = useRoute(),
@@ -94,6 +95,7 @@ onBeforeUnmount(() => {
       <button class="text-button" @click="share">分享这篇文章 ↗</button>
       <p v-if="copyNotice" role="status">{{ copyNotice }}</p>
     </div>
+    <DiscussionFeed v-if="article" :key="route.params.id" :article-id="String(route.params.id)" />
     <div class="article-back">
       <router-link to="/">← 回到文章列表</router-link>
     </div>

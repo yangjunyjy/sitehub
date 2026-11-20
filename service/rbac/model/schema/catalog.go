@@ -34,6 +34,7 @@ func MenuCatalog() []MenuSeed {
 		{"system", "角色管理", "system/roles/index", "system:role:list", false},
 		{"system", "菜单管理", "system/menus/index", "system:menu:list", false},
 		{"blog", "文章管理", "blog/articles/index", "blog:article:list", false},
+		{"blog", "友链管理", "blog/friends/index", "blog:community:list", false},
 		{"blog", "新建文章", "blog/articles/create/index", "blog:article:create", true},
 		{"blog", "编辑文章", "blog/articles/editor/index", "blog:article:update", true},
 		{"blog", "分类管理", "blog/categories/index", "blog:category:list", false},
@@ -80,6 +81,9 @@ func MenuCatalog() []MenuSeed {
 		"product": {"product:content:list", "product:content:edit", "product:download:list", "product:download:edit", "product:download:create", "product:download:update", "product:download:delete", "product:doc:list", "product:doc:edit", "product:doc:create", "product:doc:update", "product:doc:delete", "product:doc:publish", "file:storage:list", "file:storage:edit"},
 	}
 	for _, root := range []string{"system", "blog", "product"} {
+		if root == "blog" {
+			permissions[root] = append(permissions[root], "blog:community:list", "blog:community:review")
+		}
 		for _, permission := range permissions[root] {
 			add("permission-"+permission, root, "admin", permission, "", "", permission, 3, true)
 		}

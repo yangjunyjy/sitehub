@@ -3,6 +3,7 @@ package mysql
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -118,63 +119,43 @@ func (r *SysMenuRepositoryImpl) GetMenuTree() ([]*rbacentity.SysMenu, error) {
 }
 
 func (r *SysMenuRepositoryImpl) GetUserMenus(userID uint64) ([]*rbacentity.SysMenu, error) {
-	// 查询用户的所有角色
-	var roleIDs []uint64
-	if err := r.db.Table("sys_role").
-		Joins("INNER JOIN sys_user_role ON sys_role.id = sys_user_role.role_id").
-		Where("sys_user_role.user_id = ? AND sys_role.status = ? AND sys_role.deleted = 0", userID, rbacentity.StatusEnabled).
-		Pluck("sys_role.id", &roleIDs).Error; err != nil {
+	grants := r.db.Table("sys_role_menu rm").Select("rm.menu_id").
+		Joins("JOIN sys_user_role ur ON ur.role_id = rm.role_id").
+		Joins("JOIN sys_role r ON r.id = rm.role_id").
+		Where("ur.user_id = ? AND r.status = ? AND r.deleted = 0", userID, rbacentity.StatusEnabled)
+	active := r.db.Model(&rbacentity.SysMenu{}).Where("status = ? AND deleted = 0", rbacentity.StatusEnabled)
+	var batch []*rbacentity.SysMenu
+	if err := active.Session(&gorm.Session{}).Where("id IN (?)", grants).Find(&batch).Error; err != nil {
 		return nil, err
 	}
-
-	if len(roleIDs) == 0 {
-		return nil, nil
-	}
-
-	// 查询角色的所有菜单
-	var menuIDs []uint64
-	if err := r.db.Table("sys_menu").
-		Joins("INNER JOIN sys_role_menu ON sys_menu.id = sys_role_menu.menu_id").
-		Where("sys_role_menu.role_id IN ? AND sys_menu.status = ? AND sys_menu.deleted = 0", roleIDs, rbacentity.StatusEnabled).
-		Pluck("sys_menu.id", &menuIDs).Error; err != nil {
-		return nil, err
-	}
-
-	if len(menuIDs) == 0 {
-		return nil, nil
-	}
-
-	// 包含所有有权限菜单的父级目录
-	allMenuIDs := make([]uint64, 0, len(menuIDs))
-	allMenuIDs = append(allMenuIDs, menuIDs...)
-
-	// 递归查找所有父级目录
-	for _, menuID := range menuIDs {
-		parentIDs, err := r.getAllParentIDs(menuID)
-		if err != nil {
+	var menus []*rbacentity.SysMenu
+	seen := make(map[uint64]bool)
+	for len(batch) > 0 {
+		menus = append(menus, batch...)
+		for _, menu := range batch {
+			seen[menu.ID] = true
+		}
+		var parents []uint64
+		for _, menu := range batch {
+			if menu.ParentID != 0 && !seen[menu.ParentID] {
+				seen[menu.ParentID] = true
+				parents = append(parents, menu.ParentID)
+			}
+		}
+		if len(parents) == 0 {
+			break
+		}
+		batch = nil
+		if err := active.Session(&gorm.Session{}).Where("id IN ?", parents).Find(&batch).Error; err != nil {
 			return nil, err
 		}
-		allMenuIDs = append(allMenuIDs, parentIDs...)
 	}
-
-	// 去重
-	uniqueMenuIDs := make([]uint64, 0, len(allMenuIDs))
-	seen := make(map[uint64]bool)
-	for _, id := range allMenuIDs {
-		if !seen[id] {
-			seen[id] = true
-			uniqueMenuIDs = append(uniqueMenuIDs, id)
+	sort.Slice(menus, func(first, second int) bool {
+		if menus[first].Sort == menus[second].Sort {
+			return menus[first].ID < menus[second].ID
 		}
-	}
-
-	// 查询菜单详情并构建树
-	var menus []*rbacentity.SysMenu
-	err := r.db.Where("id IN ?", uniqueMenuIDs).Order("sort ASC, id ASC").Find(&menus).Error
-	if err != nil {
-		return nil, err
-	}
-
-	// 构建树形结构
+		return menus[first].Sort < menus[second].Sort
+	})
 	return r.buildMenuTree(menus, 0), nil
 }
 
@@ -211,6 +192,7 @@ func menuEditableValues(menu *rbacentity.SysMenu) map[string]any {
 		"parent_id": menu.ParentID, "menu_name": menu.MenuName,
 		"menu_code": menu.MenuCode, "menu_type": menu.MenuType,
 		"component": menu.Component, "path": menu.Path, "icon": menu.Icon,
+		"page_type": menu.PageType, "external_url": menu.ExternalURL,
 		"sort": menu.Sort, "status": menu.Status, "is_visible": menu.IsVisible,
 		"remark": menu.Remark,
 	}
@@ -281,38 +263,6 @@ func (r *SysMenuRepositoryImpl) deleteChildren(tx *gorm.DB, parentID uint64) err
 	}
 
 	return nil
-}
-
-// getAllParentIDs 递归查找菜单的所有父级目录ID
-func (r *SysMenuRepositoryImpl) getAllParentIDs(menuID uint64) ([]uint64, error) {
-	var parentIDs []uint64
-	var menu rbacentity.SysMenu
-
-	// 查询当前菜单的父级
-	if err := r.db.Select("parent_id").First(&menu, menuID).Error; err != nil {
-		// 如果菜单不存在，返回空
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return parentIDs, nil
-		}
-		return nil, err
-	}
-
-	// 如果没有父级（根菜单），返回
-	if menu.ParentID == 0 {
-		return parentIDs, nil
-	}
-
-	// 添加父级ID
-	parentIDs = append(parentIDs, menu.ParentID)
-
-	// 递归查找父级的父级
-	grandParentIDs, err := r.getAllParentIDs(menu.ParentID)
-	if err != nil {
-		return nil, err
-	}
-	parentIDs = append(parentIDs, grandParentIDs...)
-
-	return parentIDs, nil
 }
 
 // buildMenuTree 构建菜单树

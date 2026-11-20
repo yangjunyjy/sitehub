@@ -40,14 +40,25 @@ await context.route("**/v1/**", async (route) => {
       menuName: ["首页", "分类", "标签", "归档", "友链", "关于", "留言"][index],
       component: name + "/index",
     }));
-  if (path.endsWith("/about")) data = {};
+  if (path.endsWith("/about")) data = { name: '云间小记', bio: '记录生活的光与热', homeVerse: '在文字的星河里，记录生活的光与热', homeAnimation: true };
+  if (path.endsWith('/friends')) data.items = [
+    ['夏末的猫', '记录开发日常和窗边的小事。'], ['工具小记', '分享每天用到的小工具。'],
+    ['空白之地', '在代码和文字之间寻找平衡。'], ['山间木屋', '写点技术，也记四季的风景。'],
+    ['阿树的笔记', '学习笔记和项目实践。'], ['晚风小栈', '关于读书和散步的随笔。'],
+    ['猫鸣的博客', '前端、设计和生活碎片。'], ['旅人手记', '旅行途中的山河与见闻。'],
+  ].map(([name, description], index) => ({ id: String(index + 1), name, description, url: `https://example.org/friend/${index + 1}` }));
+  if (path.endsWith('/menus/public')) data.items.push({ name: '站外手记', pageType: 'external', externalUrl: 'https://example.org/notes' });
+  if (path.endsWith('/messages') && !new URL(route.request().url()).searchParams.has('articleId')) {
+    const second = new URL(route.request().url()).searchParams.get('page') === '2';
+    data = { total: 11, items: [{ id: second ? '1' : '11', nickname: '星旅客', content: second ? '前一页的星光' : '新到的星光' }] };
+  }
   if (path.endsWith("/articles/detail"))
     data = {
       id: "1",
       title: "Isolated article fixture",
       content_format: "markdown",
       content:
-        "# Reader heading\n\nA paragraph.\n\n<script>window.untrustedArticle=true</script>",
+        "# Reader heading\n\n" + 'A paragraph.\n\n'.repeat(65) + "<script>window.untrustedArticle=true</script>",
       tags: [],
     };
   if (route.request().method() === "POST")
@@ -56,6 +67,63 @@ await context.route("**/v1/**", async (route) => {
 });
 const page = await context.newPage();
 page.on("pageerror", (error) => errors.push(error.message));
+async function scrollHeaderTo(position, shown) {
+  await page.evaluate((top) => window.scrollTo(0, top), position);
+  await page.waitForFunction(([top, visible]) => {
+    const rect = document.querySelector(".blog-header").getBoundingClientRect();
+    return window.scrollY === top && (visible ? Math.abs(rect.top) < .5 : rect.bottom <= 0);
+  }, [position, shown]);
+}
+
+async function checkHomeMotion() {
+  const verse = page.getByRole("heading", { name: "在文字的星河里，记录生活的光与热", exact: true });
+  assert.equal(await verse.count(), 1);
+  assert.equal(await page.getByRole("heading", { name: "首页", exact: true }).count(), 0);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const shower = page.locator(".meteor-shower");
+  await shower.waitFor({ state: "hidden" });
+  await waitForFullVerse();
+  assert.equal(await page.locator('.motion-control').count(), 0);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await checkMeteorFlight();
+  await waitForFullVerse();
+  await page.waitForFunction(() => !document.querySelector(".verse-ink").textContent);
+  await page.waitForFunction(() => document.querySelector(".verse-ink").textContent.length >= 2);
+  await scrollHeaderTo(42, true);
+  await scrollHeaderTo(240, false);
+  await scrollHeaderTo(235, false);
+  await scrollHeaderTo(210, true);
+  assert.equal(await page.locator('.blog-header.is-solid').count(), 0);
+  await scrollHeaderTo(0, true);
+}
+async function waitForFullVerse() {
+  await page.waitForFunction(() => {
+    const verse = document.querySelector(".verse-ink");
+    return verse.textContent === verse.parentElement.getAttribute("aria-label");
+  });
+}
+async function checkMeteorFlight() {
+  const showerLayer = page.locator(".meteor-shower");
+  await showerLayer.waitFor({ state: 'visible' });
+  const visibleFlight = await showerLayer.evaluate(async (shower) => {
+    function sample() {
+      return Array.from(shower.children, meteor => {
+        const { left, top } = meteor.getBoundingClientRect();
+        const visible = left > 0 && left < innerWidth && top > 60 && top < innerHeight && getComputedStyle(meteor).opacity > .55;
+        return { left, top, visible };
+      });
+    }
+    let previous = sample();
+    for (let attempt = 0; attempt < 12; attempt++) {
+      await new Promise(done => setTimeout(done, 160));
+      const current = sample();
+      if (current.some((end, index) => previous[index].visible && end.visible && end.left < previous[index].left - 2 && end.top > previous[index].top + 1)) return true;
+      previous = current;
+    }
+    return false;
+  });
+  assert(visibleFlight, "At least one clearly visible meteor should travel southwest in real time");
+}
 try {
   for (const path of [
     "/",
@@ -97,6 +165,29 @@ try {
       false,
       "Desktop horizontal overflow: " + path,
     );
+    if (path === "/") {
+      await checkHomeMotion();
+      assert.equal(await page.getByRole('link', { name: '站外手记' }).getAttribute('href'), 'https://example.org/notes');
+      const content = page.getByRole("button", { name: "内容" });
+      const tag = page.getByRole("link", { name: "标签 按标签发现文章" });
+      await content.hover();
+      await tag.waitFor();
+      await tag.hover();
+      await page.screenshot({ path: `${artifacts}/home-content-menu.png` });
+      await page.mouse.move(10, 260);
+      await tag.waitFor({ state: "hidden" });
+      await content.click();
+      await tag.waitFor();
+      await scrollHeaderTo(200, true);
+      await content.press("Escape");
+      assert.equal(await content.getAttribute("aria-expanded"), "false");
+      await content.press("Enter");
+      await tag.waitFor();
+      await content.press("Escape");
+      await scrollHeaderTo(0, true);
+      await page.locator(".home-hero").click({ position: { x: 10, y: 90 } });
+      await waitForFullVerse();
+    }
     if (["/", "/messages", "/friends"].includes(path))
       await page.screenshot({
         path: `${artifacts}/${path === "/" ? "home" : path.slice(1)}-desktop.png`,
@@ -104,6 +195,12 @@ try {
       });
   }
   await page.goto(origin + "/friends", { waitUntil: "networkidle" });
+  await page.getByRole('button', { name: '列表', exact: true }).click();
+  await page.locator('.friend-list').getByText('夏末的猫').waitFor();
+  await page.reload({ waitUntil: 'networkidle' });
+  assert.equal(await page.getByRole('button', { name: '列表', exact: true }).getAttribute('aria-pressed'), 'true');
+  await page.getByRole('button', { name: '卡片', exact: true }).click();
+  await page.getByRole('button', { name: '前往申请' }).click();
   await page.getByPlaceholder("你的站点叫什么名字？").fill("Browser test");
   await page
     .getByPlaceholder("https://your-blog.com", { exact: true })
@@ -116,6 +213,24 @@ try {
     .getByText("申请已提交，正在等待博主审核。感谢你的相遇！", { exact: true })
     .waitFor();
   await page.goto(origin + "/messages", { waitUntil: "networkidle" });
+  assert.equal(await page.getByLabel('留言内容').count(), 0);
+  assert(await page.locator('.message-universe canvas').isVisible());
+  const streak = page.locator('.message-meteor').first();
+  await streak.getByText('新到的星光').waitFor();
+  const start = await streak.boundingBox();
+  const firstFrame = await page.locator('.message-universe canvas').evaluate(canvas => canvas.toDataURL());
+  await page.waitForFunction(([left, top]) => {
+    const current = document.querySelector('.message-meteor').getBoundingClientRect();
+    return current.left < left - 8 && current.top > top + 2;
+  }, [start.x, start.y]);
+  assert.notEqual(await page.locator('.message-universe canvas').evaluate(canvas => canvas.toDataURL()), firstFrame);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await streak.waitFor({ state: 'hidden' });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.getByRole('button', { name: '下一页' }).click();
+  await page.getByText('前一页的星光').waitFor();
+  assert.equal(await streak.locator('span').textContent(), '新到的星光');
+  await page.getByRole('button', { name: '写留言' }).click();
   await page
     .getByLabel("留言内容", { exact: true })
     .fill("Isolated browser test");
@@ -124,6 +239,16 @@ try {
     .getByText("你的星光已送达，审核通过后会出现在这片星空。", { exact: true })
     .waitFor();
   await page.goto(origin + "/article/1", { waitUntil: "networkidle" });
+  const progress = page.getByRole('progressbar', { name: '文章阅读进度' });
+  assert.equal(await progress.getAttribute('aria-valuenow'), '0');
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await page.waitForFunction(() => document.querySelector('[role="progressbar"]').getAttribute('aria-valuenow') === '100');
+  await page.getByRole('button', { name: '写评论' }).click();
+  await page.getByLabel('评论内容').fill('文章下的评论');
+  const comment = page.waitForRequest(req => req.method() === 'POST' && req.url().endsWith('/blog/messages'));
+  await page.getByRole('button', { name: '发送评论' }).click();
+  assert.equal((await comment).postDataJSON().articleId, 1);
+  await page.getByText('评论已提交，审核通过后会显示在本文下方。').waitFor();
   await page
     .getByRole("heading", { name: "Reader heading", exact: true })
     .waitFor();
@@ -141,6 +266,7 @@ try {
       : route.fallback(),
   );
   await page.goto(origin + "/messages", { waitUntil: "networkidle" });
+  await page.getByRole('button', { name: '写留言' }).click();
   await page
     .getByLabel("留言内容", { exact: true })
     .fill("Keep this after a failed request");
@@ -195,7 +321,18 @@ try {
       .getByRole("navigation", { name: "移动导航", exact: true })
       .getByText("分类", { exact: true })
       .waitFor();
-    await page.getByRole("button", { name: "切换导航", exact: true }).click();
+    if (path === "/") {
+      await scrollHeaderTo(240, true);
+      await page.setViewportSize({ width: 844, height: 390 });
+      await page.waitForFunction(() => !document.querySelector("#mobile-navigation"));
+      await scrollHeaderTo(360, false);
+      await page.setViewportSize({ width: 390, height: 844 });
+      await scrollHeaderTo(0, true);
+      await checkMeteorFlight();
+      await waitForFullVerse();
+    } else {
+      await page.getByRole("button", { name: "切换导航", exact: true }).click();
+    }
     if (["/", "/messages"].includes(path))
       await page.screenshot({
         path: `${artifacts}/${path === "/" ? "home" : "messages"}-mobile.png`,
@@ -203,6 +340,15 @@ try {
       });
   }
   assert.deepEqual(errors, []);
+  await page.route('**/v1/blog/about', route => route.fulfill({ json: { code: 0, data: { homeVerse: '后端设置的短句', homeAnimation: false } } }));
+  await page.goto(origin, { waitUntil: 'networkidle' });
+  await page.getByRole('heading', { name: '后端设置的短句' }).waitFor();
+  await waitForFullVerse();
+  assert.equal(await page.locator('.sky-rain').isVisible(), false);
+  await page.route('**/v1/blog/about', route => route.fulfill({ json: { code: 0, data: { homeVerse: '切回博客后继续播放', homeAnimation: true } } }));
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await page.getByRole('heading', { name: '切回博客后继续播放' }).waitFor();
+  await checkMeteorFlight();
   console.log(
     "Blog browser checks passed: directory routes, dynamic navigation, empty content, pending forms and responsive layouts",
   );

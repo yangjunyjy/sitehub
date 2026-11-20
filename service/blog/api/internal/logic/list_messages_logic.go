@@ -36,13 +36,18 @@ func (l *ListMessagesLogic) ListMessages(req *types.CommunityPage) (*types.Respo
 	if page < 1 || page > 1000000 || size < 1 || size > 100 {
 		return nil, status.Error(codes.InvalidArgument, "无效的分页参数")
 	}
-	messages, err := l.svcCtx.Core.Community.PublishedMessages(l.ctx, int((page-1)*size), int(size))
+	if req.ArticleID != 0 {
+		if _, err := l.svcCtx.Core.Articles.PublicDetail(req.ArticleID); err != nil {
+			return nil, err
+		}
+	}
+	messages, total, err := l.svcCtx.Core.Community.PublishedMessages(l.ctx, req.ArticleID, int((page-1)*size), int(size))
 	if err != nil {
 		return nil, err
 	}
 	items := make([]map[string]any, 0, len(messages))
 	for _, message := range messages {
-		items = append(items, map[string]any{"id": strconv.FormatUint(message.ID, 10), "nickname": message.Nickname, "content": message.Content})
+		items = append(items, map[string]any{"id": strconv.FormatUint(message.ID, 10), "nickname": message.Nickname, "content": message.Content, "createdAt": message.CreatedAt})
 	}
-	return reply(map[string]any{"items": items}, nil)
+	return reply(map[string]any{"items": items, "total": total, "page": page, "pageSize": size}, nil)
 }

@@ -159,13 +159,29 @@ test("menu edits replace routes; revocation returns 403; logout removes all menu
   assert.equal(router.hasRoute("menu-3"), false);
 });
 
-test("failed menu loading cannot retain stale navigation or frontend fallback pages", async () => {
+test("a temporary menu failure can retry the original page in the same session", async () => {
   const { router, rbac, values } = setup();
   rbac.loadAllDataFromBackend = async () => {
     throw new Error("offline");
   };
   await router.push("/dashboard/system/users");
+  assert.equal(router.currentRoute.value.name, "AccessUnavailable");
+  assert.equal(values.has("token"), true);
+  assert.equal(router.hasRoute("menu-3"), false);
+  rbac.loadAllDataFromBackend = async () => {
+    rbac.currentMenus = [menu(3, '/dashboard/system/users', 'system/users/index')];
+    rbac.menusLoaded = true;
+  };
+  await router.replace(router.currentRoute.value.query.redirect);
+  assert.equal(router.currentRoute.value.name, 'menu-3');
+});
+
+test('expired credentials return to login with the requested destination', async () => {
+  const { router, rbac, values } = setup();
+  rbac.loadAllDataFromBackend = async () => { throw Object.assign(new Error('expired'), { response: { status: 401 } }); };
+  await router.push('/dashboard/system/users');
   assert.equal(router.currentRoute.value.name, "Login");
+  assert.equal(router.currentRoute.value.query.redirect, '/dashboard/system/users');
   assert.equal(values.has("token"), false);
   assert.equal(router.hasRoute("menu-3"), false);
 });

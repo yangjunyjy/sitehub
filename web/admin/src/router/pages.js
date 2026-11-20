@@ -1,4 +1,5 @@
 // Menu components are exact paths relative to views, without extensions.
+import { externalAddress } from '../utils/external-address.mjs';
 export function componentKey(component) {
   if (
     typeof component !== "string" ||
@@ -43,6 +44,10 @@ export function navigationMenus(
     .flatMap((menu) => {
       if (!superAdmin && menu.component === "admin/settings/email/index")
         return [];
+      if (menu.pageType === 'external') {
+        const address = externalAddress(menu.externalUrl);
+        return address ? [{ ...menu, externalUrl: address }] : [];
+      }
       const path = menuPath(menu.path, parentPath);
       const children = navigationMenus(menu.children || [], superAdmin, path);
       if ((menu.type === "directory" && !children.length) || !path) return [];
@@ -55,13 +60,14 @@ export function menuRoutes(menus, modules, notFound) {
   const routes = [];
   const usedPaths = new Set([
     "/login",
+    "/access-unavailable",
     "/dashboard",
     "/",
     "/403",
   ]);
   const visit = (items, parentPath = "") => {
     for (const menu of filterMenuTree(items)) {
-      if (menu.type === "button") continue;
+      if (menu.type === "button" || menu.pageType === 'external') continue;
       const path = menuPath(menu.path, parentPath);
       if (menu.type === "menu" && path && !usedPaths.has(path)) {
         const component = modules[componentKey(menu.component)];
