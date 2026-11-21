@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -17,21 +15,13 @@ import (
 	"sitehub/common/configloader"
 	"sitehub/gateway/manifest"
 	"sitehub/gateway/plugin"
-	"sitehub/tools/gatewayctl/internal/publisher"
+	"sitehub/gateway/publisher"
 )
 
-type config struct {
+type PublisherConfig struct {
 	AdminURL string
 	AdminKey string
 	StateDir string `json:",default=.tmp/gateway-releases"`
-}
-type release struct {
-	Generation       string            `json:"generation"`
-	Status           string            `json:"status"`
-	PreviousRevision int64             `json:"previous_revision"`
-	AppliedRevision  int64             `json:"applied_revision"`
-	Previous         manifest.Document `json:"previous"`
-	Desired          manifest.Document `json:"desired"`
 }
 
 func main() { command.Execute(newCommand()) }
@@ -45,6 +35,7 @@ func newCommand() *cobra.Command {
 		action := action
 		root.AddCommand(&cobra.Command{Use: action, Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 			var desired manifest.Document
+			var rollbackOf string
 			var expected int64
 			if action == "rollback" {
 				if from == "" {
@@ -54,13 +45,14 @@ func newCommand() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				var saved release
+				var saved publisher.Release
 				if err = json.Unmarshal(data, &saved); err != nil {
 					return err
 				}
 				if saved.Generation == "" || saved.Status != "applied" || saved.AppliedRevision < 1 {
 					return fmt.Errorf("rollback requires a confirmed applied native release")
 				}
+				rollbackOf = saved.Generation
 				desired = saved.Previous
 				expected = saved.AppliedRevision
 				if err = manifest.Validate(desired, plugin.DefaultRegistry()); err != nil {
@@ -79,15 +71,14 @@ func newCommand() *cobra.Command {
 			}
 			settings := viper.New()
 			settings.SetConfigFile(file)
-			var c config
+			var c PublisherConfig
 			if err := configloader.Load(settings, "GATEWAYCTL", &c); err != nil {
 				return err
 			}
-			u, err := url.Parse(c.AdminURL)
-			if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil || len(c.AdminKey) < 32 {
-				return fmt.Errorf("valid AdminURL and AdminKey of at least 32 characters are required")
+			client, err := c.client()
+			if err != nil {
+				return err
 			}
-			client := &publisher.Client{URL: c.AdminURL, Key: c.AdminKey, HTTP: &http.Client{Timeout: 15 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
 			previous, err := client.Snapshot(cmd.Context())
 			if err != nil {
 				return err
@@ -101,52 +92,21 @@ func newCommand() *cobra.Command {
 			if action == "diff" {
 				return nil
 			}
-			if err = os.MkdirAll(c.StateDir, 0700); err != nil {
-				return err
+			record, err := publisher.ApplyRelease(cmd.Context(), client, c.StateDir, "gatewayctl", rollbackOf, previous, desired)
+			if record.Generation != "" {
+				fmt.Fprintln(cmd.OutOrStdout(), "release:", filepath.Join(c.StateDir, record.Generation+".json"), "status:", record.Status)
 			}
-			var random [12]byte
-			if _, err = rand.Read(random[:]); err != nil {
-				return err
-			}
-			generation := hex.EncodeToString(random[:])
-			record := release{Generation: generation, Status: "pending", PreviousRevision: previous.Revision, Previous: previous.Manifest, Desired: desired}
-			file := filepath.Join(c.StateDir, generation+".json")
-			persist := func() error {
-				data, _ := json.MarshalIndent(record, "", "  ")
-				temporary := file + ".tmp"
-				f, err := os.OpenFile(temporary, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
-				if err != nil {
-					return err
-				}
-				_, err = f.Write(data)
-				if err == nil {
-					err = f.Sync()
-				}
-				closeErr := f.Close()
-				if err != nil {
-					return err
-				}
-				if closeErr != nil {
-					return closeErr
-				}
-				return os.Rename(temporary, file)
-			}
-			if err = persist(); err != nil {
-				return err
-			}
-			applied, err := client.Publish(cmd.Context(), desired, previous.Revision)
-			if err != nil {
-				record.Status = "unconfirmed"
-			} else {
-				record.Status = "applied"
-				record.AppliedRevision = applied.Revision
-			}
-			if saveErr := persist(); saveErr != nil {
-				return fmt.Errorf("release result persistence failed; query active revision: %w", saveErr)
-			}
-			fmt.Fprintln(cmd.OutOrStdout(), "release:", file, "status:", record.Status)
 			return err
 		}})
 	}
+	root.AddCommand(consoleCommand(&file))
 	return root
+}
+
+func (c PublisherConfig) client() (*publisher.Client, error) {
+	u, err := url.Parse(c.AdminURL)
+	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil || len(c.AdminKey) < 32 {
+		return nil, fmt.Errorf("valid AdminURL and AdminKey of at least 32 characters are required")
+	}
+	return &publisher.Client{URL: c.AdminURL, Key: c.AdminKey, HTTP: &http.Client{Timeout: 15 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}, nil
 }

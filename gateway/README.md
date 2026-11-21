@@ -113,6 +113,95 @@ go run ./tools/gatewayctl publish --manifest gateway/etc/routes.yaml -f gateway/
 
 `gatewayctl` 未显式传入 `--manifest` 时仍读取原有 `gateway/etc/routes.json`，兼容已有发布流程。发布记录写入配置的 `StateDir`，已确认的记录可用 `rollback --release <记录文件>` 恢复其前一版本；并发版本变化时会拒绝覆盖。文件模式使用 `gateway reload`，etcd 模式使用 `gatewayctl publish`。
 
+## 独立网关控制台
+
+后台菜单“网关控制台”在新窗口打开独立应用。控制台提供路由、上游、插件策略和发布记录。编辑先保存在当前页面的草稿中，“审阅并发布”会校验整份配置并展示各项修改前后的值。回滚会将上一次配置发布为新修订。文件模式提供只读视图，页面发布与回滚使用 `Source: etcd`。
+
+网关进程同时提供 Vue 3 页面、登录接口和配置管理接口。Go 构建时嵌入 `web/gateway-admin/static` 中随源码分发的页面资源。修改 `web/gateway-admin/src` 后，从仓库根目录执行 `npm --prefix web run build -w @sitehub/gateway-admin`。前端构建成功后会自动更新 `static`，提交页面修改时一并提交其中的资源。
+
+本地使用 [gateway.yaml](etc/gateway.yaml)，设置 `GATEWAY_ADMIN_KEY` 和与 RBAC 一致的 `SERVICE_KEY`，启动 RBAC RPC 后运行：
+
+```powershell
+$env:GATEWAY_CONSOLE_ENABLED = 'true'
+go run ./gateway -f gateway/etc/gateway.yaml
+```
+
+打开 `http://127.0.0.1:9190/`。输入管理员账号、密码和绑定邮箱，通过滑块验证获取邮箱验证码后登录。已有同主机后台会话可直接进入。右上角“退出登录”撤销当前 RBAC 管理员会话，同一会话下的后台页面也需要重新登录。邮箱验证码依赖 RBAC 的 Redis 和邮件服务。
+
+云机部署使用更新后的 gateway 与 bootstrap 镜像。在 Compose 的 `.env` 中填写实际后台 Origin 和控制台完整地址，以已有 IP 部署为例：
+
+```dotenv
+GATEWAY_CONSOLE_ORIGIN=https://203.0.113.10:8445
+GATEWAY_CONSOLE_URL=https://203.0.113.10:8445/gateway-console/
+```
+
+在后台 HTTPS 入口添加以下 Nginx location。如果三个站点共用一个 server 块，只在后台端口放行这个入口。末尾的斜杠用于转发相对资源与 API。
+
+```nginx
+location /gateway-console/ {
+    if ($server_port != 8445) { return 404; }
+    proxy_pass http://127.0.0.1:9190/;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header Host $http_host;
+    client_max_body_size 5m;
+}
+```
+
+在发布目录启动控制台并同步 RBAC 菜单。新菜单使用 `GATEWAY_CONSOLE_URL` 创建，已有外链地址在后台“菜单管理”中修改。角色管理中按需分配菜单、查看权限 `gateway:config:read`、发布权限 `gateway:config:publish` 和回滚权限 `gateway:config:rollback`。
+
+```sh
+docker compose up -d gateway
+docker compose --profile init run --rm database-init -service rbac
+```
+
+控制台使用 HttpOnly Cookie 与 RBAC 管理员会话，发布与回滚沿用管理员动态验证码设置。浏览器只访问控制台，控制台服务使用内部地址访问 9180。每个网关环境使用独立的 `StateDir`，同一环境的 CLI 和控制台共享发布记录。Compose 使用持久卷 `gateway-releases`。
+
+## 线上通过同一个公网 IP 访问三个站点
+
+以下按云机宿主机运行 Nginx、应用使用项目 Compose 部署编写。`203.0.113.10` 是示例 IPv4，请统一替换为实际公网 IP。
+
+| 站点 | 浏览器入口 | Nginx 发给 Go 网关的 Host |
+| --- | --- | --- |
+| 产品 | `https://203.0.113.10:8443` | `product.sitehub.local` |
+| 博客 | `https://203.0.113.10:8444` | `blog.sitehub.local` |
+| 后台 | `https://203.0.113.10:8445` | `admin.sitehub.local` |
+
+三个前端都使用根路径，且都通过本源的 `/v1` 访问 API。公开端口负责区分站点，Nginx 以固定 Host 代理整条请求到 `127.0.0.1:8082`。这些 Host 只参与内部路由匹配，无需 DNS 或客户端 hosts。Go 网关校验要求路由 Host 为 DNS 名称，匹配时还会去掉端口。
+
+1. 修改云机 Compose 目录的 `.env`，保留现有密码及其他部署参数。这里的 `GATEWAY_PORT` 对应已有端口映射 `${GATEWAY_PORT:-8082}:9080`。
+
+   ```dotenv
+   GATEWAY_PORT=127.0.0.1:8082
+   WEB_SITE_URL=https://203.0.113.10:8443
+   WEB_PRODUCT_URL=https://203.0.113.10:8443
+   WEB_BLOG_URL=https://203.0.113.10:8444
+   WEB_COOKIE_SECURE=true
+   ```
+
+2. 在云机发布目录的 `gateway/routes.json` 中修改下列两个 `origins` 数组。用当前生产清单作基础，保留原有路由、上游及其他插件配置。Origin 必须与浏览器的协议、IP、端口完全一致，末尾不加斜杠。
+
+   | JSON 字段 | 切换后的值 |
+   | --- | --- |
+   | `profiles.site.browser-session.origins` | `["https://203.0.113.10:8443", "https://203.0.113.10:8444"]` |
+   | `profiles.admin.browser-session.origins` | `["https://203.0.113.10:8445"]` |
+
+3. 将仓库的 [Nginx 配置模板](etc/example/public-ip.nginx.conf) 复制到云机的 `/etc/nginx/conf.d/sitehub-ip.conf`，替换 `server_name` 和证书路径。三个 HTTPS 端口可以共用一张受客户端信任、SAN 包含该 IP 地址的证书。安全组和宿主机防火墙按需开放 8443、8444、8445，后台端口可限定管理来源。8082 绑定回环，9180 为容器内部控制端口。
+
+4. 验证清单，重建读取新环境变量的容器，然后发布。云机配置为 `Source: etcd`；已有 etcd 路由需通过 `gatewayctl publish` 更新。先看 diff，确认与本次迁移相符。
+
+   ```bash
+   sudo nginx -t
+   docker compose run --rm --no-deps gateway-publish validate --manifest /app/manifests/routes.json
+   docker compose up -d gateway web-product web-admin rbac-api
+   docker compose run --rm gateway-publish diff --manifest /app/manifests/routes.json -f /app/etc/gatewayctl.yaml
+   docker compose run --rm gateway-publish
+   sudo systemctl reload nginx
+   ```
+
+5. 分别打开三个公网入口，核对首页及后台预览、产品站到博客的跳转。在博客或产品站验证会员登录，再在后台验证管理员登录。只验证首页不能覆盖登录时的 Origin 校验。后台配置的菜单外链、友链或下载外链中，指向旧站点的绝对 URL 也需更新。
+
+此部署把 Nginx 放在 Go 网关之前。当前网关以 TCP 对端地址执行限流，并覆盖转发 IP 头，所以同一路由的访客共享代理地址的限流额度，业务访问日志也会记录代理地址。Nginx 的访问日志可查看客户端 IP。若已有基于真实客户端 IP 的限流或审计要求，需先处理这项差异。
+
 ## 扩展与运行边界
 
 新增普通插件实现 `plugin.Factory`，在入口通过 `Registry.Register(name, priority, factory)` 注册；直接生成响应的插件使用 `RegisterTerminal`。终止插件通过注册元数据参与路由校验，新增时无需修改配置契约或路由引擎。入口组装同一个注册表，交给 `manifest.ReadWithRegistry`、命令检查和 `app.RunWithRegistry` 使用，避免“文件检查认识插件，运行引擎不认识”的情况。

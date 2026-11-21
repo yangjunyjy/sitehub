@@ -27,6 +27,7 @@ let doc = {
   groupId: '9',
   status: 'modified',
 }
+const removed = new Set()
 const calls = [],
   errors = []
 let conflict = false,
@@ -60,6 +61,7 @@ try {
     if (path.endsWith('/auth/permissions')) data = { items: ['*'] }
     if (path.endsWith('/auth/totp')) data = { enabled: false }
     if (action) calls.push({ action, query: url.search, payload })
+    if (action?.endsWith('/delete')) removed.add(action + '/' + payload.id)
     if (action === 'workspace') {
       if (readError) {
         readError = false
@@ -67,7 +69,7 @@ try {
       }
       const { content, ...summary } = doc
       const mode = url.searchParams.get('mode') || 'cli'
-      const version = url.searchParams.get('version') || 'v1'
+      const version = url.searchParams.get('version') || (mode === 'ui' ? (removed.has('versions/delete/next') ? '' : 'next') : 'v1')
       data = {
         title: '产品手册',
         description: '安装和操作指南',
@@ -78,13 +80,13 @@ try {
         versionId: version,
         modes: [
           { id: 'cli', label: '命令行', status: 'published', defaultVersion: 'v1' },
-          { id: 'ui', label: '控制台', status: 'upcoming' },
-        ],
-        versions: ['v1', 'v2'].map((id) => ({ id, name: id, status: 'published', revision: '1' })),
-        groups: [
-          { id: '9', title: '入门', revision: '2', items: [summary] },
+          { id: 'ui', label: '控制台', status: 'upcoming', revision:'5' },
+        ].filter(m => !removed.has('modes/delete/'+m.id)),
+        versions: mode === 'ui' ? (version ? [{id:'next', name:'next',status:'draft',revision:'4'}] : []) : ['v1', 'v2'].map((id) => ({ id, name: id, status: 'published', revision: '1' })),
+        groups: mode === 'ui' ? [] : [
+          { id: '9', title: '入门', revision: '2', items: removed.has('documents/delete/'+doc.id) ? [] : [summary] },
           { id: '10', title: '运维', revision: '1', items: [] },
-        ],
+        ].filter(g => !removed.has('groups/delete/'+g.id)),
       }
     } else if (action === 'document') data = doc
     else if (action === 'history')
@@ -130,11 +132,29 @@ try {
   await preview.waitForURL(url => url.pathname === '/help/guide')
   assert.equal(new URL(preview.url()).searchParams.get('version'), 'v1')
   await preview.close()
-  await page.getByRole('button', { name: '运维' }).click()
+  await page.getByRole('button', { name: /^运维/ }).click()
   await page.getByText('分组内暂无文档').waitFor()
   assert.equal(calls.filter((c) => c.action === 'workspace').length, 2)
-  await page.getByRole('button', { name: '入门' }).click()
+  await page.getByRole('button', { name: /^入门/ }).click()
   assert.equal(calls.filter((c) => c.action === 'document').length, 0)
+  assert.equal(await page.getByRole('button', {name:'删除模式',exact:true}).getAttribute('aria-disabled'),'true')
+  assert.equal(await page.getByRole('button', {name:'删除文档「安装指南」'}).getAttribute('aria-disabled'),'true')
+  const removeGroup = page.getByRole('button', {name:'删除分组「运维」'})
+  await removeGroup.click()
+  const confirmation = page.getByRole('dialog', {name:'删除分组'})
+  await confirmation.getByText('永久删除分组「运维」？此操作无法撤销。').waitFor()
+  const box = await confirmation.locator('.el-message-box').boundingBox()
+  assert.ok(box.width <= 480, 'delete confirmation must stay compact on desktop')
+  if (process.env.SITEHUB_PREVIEW_DIR) {
+    await page.screenshot({path:process.env.SITEHUB_PREVIEW_DIR+'/manual-delete-confirmation.png',animations:'disabled'})
+  }
+  await confirmation.getByRole('button',{name:'取消'}).click()
+  assert.equal(calls.filter(c => c.action === 'groups/delete').length,0)
+  await removeGroup.click()
+  const deleting = page.waitForRequest(req => req.url().endsWith('/groups/delete'))
+  await confirmation.getByRole('button',{name:'确认删除'}).click()
+  assert.deepEqual((await deleting).postDataJSON(),{version:'v1',id:10,revision:1})
+  await confirmation.waitFor({state:'hidden'})
   const combo = page.getByRole('combobox', { name: '文档版本' })
   await combo.press('Enter')
   await page.getByRole('option', { name: 'v2', exact: true }).click()
@@ -157,7 +177,7 @@ try {
   await groupForm.getByRole('button', { name:'保存' }).click()
   assert.deepEqual((await groupSave).postDataJSON(), { id:0, title:'监控部署', version:'v2', revision:0 })
   await groupForm.waitFor({ state:'hidden' })
-  await page.getByRole('button', { name: '安装指南' }).click()
+  await page.getByRole('button', { name: '安装指南', exact: true }).click()
   const title = page.getByRole('textbox', { name: '文档标题' })
   await title.waitFor()
   assert.equal(await title.inputValue(), '安装指南')
@@ -190,9 +210,24 @@ try {
     .click()
   await page.getByText('文档已撤回', { exact: true }).waitFor()
   assert.equal(doc.status, 'draft')
+  async function confirmDelete(label,kind,action,payload) {
+    await page.getByRole('button',{name:label,exact:true}).click()
+    const pending = page.waitForRequest(r => r.url().endsWith('/'+action))
+    await page.getByRole('dialog',{name:'删除'+kind}).getByRole('button',{name:'确认删除'}).click()
+    assert.deepEqual((await pending).postDataJSON(),payload)
+  }
+  await page.goto(origin+'/manuals?mode=cli&version=v2')
+  await confirmDelete('删除文档「'+doc.title+'」','文档','documents/delete',{id:doc.id,version:'v2',revision:Number(doc.revision)})
+  await page.getByText('分组内暂无文档').waitFor()
+  await page.getByRole('combobox',{name:'文档模式'}).press('Enter')
+  await page.getByRole('option',{name:'控制台',exact:true}).click()
+  await confirmDelete('删除版本','版本','versions/delete',{id:'next',revision:4})
+  await page.getByText('此模式暂无版本').waitFor()
+  await confirmDelete('删除模式','模式','modes/delete',{id:'ui',revision:5})
+  await page.waitForURL('**/manuals')
   assert.deepEqual(errors, [])
   console.log(
-    'PASS workspace retry, version/group navigation, on-demand document and history, conflict recovery, draft, publish and withdraw',
+    'PASS workspace retry, version/group navigation, on-demand document and history, conflict recovery, draft, publish, withdraw and all four deletion actions',
   )
 } finally {
   await browser?.close()

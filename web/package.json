@@ -5,6 +5,7 @@
   "workspaces": [
     "admin",
     "product",
+    "gateway-admin",
     "blog"
   ],
   "engines": {

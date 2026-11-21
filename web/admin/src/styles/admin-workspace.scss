@@ -181,14 +181,17 @@
 .admin-table-body {
   min-width: 0;
 }
+.admin-table,
+.admin-table-panel .el-table {
+  --el-table-row-hover-bg-color: var(--el-color-primary-light-9);
+  --el-table-current-row-bg-color: var(--el-color-primary-light-8);
+}
 .admin-table-panel .el-table {
   --el-table-header-bg-color: #fafafa;
   --el-table-header-text-color: #606266;
   --el-table-text-color: #303133;
   --el-table-border-color: #ebeef5;
-  --el-table-row-hover-bg-color: #909399;
   --el-table-tr-bg-color: #fff;
-  --el-table-current-row-bg-color: #909399;
   width: 100%;
   font-size: 14px;
 }
@@ -196,7 +199,7 @@
   font-weight: 600;
 }
 .admin-table-panel .el-table.admin-table--header-background {
-  --el-table-header-bg-color: #909399;
+  --el-table-header-bg-color: var(--bg-hover);
 }
 .admin-table-panel
   .el-table--striped

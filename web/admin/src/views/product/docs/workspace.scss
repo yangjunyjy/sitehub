@@ -126,3 +126,15 @@
 }
 
 .manual-search { max-width: 280px; margin-bottom: 12px; }
+
+.manual-group-row { display: flex; align-items: center; gap: 2px; }
+.manual-group-row .manual-group { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.manual-group-row :deep(.el-button) { padding-inline: 6px; }
+
+.manual-context-picker, .manual-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.manual-row-actions :deep(.el-button) { margin: 0; padding-inline: 4px; }

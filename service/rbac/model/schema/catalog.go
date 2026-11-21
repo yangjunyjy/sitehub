@@ -2,6 +2,9 @@ package schema
 
 import (
 	"errors"
+	"fmt"
+	"net/url"
+	"os"
 	"strings"
 
 	"gorm.io/gorm"
@@ -10,6 +13,7 @@ import (
 
 type MenuSeed struct {
 	Code, Parent, System, Name, Component, Path, Permission string
+	ExternalURL                                             string
 	Type                                                    entity.MenuType
 	Hidden                                                  bool
 }
@@ -26,6 +30,14 @@ func MenuCatalog() ([]MenuSeed, error) {
 		"system":  {"system:system:list", "system:system:create", "system:system:update", "system:system:delete", "system:user:list", "system:user:edit", "system:user:create", "system:user:update", "system:user:delete", "system:role:list", "system:role:edit", "system:role:create", "system:role:update", "system:role:delete", "system:menu:list", "system:menu:edit", "system:menu:create", "system:menu:update", "system:menu:delete", "system:icon:list", "system:icon:create", "system:icon:update", "system:icon:delete", "system:settings:list", "system:settings:edit", "system:email:manage"},
 		"blog":    {"blog:article:list", "blog:article:edit", "blog:article:create", "blog:article:update", "blog:article:delete", "blog:article:publish", "blog:article:audit", "blog:category:list", "blog:category:edit", "blog:category:create", "blog:category:update", "blog:category:delete", "blog:tag:list", "blog:tag:edit", "blog:tag:create", "blog:tag:update", "blog:tag:delete", "blog:statistics:list", "blog:settings:list", "blog:settings:edit"},
 		"product": {"website:content:edit", "website:docs:edit", "website:downloads:edit", "product:content:list", "product:content:edit", "product:download:list", "product:download:edit", "product:download:create", "product:download:update", "product:download:delete", "product:doc:list", "product:doc:edit", "product:doc:create", "product:doc:update", "product:doc:delete", "product:doc:publish", "file:storage:list", "file:storage:edit"},
+	}
+	permissions["system"] = append(permissions["system"], "gateway:config:read", "gateway:config:publish", "gateway:config:rollback")
+	if address := strings.TrimSpace(os.Getenv("GATEWAY_CONSOLE_URL")); address != "" {
+		u, err := url.Parse(address)
+		if err != nil || u.Hostname() == "" || u.User != nil || (u.Scheme != "https" && u.Scheme != "http") || u.RawQuery != "" || u.Fragment != "" {
+			return nil, fmt.Errorf("GATEWAY_CONSOLE_URL must be an HTTP(S) console address")
+		}
+		items = append(items, MenuSeed{Code: "gateway-console", Parent: "system", System: "admin", Name: "网关控制台", ExternalURL: address, Type: 2})
 	}
 	for _, root := range []string{"system", "blog", "product"} {
 		if root == "blog" {
@@ -78,6 +90,10 @@ func SeedCatalog(db *gorm.DB) error {
 			err := tx.Where("menu_code = ?", code).Take(&current).Error
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				current = entity.SysMenu{SystemCode: seed.System, ParentID: ids[seed.Parent], MenuCode: code, MenuName: seed.Name, MenuType: seed.Type, Component: seed.Component, Path: seed.Path, Permission: seed.Permission, IsVisible: !seed.Hidden, Status: 1, Sort: index}
+				if seed.ExternalURL != "" {
+					current.PageType = "external"
+					current.ExternalURL = seed.ExternalURL
+				}
 				// Map-based create preserves false IsVisible despite GORM defaults.
 				if err = tx.Create(&current).Error; err != nil {
 					return err

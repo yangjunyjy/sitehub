@@ -109,15 +109,33 @@ func (s *ManualService) Workspace(modeID, versionID string) (result productcontr
 			return err
 		}
 		items := make(map[uint64][]productcontract.ManualDocumentSummary)
+		modified := make(map[uint64]productdomain.ProductDocument)
 		for _, d := range docs {
-			items[d.GroupID] = append(items[d.GroupID], documentSummary(d))
+			summary := documentSummary(d)
+			items[d.GroupID] = append(items[d.GroupID], summary)
+			if summary.Status == "modified" {
+				modified[d.ID] = d
+			}
+		}
+		// A moved draft can leave a published revision pointing to an apparently empty group.
+		moved := make(map[uint64][]string)
+		if len(modified) > 0 {
+			live, err := r.PublishedDocuments(versionID)
+			if err != nil {
+				return err
+			}
+			for _, published := range live {
+				if draft, ok := modified[published.ID]; ok && draft.GroupID != published.GroupID {
+					moved[published.GroupID] = append(moved[published.GroupID], draft.Title)
+				}
+			}
 		}
 		for _, g := range groups {
 			children := items[g.ID]
 			if children == nil {
 				children = []productcontract.ManualDocumentSummary{}
 			}
-			result.Groups = append(result.Groups, productcontract.WebsiteDocGroup{ID: g.ID, Title: g.Title, Revision: g.Revision, Items: children})
+			result.Groups = append(result.Groups, productcontract.WebsiteDocGroup{ID: g.ID, Title: g.Title, Revision: g.Revision, Items: children, MovedDraftTitles: moved[g.ID]})
 		}
 		return nil
 	})

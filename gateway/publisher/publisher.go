@@ -16,11 +16,18 @@ import (
 )
 
 type State struct {
+	FileManaged     bool              `json:"file_managed,omitempty"`
 	Revision        int64             `json:"revision"`
 	AppliedRevision int64             `json:"applied_revision"`
 	Manifest        manifest.Document `json:"manifest"`
 	LastError       string            `json:"last_error,omitempty"`
 }
+type ControlError struct{ Status int }
+
+func (e *ControlError) Error() string {
+	return fmt.Sprintf("gateway control returned %d; query active revision before retrying", e.Status)
+}
+
 type Client struct {
 	URL, Key string
 	HTTP     *http.Client
@@ -51,7 +58,7 @@ func (c *Client) request(ctx context.Context, method string, revision int64, val
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return state, fmt.Errorf("gateway control returned %d; query active revision before retrying", resp.StatusCode)
+		return state, &ControlError{Status: resp.StatusCode}
 	}
 	decoder := json.NewDecoder(io.LimitReader(resp.Body, 8<<20))
 	if err = decoder.Decode(&state); err != nil {

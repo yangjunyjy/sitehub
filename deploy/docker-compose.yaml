@@ -39,6 +39,7 @@ services:
       - host.docker.internal:host-gateway
     environment:
       <<: *database-environment
+      GATEWAY_CONSOLE_URL: ${GATEWAY_CONSOLE_URL:-}
       BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
@@ -157,9 +158,12 @@ services:
       - host.docker.internal:host-gateway
     ports:
       - ${GATEWAY_PORT:-8082}:9080
+      - 127.0.0.1:${GATEWAY_CONSOLE_PORT:-9190}:9190
     environment:
       <<: *control-environment
       GATEWAY_ADMIN_KEY: ${GATEWAY_ADMIN_KEY:?set a gateway control key of at least 32 characters}
+      GATEWAY_CONSOLE_ORIGIN: ${GATEWAY_CONSOLE_ORIGIN:-http://127.0.0.1:9190}
+      SERVICE_KEY: ${SERVICE_KEY:?set SERVICE_KEY}
     depends_on:
       rbac-api:
         condition: service_started
@@ -173,7 +177,10 @@ services:
         condition: service_healthy
       web-admin:
         condition: service_healthy
-    networks: [default, control]
+    networks:
+      default: {}
+      control:
+        aliases: [gateway-control]
     stop_grace_period: 65s
     healthcheck:
       test: [CMD, /app/gateway, health, -f, /app/etc/gateway.yaml]
@@ -182,6 +189,7 @@ services:
       retries: 30
     volumes:
       - ./gateway/gateway.yaml:/app/etc/gateway.yaml:ro
+      - gateway-releases:/data/releases
       - ./gateway/routes.json:/app/etc/routes.json:ro
 
   gateway-publish:

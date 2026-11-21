@@ -78,6 +78,9 @@ func TestManualDraftPublicationAndVisibility(t *testing.T) {
 	}
 	workspace, err = manuals.Workspace("guide", "v1")
 	check(err)
+	if titles := workspace.Groups[0].MovedDraftTitles; len(titles) != 1 || titles[0] != modified.Title {
+		t.Fatalf("moved draft still references original group: %+v", workspace.Groups)
+	}
 	raw, err := json.Marshal(workspace)
 	check(err)
 	if strings.Contains(string(raw), "Unpublished changes") || strings.Contains(string(raw), "\"content\"") {

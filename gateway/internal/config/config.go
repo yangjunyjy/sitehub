@@ -8,6 +8,7 @@ import (
 
 	"github.com/zeromicro/go-zero/core/logx"
 	"sitehub/common/controlplane"
+	"sitehub/gateway/console"
 )
 
 type Config struct {
@@ -29,6 +30,11 @@ type Config struct {
 		Key       string `json:",default=/sitehub/gateway/v1/config"`
 		Username  string `json:",optional"`
 		Password  string `json:",optional"`
+	} `json:",optional"`
+	Console struct {
+		console.Config
+		Enabled  bool   `json:",default=false"`
+		StateDir string `json:",default=.tmp/gateway-releases"`
 	} `json:",optional"`
 	ControlPlane controlplane.Config `json:",optional"`
 	Discovery    struct {
@@ -58,7 +64,14 @@ func (c Config) SourceType() string {
 }
 
 func (c Config) Validate() error {
-	for _, address := range []string{c.Listen, c.Admin.Listen} {
+	addresses := []string{c.Listen, c.Admin.Listen}
+	if c.Console.Enabled {
+		if err := c.Console.Validate(); err != nil {
+			return err
+		}
+		addresses = append(addresses, c.Console.Listen)
+	}
+	for _, address := range addresses {
 		_, port, err := net.SplitHostPort(address)
 		number, parseErr := strconv.Atoi(port)
 		if err != nil || parseErr != nil || number < 1 || number > 65535 {

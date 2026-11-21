@@ -115,10 +115,9 @@
 }
 .admin-table {
   width: 100%;
-  --el-table-header-bg-color: #909399;
+  --el-table-header-bg-color: var(--bg-hover);
   --el-table-header-text-color: #606266;
   --el-table-border-color: #ebeef5;
-  --el-table-row-hover-bg-color: #909399;
 }
 .admin-table .el-table__cell {
   padding: 16px 0;

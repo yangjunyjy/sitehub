@@ -47,10 +47,11 @@ type WebsiteDocVersionSummary struct {
 }
 
 type WebsiteDocGroup struct {
-	ID       uint64                  `json:"id,string"`
-	Revision uint64                  `json:"revision,string"`
-	Title    string                  `json:"title"`
-	Items    []ManualDocumentSummary `json:"items"`
+	MovedDraftTitles []string                `json:"movedDraftTitles,omitempty"`
+	ID               uint64                  `json:"id,string"`
+	Revision         uint64                  `json:"revision,string"`
+	Title            string                  `json:"title"`
+	Items            []ManualDocumentSummary `json:"items"`
 }
 
 type ManualDocumentSummary struct {

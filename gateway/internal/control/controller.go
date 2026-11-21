@@ -19,6 +19,7 @@ import (
 )
 
 type State struct {
+	FileManaged     bool              `json:"file_managed,omitempty"`
 	Revision        int64             `json:"revision"`
 	AppliedRevision int64             `json:"applied_revision"`
 	Manifest        manifest.Document `json:"manifest"`
@@ -125,7 +126,7 @@ func (c *Controller) config(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		c.mu.Lock()
-		state := State{Revision: record.Revision, AppliedRevision: c.applied, Manifest: d, LastError: c.lastError}
+		state := State{FileManaged: c.Load != nil, Revision: record.Revision, AppliedRevision: c.applied, Manifest: d, LastError: c.lastError}
 		c.mu.Unlock()
 		w.Header().Set("ETag", strconv.Quote(strconv.FormatInt(record.Revision, 10)))
 		respond(w, 200, state)

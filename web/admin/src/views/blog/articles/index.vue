@@ -144,6 +144,7 @@
               @click="exportOne(row)" /><AdminRowAction
               v-if="can('delete') && !row.deleted_at"
               action="delete"
+              label="移入回收站"
               :disabled="busy.has(row.id) || !!loadError"
               @click="remove(row)" /><AdminRowAction
               v-if="can('delete') && row.deleted_at"
@@ -284,9 +285,10 @@ async function toggleTop(row, value) {
 }
 async function remove(row) {
   try {
-    await ElMessageBox.confirm(`确定删除“${row.title}”？文章将移入回收站，可以恢复。`, '删除文章', {
+    await ElMessageBox.confirm(`将“${row.title || '未命名草稿'}”移入回收站？之后可以恢复。`, '移入回收站', {
       type: 'warning',
-      confirmButtonText: '确认删除',
+      confirmButtonText: '移入回收站',
+      confirmButtonType: 'danger',
       cancelButtonText: '取消',
     })
   } catch {
@@ -297,7 +299,7 @@ async function remove(row) {
     await deleteArticle(row.id, row.version)
     if (articles.value.length === 1 && pagination.page > 1) pagination.page--
     await loadList()
-    ElMessage.success('文章已删除')
+    ElMessage.success('文章已移入回收站')
   } catch (error) {
     ElMessage.error(articleError(error))
   } finally {

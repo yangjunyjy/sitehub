@@ -1,0 +1,19 @@
+{
+  "name": "@sitehub/gateway-admin",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build && node scripts/publish-assets.mjs"
+  },
+  "dependencies": {
+    "vue": "^3.5.26",
+    "element-plus": "^2.10.4",
+    "@element-plus/icons-vue": "^2.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.3",
+    "sass-embedded": "^1.97.2",
+    "vite": "^7.3.0"
+  }
+}

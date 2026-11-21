@@ -3,6 +3,7 @@ ARG APP=product
 ARG VITE_WEBSITE_URL
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
+COPY web/gateway-admin/package.json ./gateway-admin/package.json
 COPY web/admin/package.json ./admin/package.json
 COPY web/blog/package.json ./blog/package.json
 COPY web/product/package.json ./product/package.json

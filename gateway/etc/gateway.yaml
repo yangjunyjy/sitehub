@@ -29,3 +29,11 @@ HTTP:
   ReadHeaderTimeout: 10s
   IdleTimeout: 90s
   ShutdownTimeout: 60s
+
+Console:
+  Enabled: false
+  Listen: 127.0.0.1:9190
+  Origin: http://127.0.0.1:9190
+  RBACAddress: 127.0.0.1:9801
+  ServiceKey: ${SERVICE_KEY}
+  StateDir: .tmp/gateway-releases

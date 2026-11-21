@@ -34,6 +34,10 @@ async function openEditor(totp = false) {
   let article
   const gates = [gate(), gate()]
   const listGate = gate()
+  let listRows = [
+    { id: '48', title: 'MODULES', status: 1, version: '2', views: 9, updatedAt: '2026-11-19T17:21:00' },
+    { id: '49', title: '博客启程', status: 1, version: '1', views: 5, updatedAt: '2026-11-19T11:19:00' },
+  ]
   await page.route('**/v1/**', async route => {
     const request = route.request()
     const path = new URL(request.url()).pathname
@@ -44,8 +48,15 @@ async function openEditor(totp = false) {
     if (path.endsWith('/auth/totp')) data = { enabled: totp }
     if (path.endsWith('/articles/options')) data = { categories: [], tags: [] }
     if (path.endsWith('/articles/detail')) throw new Error('First draft promotion reloaded the article')
-    if (path.endsWith('/admin/articles')) await listGate.promise
-    if (path.endsWith('/articles/draft') || path.endsWith('/articles/action')) {
+    if (path.endsWith('/admin/articles')) {
+      await listGate.promise
+      data = { items: listRows, total: listRows.length }
+    }
+    if (path.endsWith('/articles/action') && request.postDataJSON().action === 'delete') {
+      const body = request.postDataJSON()
+      requests.push(body)
+      listRows = listRows.filter(row => row.id !== String(body.id))
+    } else if (path.endsWith('/articles/draft') || path.endsWith('/articles/action')) {
       const body = request.postDataJSON()
       requests.push({ ...body, token: request.headers()['x-totp-token'] })
       const index = requests.length - 1
@@ -107,8 +118,45 @@ try {
   assert.equal(await ring.evaluate(el => getComputedStyle(el).animationName), 'none')
   assert.equal(await ring.locator('.path').evaluate(el => getComputedStyle(el).animationName), 'none')
   listGate.resolve()
-  await page.close()
   console.log('PASS delayed article list uses a 2s spinner and honors reduced motion')
+
+  const row = page.locator('.el-table__row').filter({ hasText: 'MODULES' })
+  const trash = row.getByRole('button', { name: '移入回收站' })
+  await trash.hover()
+  await page.getByRole('tooltip', { name: '移入回收站' }).waitFor()
+  const contrast = await row.locator('.article-copy p').evaluate(summary => {
+    const luminance = color => {
+      const [r, g, b] = color.match(/\d+/g).slice(0, 3).map(Number).map(value => {
+        const s = value / 255
+        return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+      })
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    }
+    return (luminance(getComputedStyle(summary.closest('td')).backgroundColor) + 0.05) /
+      (luminance(getComputedStyle(summary).color) + 0.05)
+  })
+  assert.ok(contrast >= 4.5, 'hovered article summaries must remain legible')
+  const countBeforeTrash = requests.length
+  await trash.click()
+  const confirmTrash = page.getByRole('dialog', { name: '移入回收站' })
+  const panel = confirmTrash.locator('.el-message-box')
+  await confirmTrash.getByText(/MODULES/).waitFor()
+  const desktopBox = await panel.boundingBox()
+  assert.ok(desktopBox.width < 500 && Math.abs(desktopBox.x + desktopBox.width / 2 - 720) < 2)
+  await confirmTrash.getByRole('button', { name: '取消' }).click()
+  await confirmTrash.waitFor({ state: 'hidden' })
+  assert.equal(requests.length, countBeforeTrash)
+  await trash.click()
+  await page.setViewportSize({ width: 390, height: 844 })
+  const mobileBox = await panel.boundingBox()
+  assert.ok(mobileBox.x >= 16 && mobileBox.x + mobileBox.width <= 374)
+  await confirmTrash.getByRole('button', { name: '移入回收站', exact: true }).click()
+  await row.waitFor({ state: 'detached' })
+  assert.equal(requests.length, countBeforeTrash + 1)
+  assert.equal(requests.at(-1).id, 48)
+  assert.equal(requests.at(-1).version, 2)
+  await page.close()
+  console.log('PASS readable row hover and compact trash confirmation on desktop and mobile')
 
   const protectedEditor = await openEditor(true)
   const securePage = protectedEditor.page

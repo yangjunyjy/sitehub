@@ -24,7 +24,10 @@ body {
 .el-drawer {
   max-width: 100vw;
 }
-.el-message-box,
+.el-message-box {
+  --el-messagebox-padding-primary: 20px;
+  --el-messagebox-border-radius: var(--border-radius-extra-large);
+}
 .admin-global-search {
   max-width: calc(100vw - 24px);
 }

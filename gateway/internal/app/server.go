@@ -11,12 +11,14 @@ import (
 	"time"
 
 	"sitehub/common/controlplane"
+	"sitehub/gateway/console"
 	"sitehub/gateway/internal/config"
 	"sitehub/gateway/internal/control"
 	"sitehub/gateway/internal/discovery"
 	"sitehub/gateway/internal/engine"
 	"sitehub/gateway/manifest"
 	"sitehub/gateway/plugin"
+	"sitehub/gateway/publisher"
 
 	"github.com/zeromicro/go-zero/core/logx"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -124,7 +126,30 @@ func RunWithRegistry(ctx context.Context, c config.Config, plugins *plugin.Regis
 		return err
 	}
 	defer adminListener.Close()
-	failures := make(chan error, 2)
+	failures := make(chan error, 3)
+	servers := []*http.Server{public, admin}
+	if c.Console.Enabled {
+		host, port, _ := net.SplitHostPort(c.Admin.Listen)
+		if host == "" || host == "0.0.0.0" {
+			host = "127.0.0.1"
+		} else if host == "::" {
+			host = "::1"
+		}
+		client := &publisher.Client{URL: "http://" + net.JoinHostPort(host, port), Key: c.Admin.Key, HTTP: &http.Client{Timeout: 15 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
+		handler, closeAuth, err := console.New(c.Console.Config, client, plugins, c.Console.StateDir)
+		if err != nil {
+			return err
+		}
+		defer closeAuth()
+		listener, err := net.Listen("tcp", c.Console.Listen)
+		if err != nil {
+			return err
+		}
+		defer listener.Close()
+		web := &http.Server{Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 40 * time.Second, IdleTimeout: 60 * time.Second}
+		servers = append(servers, web)
+		go func() { failures <- web.Serve(listener) }()
+	}
 	go func() {
 		if c.TLS.Certificate != "" {
 			failures <- public.ServeTLS(publicListener, c.TLS.Certificate, c.TLS.Key)
@@ -147,19 +172,15 @@ func RunWithRegistry(ctx context.Context, c config.Config, plugins *plugin.Regis
 	drainCtx, cancel := context.WithTimeout(context.Background(), c.HTTP.ShutdownTimeout)
 	defer cancel()
 	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		if err := public.Shutdown(drainCtx); err != nil {
-			_ = public.Close()
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		if err := admin.Shutdown(drainCtx); err != nil {
-			_ = admin.Close()
-		}
-	}()
+	for _, srv := range servers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := srv.Shutdown(drainCtx); err != nil {
+				_ = srv.Close()
+			}
+		}()
+	}
 	wg.Wait()
 	// Shutdown excludes hijacked WebSocket connections. Give them the same
 	// drain deadline, then close tracked sockets to bound process termination.
