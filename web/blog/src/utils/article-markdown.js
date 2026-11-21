@@ -1,5 +1,46 @@
 // HTML is sanitized before entering the blog's live DOM.
-export function createArticleRenderer(Marked, DOMPurify, hljs) {
+function indexHeadings(fragment) {
+  const headings = [];
+  const used = new Set();
+  const aliases = new Map();
+  const nextSuffix = new Map();
+  const nodes = fragment.querySelectorAll("h1,h2,h3,h4,h5,h6,[id]");
+  for (const node of nodes) {
+    const original = node.id;
+    const heading = /^H[1-6]$/.test(node.tagName);
+    const text = node.textContent.trim();
+    const label =
+      (heading ? text : original)
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, "-")
+        .replace(/^-+|-+$/g, "") || "section";
+    const base = (heading ? "heading-" : "anchor-") + label;
+    let suffix = nextSuffix.get(base) || 0;
+    let id = suffix ? base + "-" + suffix : base;
+    while (used.has(id)) id = base + "-" + ++suffix;
+    nextSuffix.set(base, suffix + 1);
+    used.add(id);
+    node.id = id;
+    if (original && !aliases.has(original)) aliases.set(original, id);
+    if (heading && text)
+      headings.push({ level: Number(node.tagName[1]), text, slug: id });
+  }
+  for (const link of fragment.querySelectorAll('a[href^="#"]')) {
+    const original = link.getAttribute("href").slice(1);
+    let decoded;
+    try {
+      decoded = decodeURIComponent(original);
+    } catch {
+      continue;
+    }
+    if (aliases.has(decoded))
+      link.setAttribute("href", "#" + aliases.get(decoded));
+  }
+  return headings;
+}
+
+export function createArticleRenderer(Marked, DOMPurify) {
+  const parser = new Marked({ gfm: true, breaks: true });
   // Switching articles or toggling the editor preview should not parse/highlight
   // identical content again. Bound both entry count and retained text size.
   const cache = new Map();
@@ -15,9 +56,9 @@ export function createArticleRenderer(Marked, DOMPurify, hljs) {
     if (source == null) source = "";
     if (typeof source !== "string")
       throw new TypeError("Markdown content must be a string");
-    if (format !== "markdown")
-      throw new Error("Only Markdown content is supported");
-    const cacheKey = source;
+    if (format !== "markdown" && format !== "html")
+      throw new Error("Unsupported article format");
+    const cacheKey = format + "\0" + source;
     const cached = cache.get(cacheKey);
     if (cached) {
       cache.delete(cacheKey);
@@ -25,81 +66,67 @@ export function createArticleRenderer(Marked, DOMPurify, hljs) {
       return copyResult(cached);
     }
 
-    const headings = [],
-      counts = new Map(),
-      usedIDs = new Set();
-    const escape = (s) =>
-      String(s)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;");
-    const idFor = (text) => {
-      const base =
-        text
-          .toLowerCase()
-          .replace(/[^\p{L}\p{N}]+/gu, "-")
-          .replace(/^-|-$/g, "") || "section";
-      let count = counts.get(base) || 0;
-      let id = `heading-${base}${count ? `-${count}` : ""}`;
-      // A literal "foo-1" heading may already own the suffix that a repeated
-      // "foo" heading would otherwise receive. Every anchor must stay unique.
-      while (usedIDs.has(id)) {
-        count++;
-        id = `heading-${base}-${count}`;
-      }
-      counts.set(base, count + 1);
-      usedIDs.add(id);
-      return id;
-    };
-    const parser = new Marked({ gfm: true, breaks: true });
-    parser.use({
-      renderer: {
-        heading(token) {
-          const depth = token?.depth;
-          const level =
-            Number.isInteger(depth) && depth >= 1 && depth <= 6 ? depth : 1;
-          const inline = Array.isArray(token?.tokens)
-            ? this.parser.parseInline(token.tokens)
-            : parser.parseInline(
-                typeof token?.text === "string" ? token.text : "",
-              );
-          // Extract visible text, including decoded entities and inline formatting, for the TOC.
-          const fragment = DOMPurify.sanitize(inline, {
-            RETURN_DOM_FRAGMENT: true,
-          });
-          const text = fragment.textContent || "";
-          const id = idFor(text);
-          headings.push({ level, text, slug: id });
-          return `<h${level} id="${escape(id)}">${inline}</h${level}>\n`;
-        },
-        code(token) {
-          const source = typeof token?.text === "string" ? token.text : "";
-          const language = String(token?.lang || "").split(/\s/)[0];
-          const code =
-            language && hljs?.getLanguage(language)
-              ? hljs.highlight(source, { language }).value
-              : escape(source);
-          return `<div class="code-block-wrapper"><div class="code-header"><span>${escape(language || "text")}</span><button class="code-copy-btn" type="button">复制</button></div><pre class="code-content"><code class="hljs language-${escape(language)}">${code}</code></pre></div>`;
-        },
-      },
+    const markup = format === "html" ? source : parser.parse(source);
+    const fragment = DOMPurify.sanitize(markup, {
+      RETURN_DOM_FRAGMENT: true,
+      ALLOWED_TAGS:
+        "a abbr article aside b blockquote br caption cite code col colgroup dd del details div dl dt em figcaption figure h1 h2 h3 h4 h5 h6 hr i img kbd li mark ol p pre s section small span strong sub summary sup table tbody td th thead tfoot tr u ul".split(
+          " ",
+        ),
+      ALLOWED_ATTR:
+        "alt class colspan dir height href id lang open rowspan scope src start title width".split(
+          " ",
+        ),
+      ALLOW_ARIA_ATTR: false,
+      ALLOW_DATA_ATTR: false,
     });
-    let html = parser.parse(source);
-    html = DOMPurify.sanitize(html, {
-      USE_PROFILES: { html: true },
-      FORBID_TAGS: [
-        "style",
-        "iframe",
-        "form",
-        "input",
-        "video",
-        "audio",
-        "object",
-        "embed",
-      ],
-      FORBID_ATTR: ["style"],
-      ADD_ATTR: ["target"],
-    });
+    // Only the language on code blocks affects presentation. Article markup
+    // must never acquire controls or layout styles from the surrounding site.
+    for (const node of fragment.querySelectorAll("[class]")) {
+      const language =
+        node.matches("pre > code") &&
+        [...node.classList].find((value) => /^language-[\w.+#-]+$/.test(value));
+      node.removeAttribute("class");
+      if (language) node.className = language;
+    }
+    const headings = indexHeadings(fragment);
+    for (const table of fragment.querySelectorAll("table")) {
+      const scroll = document.createElement("div");
+      scroll.className = "article-table";
+      scroll.tabIndex = 0;
+      scroll.setAttribute("role", "region");
+      scroll.setAttribute(
+        "aria-label",
+        table.caption?.textContent || "文章表格",
+      );
+      table.replaceWith(scroll);
+      scroll.append(table);
+    }
+    for (const pre of fragment.querySelectorAll("pre")) {
+      const code = pre.querySelector(":scope > code");
+      const wrapper = document.createElement("figure");
+      wrapper.className = "code-block-wrapper";
+      const bar = document.createElement("figcaption");
+      bar.className = "code-header";
+      const language = document.createElement("span");
+      language.textContent =
+        code?.className.replace(/^language-/, "") || "纯文本";
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "code-copy-btn";
+      button.textContent = "复制代码";
+      bar.append(language, button);
+      pre.tabIndex = 0;
+      pre.replaceWith(wrapper);
+      wrapper.append(bar, pre);
+    }
+    for (const image of fragment.querySelectorAll("img")) {
+      image.loading = "lazy";
+      image.decoding = "async";
+    }
+    const container = document.createElement("div");
+    container.append(fragment);
+    const html = container.innerHTML;
     const result = { html, headings };
     const characters =
       cacheKey.length +

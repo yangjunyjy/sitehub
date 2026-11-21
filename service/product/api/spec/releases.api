@@ -1,0 +1,130 @@
+syntax = "v1"
+
+type WebsiteInstallOption {
+	ID          string `json:"id,optional"`
+	Title       string `json:"title,optional"`
+	Badge       string `json:"badge,optional"`
+	Description string `json:"description,optional"`
+	Command     string `json:"command,optional"`
+}
+
+type WebsiteRequirement {
+	Label string `json:"label,optional"`
+	Value string `json:"value,optional"`
+}
+
+type ResolveDownloadRequest {
+	ID string `form:"id,optional"`
+}
+
+type PublishedDownload {
+	URL      string `json:"url"`
+	FileName string `json:"fileName"`
+}
+
+type ReleaseGroupInput {
+	ID          string `json:"id,optional"`
+	Name        string `json:"name,optional"`
+	Description string `json:"description,optional"`
+	SortOrder   int    `json:"sortOrder,optional"`
+	Revision    uint64 `json:"revision,optional"`
+}
+
+type ReleaseFileInput {
+	ID          string `json:"id,optional"`
+	GroupID     string `json:"groupId,optional"`
+	Product     string `json:"product,optional"`
+	Edition     string `json:"edition,optional"`
+	Version     string `json:"version,optional"`
+	Platform    string `json:"platform,optional"`
+	Arch        string `json:"arch,optional"`
+	Format      string `json:"format,optional"`
+	URL         string `json:"url,optional"`
+	FileName    string `json:"fileName,optional"`
+	Description string `json:"description,optional"`
+	Icon        string `json:"icon,optional"`
+	Checksum    string `json:"checksum,optional"`
+	ReleaseDate string `json:"releaseDate,optional"`
+	Size        int64  `json:"size,optional"`
+	SortOrder   int    `json:"sortOrder,optional"`
+	Revision    uint64 `json:"revision,optional"`
+}
+
+type ReleaseRevision {
+	ID       string `json:"id,optional"`
+	Revision uint64 `json:"revision,optional"`
+}
+
+type ReleaseSettingsInput {
+	Title                string                 `json:"title,optional"`
+	Description          string                 `json:"description,optional"`
+	Version              string                 `json:"version,optional"`
+	ReleaseDate          string                 `json:"releaseDate,optional"`
+	SupportArchitectures string                 `json:"supportArchitectures,optional"`
+	SupportTitle         string                 `json:"supportTitle,optional"`
+	SupportDescription   string                 `json:"supportDescription,optional"`
+	InstallOptions       []WebsiteInstallOption `json:"installOptions,optional"`
+	Requirements         []WebsiteRequirement   `json:"requirements,optional"`
+	Revision             uint64                 `json:"revision,optional"`
+}
+
+@server (
+	group:  releases
+	prefix: /v1/product/releases
+)
+service product-api {
+	@handler ReleaseCatalog
+	get /catalog returns (Response)
+}
+
+@server (
+	group:  releaseadmin
+	prefix: /v1/product/admin/releases
+)
+service product-api {
+	@handler ReleaseFiles
+	get /files returns (Response)
+
+	@handler ReleaseGroups
+	get /groups returns (Response)
+
+	@handler ReleaseSettings
+	get /settings returns (Response)
+
+	@handler SaveReleaseSettings
+	post /settings/update (ReleaseSettingsInput) returns (Response)
+
+	@handler CreateReleaseGroup
+	post /groups/create (ReleaseGroupInput) returns (Response)
+
+	@handler UpdateReleaseGroup
+	post /groups/update (ReleaseGroupInput) returns (Response)
+
+	@handler DeleteReleaseGroup
+	post /groups/delete (ReleaseRevision) returns (Response)
+
+	@handler CreateReleaseFile
+	post /files/create (ReleaseFileInput) returns (Response)
+
+	@handler UpdateReleaseFile
+	post /files/update (ReleaseFileInput) returns (Response)
+
+	@handler PublishReleaseFile
+	post /files/publish (ReleaseRevision) returns (Response)
+
+	@handler WithdrawReleaseFile
+	post /files/withdraw (ReleaseRevision) returns (Response)
+
+	@handler DeleteReleaseFile
+	post /files/delete (ReleaseRevision) returns (Response)
+}
+
+@server (
+	group:  downloads
+	prefix: /internal/product
+)
+service product-api {
+	@handler InternalDownload
+	get /download (ResolveDownloadRequest) returns (PublishedDownload)
+}
+

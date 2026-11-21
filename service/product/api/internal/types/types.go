@@ -3,74 +3,144 @@
 
 package types
 
-type AdminDocumentRequest struct {
-	ID      string `form:"id,optional"`
+type ManualCatalogQuery struct {
+	Mode    string `form:"mode,optional"`
 	Version string `form:"version,optional"`
 }
 
-type ChangeDocGroupRequest struct {
-	Action    string `json:"action,optional"`
-	Version   string `json:"version,optional"`
-	Title     string `json:"title,optional"`
-	ID        uint64 `json:"id,optional"`
-	Revision  uint64 `json:"revision,optional"`
-	Direction int64  `json:"direction,optional"`
+type ManualDocumentQuery struct {
+	Version string `form:"version"`
+	ID      string `form:"id"`
 }
 
-type ChangeDocModeRequest struct {
-	Action         string `json:"action,optional"`
-	ID             string `json:"id,optional"`
-	Label          string `json:"label,optional"`
+type ManualDocumentRevision struct {
+	Version  string `json:"version"`
+	ID       string `json:"id"`
+	Revision uint64 `json:"revision"`
+}
+
+type ManualDraftRequest struct {
+	Version  string `json:"version"`
+	ID       string `json:"id"`
+	GroupID  uint64 `json:"groupId"`
+	Slug     string `json:"slug"`
+	Title    string `json:"title"`
+	Summary  string `json:"summary,optional"`
+	Content  string `json:"content,optional"`
+	Revision uint64 `json:"revision,optional"`
+}
+
+type ManualGroupMoveRequest struct {
+	Version   string `json:"version"`
+	ID        uint64 `json:"id"`
+	Revision  uint64 `json:"revision"`
+	Direction int    `json:"direction"`
+}
+
+type ManualGroupRequest struct {
+	Version  string `json:"version"`
+	ID       uint64 `json:"id,optional"`
+	Title    string `json:"title"`
+	Revision uint64 `json:"revision,optional"`
+}
+
+type ManualGroupRevision struct {
+	Version  string `json:"version"`
+	ID       uint64 `json:"id"`
+	Revision uint64 `json:"revision"`
+}
+
+type ManualHistoryQuery struct {
+	Version   string `form:"version"`
+	ID        string `form:"id"`
+	HistoryID uint64 `form:"historyId"`
+}
+
+type ManualModeRequest struct {
+	ID             string `json:"id"`
+	Label          string `json:"label"`
 	Description    string `json:"description,optional"`
-	Icon           string `json:"icon,optional"`
-	Status         string `json:"status,optional"`
+	Icon           string `json:"icon"`
+	Status         string `json:"status"`
 	DefaultVersion string `json:"defaultVersion,optional"`
-	SortOrder      int64  `json:"sortOrder,optional"`
+	SortOrder      int    `json:"sortOrder,optional"`
 	Revision       uint64 `json:"revision,optional"`
 }
 
-type ChangeDocVersionRequest struct {
-	Action   string `json:"action,optional"`
-	ID       string `json:"id,optional"`
-	Name     string `json:"name,optional"`
-	Status   string `json:"status,optional"`
+type ManualNamedRevision struct {
+	ID       string `json:"id"`
+	Revision uint64 `json:"revision"`
+}
+
+type ManualPublicDocumentQuery struct {
+	ID      string `form:"id"`
+	Version string `form:"version,optional"`
+	Mode    string `form:"mode,optional"`
+}
+
+type ManualSettingsRequest struct {
+	Title       string `json:"title"`
+	Description string `json:"description,optional"`
+	Revision    uint64 `json:"revision"`
+}
+
+type ManualVersionRequest struct {
+	ID       string `json:"id"`
+	ModeID   string `json:"modeId"`
+	Name     string `json:"name"`
 	Source   string `json:"source,optional"`
-	ModeID   string `json:"modeID,optional"`
 	Revision uint64 `json:"revision,optional"`
-}
-
-type DeleteDocumentRequest struct {
-	Version  string `json:"version,optional"`
-	ID       string `json:"id,optional"`
-	Revision uint64 `json:"revision,optional"`
-}
-
-type DocCatalogRequest struct {
-	Version string `form:"version,optional"`
-	Mode    string `form:"mode,optional"`
-}
-
-type DocsNavigationRequest struct {
-	Version string `form:"version,optional"`
-	Mode    string `form:"mode,optional"`
-}
-
-type DocumentHistoryRequest struct {
-	ID        string `form:"id,optional"`
-	Version   string `form:"version,optional"`
-	Mode      string `form:"mode,optional"`
-	HistoryID uint64 `form:"historyId,optional"`
-}
-
-type DocumentRequest struct {
-	ID      string `form:"id,optional"`
-	Version string `form:"version,optional"`
-	Mode    string `form:"mode,optional"`
 }
 
 type PublishedDownload struct {
 	URL      string `json:"url"`
 	FileName string `json:"fileName"`
+}
+
+type ReleaseFileInput struct {
+	ID          string `json:"id,optional"`
+	GroupID     string `json:"groupId,optional"`
+	Product     string `json:"product,optional"`
+	Edition     string `json:"edition,optional"`
+	Version     string `json:"version,optional"`
+	Platform    string `json:"platform,optional"`
+	Arch        string `json:"arch,optional"`
+	Format      string `json:"format,optional"`
+	URL         string `json:"url,optional"`
+	FileName    string `json:"fileName,optional"`
+	Description string `json:"description,optional"`
+	Icon        string `json:"icon,optional"`
+	Checksum    string `json:"checksum,optional"`
+	ReleaseDate string `json:"releaseDate,optional"`
+	Size        int64  `json:"size,optional"`
+	SortOrder   int    `json:"sortOrder,optional"`
+	Revision    uint64 `json:"revision,optional"`
+}
+
+type ReleaseGroupInput struct {
+	ID          string `json:"id,optional"`
+	Name        string `json:"name,optional"`
+	Description string `json:"description,optional"`
+	SortOrder   int    `json:"sortOrder,optional"`
+	Revision    uint64 `json:"revision,optional"`
+}
+
+type ReleaseRevision struct {
+	ID       string `json:"id,optional"`
+	Revision uint64 `json:"revision,optional"`
+}
+
+type ReleaseSettingsInput struct {
+	Title                string                 `json:"title,optional"`
+	Description          string                 `json:"description,optional"`
+	Version              string                 `json:"version,optional"`
+	ReleaseDate          string                 `json:"releaseDate,optional"`
+	SupportArchitectures string                 `json:"supportArchitectures,optional"`
+	SupportTitle         string                 `json:"supportTitle,optional"`
+	SupportDescription   string                 `json:"supportDescription,optional"`
+	InstallOptions       []WebsiteInstallOption `json:"installOptions,optional"`
+	Requirements         []WebsiteRequirement   `json:"requirements,optional"`
+	Revision             uint64                 `json:"revision,optional"`
 }
 
 type ResolveDownloadRequest struct {
@@ -93,37 +163,6 @@ type SaveContentRequest struct {
 	Product       WebsiteProductContent `json:"product,optional"`
 	About         WebsiteAboutContent   `json:"about,optional"`
 	Footer        WebsiteFooterContent  `json:"footer,optional"`
-}
-
-type SaveDocSettingsRequest struct {
-	Title       string `json:"title,optional"`
-	Description string `json:"description,optional"`
-	Revision    uint64 `json:"revision,optional"`
-}
-
-type SaveDocumentRequest struct {
-	Version  string `json:"version,optional"`
-	ID       string `json:"id,optional"`
-	Slug     string `json:"slug,optional"`
-	Title    string `json:"title,optional"`
-	Summary  string `json:"summary,optional"`
-	Content  string `json:"content,optional"`
-	GroupID  uint64 `json:"groupID,optional"`
-	Revision uint64 `json:"revision,optional"`
-}
-
-type SaveDownloadsRequest struct {
-	Title                string                   `json:"title,optional"`
-	Groups               []WebsiteDownloadGroup   `json:"groups,optional"`
-	Version              string                   `json:"version,optional"`
-	ReleaseDate          string                   `json:"releaseDate,optional"`
-	SupportArchitectures string                   `json:"supportArchitectures,optional"`
-	Description          string                   `json:"description,optional"`
-	Packages             []WebsiteDownloadPackage `json:"packages,optional"`
-	InstallOptions       []WebsiteInstallOption   `json:"installOptions,optional"`
-	Requirements         []WebsiteRequirement     `json:"requirements,optional"`
-	SupportTitle         string                   `json:"supportTitle,optional"`
-	SupportDescription   string                   `json:"supportDescription,optional"`
 }
 
 type WebsiteAboutContent struct {
@@ -174,53 +213,30 @@ type WebsiteDeliveryStep struct {
 	Description string `json:"description,optional"`
 }
 
-type WebsiteDownloadGroup struct {
-	ID          string `json:"id,optional"`
-	Name        string `json:"name,optional"`
-	Description string `json:"description,optional"`
-}
-
-type WebsiteDownloadPackage struct {
-	ID          string `json:"id,optional"`
-	GroupID     string `json:"groupId,optional"`
-	Edition     string `json:"edition,optional"`
-	SortOrder   int64  `json:"sortOrder,optional"`
-	Platform    string `json:"platform,optional"`
-	Arch        string `json:"arch,optional"`
-	Format      string `json:"format,optional"`
-	URL         string `json:"url,optional"`
-	Checksum    string `json:"checksum,optional"`
-	Icon        string `json:"icon,optional"`
-	Product     string `json:"product,optional"`
-	Version     string `json:"version,optional"`
-	Description string `json:"description,optional"`
-	FileName    string `json:"fileName,optional"`
-	Size        int64  `json:"size,optional"`
-	ReleaseDate string `json:"releaseDate,optional"`
-	Status      string `json:"status,optional"`
-}
-
 type WebsiteFooterContent struct {
 	Slogan    string `json:"slogan,optional"`
 	Statement string `json:"statement,optional"`
 }
 
 type WebsiteHomeContent struct {
-	Eyebrow         string   `json:"eyebrow,optional"`
-	Title           string   `json:"title,optional"`
-	Highlight       string   `json:"highlight,optional"`
-	Description     string   `json:"description,optional"`
-	PrimaryAction   string   `json:"primaryAction,optional"`
-	SecondaryAction string   `json:"secondaryAction,optional"`
-	Meta            []string `json:"meta,optional"`
-	CapabilityTitle string   `json:"capabilityTitle,optional"`
-	CapabilityIntro string   `json:"capabilityIntro,optional"`
-	FlowTitle       string   `json:"flowTitle,optional"`
-	FlowIntro       string   `json:"flowIntro,optional"`
-	AudienceTitle   string   `json:"audienceTitle,optional"`
-	AudienceIntro   string   `json:"audienceIntro,optional"`
-	BlogTitle       string   `json:"blogTitle,optional"`
-	CTA             string   `json:"cta,optional"`
+	ParticleShape       string   `json:"particleShape,default=artifact"`
+	ParticleAutoplay    bool     `json:"particleAutoplay,default=true"`
+	ParticleInteractive bool     `json:"particleInteractive,default=true"`
+	Eyebrow             string   `json:"eyebrow,optional"`
+	Title               string   `json:"title,optional"`
+	Highlight           string   `json:"highlight,optional"`
+	Description         string   `json:"description,optional"`
+	PrimaryAction       string   `json:"primaryAction,optional"`
+	SecondaryAction     string   `json:"secondaryAction,optional"`
+	Meta                []string `json:"meta,optional"`
+	CapabilityTitle     string   `json:"capabilityTitle,optional"`
+	CapabilityIntro     string   `json:"capabilityIntro,optional"`
+	FlowTitle           string   `json:"flowTitle,optional"`
+	FlowIntro           string   `json:"flowIntro,optional"`
+	AudienceTitle       string   `json:"audienceTitle,optional"`
+	AudienceIntro       string   `json:"audienceIntro,optional"`
+	BlogTitle           string   `json:"blogTitle,optional"`
+	CTA                 string   `json:"cta,optional"`
 }
 
 type WebsiteInstallOption struct {

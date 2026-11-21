@@ -48,14 +48,15 @@ try {
   assert((await adminContext.cookies()).some(c => c.name === 'sitehub_admin_session' && c.httpOnly))
   check('administrator UI login and independent HttpOnly session')
   await admin.screenshot({ path: resolve(artifacts, 'admin-desktop.png'), fullPage: true })
-  for (const path of ['blog/articles', 'blog/statistics', 'blog/categories', 'blog/tags', 'system/systems', 'system/users', 'system/roles', 'system/menus', 'product/docs', 'product/docs/groups', 'product/docs/versions', 'product/docs/modes', 'product/docs/settings', 'product/content', 'product/downloads', 'product/download-settings', 'admin/settings/basic', 'admin/settings/storage', 'admin/settings/email', 'profile']) {
+  for (const path of ['blog/articles', 'blog/statistics', 'blog/categories', 'blog/tags', 'system/systems', 'system/users', 'system/roles', 'system/menus', 'product/docs', 'product/content', 'product/downloads', 'admin/settings/basic', 'admin/settings/storage', 'admin/settings/email', 'profile']) {
     await visit(admin, adminURL, '/dashboard/' + path)
   }
   check('all native administration pages load without API errors')
-  await visit(admin, adminURL, '/dashboard/product/docs/settings')
-  await admin.getByPlaceholder('Deploy 产品文档').fill('Browser documentation')
-  const savedSettings = admin.waitForResponse(r => r.url().endsWith('/v1/product/docs/settings') && r.request().method() === 'POST')
-  await admin.getByRole('button', { name: '保存设置', exact: true }).click()
+  await visit(admin, adminURL, '/dashboard/product/docs')
+  await admin.getByRole('button', {name:'文档站设置'}).click()
+  await admin.getByRole('dialog').getByLabel('文档站标题').fill('Browser documentation')
+  const savedSettings = admin.waitForResponse(r => r.url().endsWith('/v1/product/admin/manuals/settings/save') && r.request().method() === 'POST')
+  await admin.getByRole('dialog').getByRole('button', { name: '保存', exact: true }).click()
   assert.equal((await savedSettings).status(), 200)
   await admin.waitForLoadState('networkidle')
   check('document settings preserve the native revision contract')

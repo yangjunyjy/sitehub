@@ -23,6 +23,7 @@ async function load() {
   error.value = "";
   notFound.value = false;
   article.value = null;
+  copyNotice.value = "";
   try {
     if (!/^[1-9]\d*$/.test(String(route.params.id))) {
       notFound.value = true;
@@ -34,7 +35,11 @@ async function load() {
     if (id !== generation) return;
     if (!result.data || typeof result.data.content !== "string")
       throw new Error("文章响应无效，请稍后重试");
-    if (result.data.content_format && result.data.content_format !== "markdown")
+    if (
+      !["markdown", "html"].includes(
+        result.data.content_format || result.data.contentFormat || "markdown",
+      )
+    )
       throw new Error("这篇文章的格式暂不支持阅读，请联系博主");
     article.value = result.data;
     document.title = article.value.title + " · 云间小记";
@@ -66,12 +71,29 @@ onBeforeUnmount(() => {
   <div class="reader-page">
     <section class="reader-shell">
       <header v-if="article" class="reader-title">
-        <router-link :to="{ name: 'home' }">云间小记</router-link>
-        <span v-if="article.category?.name">
-          / {{ article.category.name }}</span
-        >
+        <nav class="reader-crumb" aria-label="文章位置">
+          <router-link :to="{ name: 'home' }">云间小记</router-link>
+          <template v-if="article.category?.name"
+            ><span aria-hidden="true">/</span
+            ><router-link
+              :to="{
+                name: 'categories',
+                query: { category: String(article.category.id) },
+              }"
+              >{{ article.category.name }}</router-link
+            ></template
+          >
+        </nav>
         <h1>{{ article.title }}</h1>
-        <p>{{ articleDate(article) }}</p>
+        <p v-if="article.summary" class="reader-deck">{{ article.summary }}</p>
+        <div class="reader-byline">
+          <strong v-if="article.author?.name">{{ article.author.name }}</strong>
+          <time
+            v-if="articleDate(article) !== '日期待补充'"
+            :datetime="articleDate(article)"
+            >{{ articleDate(article) }}</time
+          >
+        </div>
       </header>
       <ContentState v-if="loading" loading /><ContentState
         v-else-if="notFound"
@@ -83,7 +105,7 @@ onBeforeUnmount(() => {
         @retry="load"
       /><ArticleBody v-else-if="article" :article="article" />
       <div v-if="article" class="article-bottom">
-        <div>
+        <div v-if="article.tags?.length">
           <router-link
             v-for="tag in article.tags || []"
             :key="tag.id"
@@ -91,13 +113,15 @@ onBeforeUnmount(() => {
             ># {{ tag.name }}</router-link
           >
         </div>
+        <button class="text-button" @click="share">分享这篇文章 ↗</button>
+        <p v-if="copyNotice" role="status">{{ copyNotice }}</p>
+      </div>
+      <template v-if="article">
         <ArticleActions
           :key="String(route.params.id)"
           :article-id="String(route.params.id)"
         />
-        <button class="text-button" @click="share">分享这篇文章 ↗</button>
-        <p v-if="copyNotice" role="status">{{ copyNotice }}</p>
-      </div>
+      </template>
       <DiscussionFeed
         v-if="article"
         :key="route.params.id"
@@ -109,68 +133,121 @@ onBeforeUnmount(() => {
     </section>
   </div>
 </template>
-<style lang="scss" scoped>
+<style scoped lang="scss">
 .reader-page {
+  --reader-measure: 710px;
+  --reader-gap: clamp(24px, 3.4vw, 55px);
+  --reader-grid: minmax(0, 1fr) minmax(0, var(--reader-measure)) minmax(0, 1fr);
   min-height: 80vh;
   background: #fff;
   color: #25312b;
-  padding: 100px 20px 32px;
+  padding: clamp(90px, 9vw, 128px) clamp(20px, 3vw, 46px) 32px;
 }
 .reader-shell {
-  width: min(100%, 1020px);
+  width: min(100%, 1450px);
   margin: auto;
 }
+.reader-title,
+.article-bottom,
+.article-back {
+  width: min(100%, var(--reader-measure));
+  margin-inline: auto;
+}
 .reader-title {
-  border-bottom: 1px solid #dce2d9;
-  padding-bottom: 24px;
+  border-bottom: 1px solid #dbe3dc;
+  padding: 0 0 clamp(24px, 3.3vw, 41px);
+}
+.reader-crumb,
+.reader-byline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
   font-size: 13px;
-  color: #607365;
+  color: #5c7063;
+}
+.reader-crumb a:hover,
+.article-back a:hover {
+  text-decoration: underline;
+}
+.reader-crumb span {
+  color: #a2afa5;
 }
 .reader-title h1 {
-  margin: 15px 0 8px;
-  color: #202a24;
+  margin: 18px 0 14px;
+  color: #202b24;
   font:
-    650 clamp(32px, 5vw, 52px) / 1.25 Georgia,
+    650 clamp(32px, 4.1vw, 54px) / 1.26 Georgia,
     "Songti SC",
     SimSun,
     serif;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.035em;
+  text-wrap: pretty;
 }
-.reader-title p {
+.reader-deck {
   margin: 0;
-  font-size: 13px;
+  line-height: 1.75;
+  font-size: clamp(16px, 1.65vw, 20px);
+  color: #55675b;
+}
+.reader-byline:not(:empty) {
+  margin-top: 20px;
+}
+.reader-byline strong {
+  color: #344b3a;
+}
+.reader-byline time {
+  font-variant-numeric: tabular-nums;
+}
+.reader-byline strong + time::before {
+  content: "·";
+  margin-right: 10px;
 }
 .article-bottom {
   display: flex;
-  justify-content: space-between;
-  gap: 20px;
+  align-items: center;
   flex-wrap: wrap;
-  border-top: 1px solid var(--line);
-  padding: 25px 0 32px;
-  > div {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    align-items: center;
-    a {
-      font-size: 11px;
-      color: #4a6852;
-      background: #f2f5ee;
-      padding: 5px 12px;
-      border-radius: 3px;
-    }
-  }
-  p {
-    width: 100%;
-    font-size: 11px;
-    color: var(--muted);
-    margin: 0;
-  }
+  gap: 14px;
+  border-top: 1px solid #dbe3dc;
+  padding: 18px 0 30px;
+}
+.article-bottom > div {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.article-bottom a {
+  font-size: 13px;
+  color: #47614f;
+  text-decoration: underline;
+  text-underline-offset: 0.22em;
+}
+.article-bottom button {
+  margin-left: auto;
+  font-size: 13px;
+  color: #47614f;
+}
+.article-bottom p {
+  width: 100%;
+  margin: 0;
+  text-align: right;
+  font-size: 12px;
+}
+.reader-shell :deep(.discussion) {
+  width: min(100%, var(--reader-measure));
 }
 .article-back {
   text-align: center;
-  font-size: 12px;
-  padding: 35px 0 60px;
-  color: #aa9ab8;
+  font-size: 13px;
+  padding: 30px 0 45px;
+  color: #526959;
+}
+@media (max-width: 640px) {
+  .reader-page {
+    padding-top: 86px;
+  }
+  .reader-byline:not(:empty) {
+    margin-top: 14px;
+  }
 }
 </style>

@@ -49,18 +49,12 @@ func (r *productDocsRepository) DeleteMode(id string) error {
 	return nil
 }
 func (r *productDocsRepository) Groups(version string) (v []productdomain.DocGroup, err error) {
-	q := r.db.Table("product_doc_groups")
-	if version != "" {
-		q = q.Where("version_id = ?", version)
-	}
+	q := r.db.Table("product_doc_groups").Where("version_id = ?", version)
 	err = q.Order("sort_order, id").Find(&v).Error
 	return
 }
 func (r *productDocsRepository) Documents(version string, body bool) (v []productdomain.ProductDocument, err error) {
-	q := r.db.Table("product_documents")
-	if version != "" {
-		q = q.Where("version_id = ?", version)
-	}
+	q := r.db.Table("product_documents").Where("version_id = ?", version)
 	if !body {
 		q = q.Omit("content_markdown")
 	}
@@ -81,6 +75,36 @@ func (r *productDocsRepository) DocumentBySlug(version, slug string) (v productd
 		err = productdomain.ErrDocumentNotFound
 	}
 	return
+}
+
+// Public queries select the revision explicitly published by the editor. Neither
+// draft metadata nor a moved draft's group leaks into the published navigation.
+func (r *productDocsRepository) published(version string) *gorm.DB {
+	return r.db.Table("product_documents AS d").
+		Joins("JOIN product_document_revisions AS p ON p.document_id = d.id AND p.revision = d.published_revision").
+		Where("d.version_id = ? AND d.published_revision > 0", version)
+}
+
+const publicationFields = "d.id, d.version_id, d.doc_key, d.published_revision, p.group_id, p.sort_order, p.slug, p.title, p.summary, p.revision, p.created_at AS updated_at"
+
+func (r *productDocsRepository) PublishedDocument(version, key string) (d productdomain.ProductDocument, err error) {
+	err = r.published(version).Select(publicationFields+", p.content_markdown").Where("d.doc_key = ?", key).Take(&d).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		err = productdomain.ErrDocumentNotFound
+	}
+	return
+}
+func (r *productDocsRepository) PublishedDocuments(version string) (items []productdomain.ProductDocument, err error) {
+	err = r.published(version).Select(publicationFields).Order("p.sort_order, d.id").Find(&items).Error
+	return
+}
+func (r *productDocsRepository) DocumentID(version, key string) (uint64, error) {
+	var row productdomain.ProductDocument
+	err := r.db.Table("product_documents").Select("id").Where("version_id = ? AND doc_key = ?", version, key).Take(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		err = productdomain.ErrDocumentNotFound
+	}
+	return row.ID, err
 }
 func (r *productDocsRepository) History(id uint64) (v []productdomain.DocumentRevision, err error) {
 	err = r.db.Table("product_document_revisions").Omit("content_markdown").Where("document_id = ?", id).Order("revision DESC").Limit(100).Find(&v).Error

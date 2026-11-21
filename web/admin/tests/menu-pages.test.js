@@ -88,10 +88,13 @@ test("page discovery uses actual index.vue files and exact component paths", () 
     "system/users/index",
     "blog/articles/create/index",
     "blog/articles/editor/index",
-    "product/docs/groups/index",
-    "product/download-settings/index",
+    "product/docs/editor/index",
+    "product/downloads/index",
   ])
     assert(modules[componentKey(path)], path);
+  for (const retired of ["product/docs/groups/index", "product/docs/settings/index", "product/docs/modes/index", "product/docs/versions/index", "product/download-settings/index"]) {
+    assert.equal(modules[componentKey(retired)], undefined);
+  }
   for (const old of [
     "views/users/UserList",
     "system/users/index.vue",

@@ -36,16 +36,16 @@ func (r *catalogRepository) Groups(version string) ([]domain.DocGroup, error) {
 	r.treeReads++
 	return []domain.DocGroup{{ID: 7, Title: "入门"}}, nil
 }
-func (r *catalogRepository) Documents(version string, body bool) ([]domain.ProductDocument, error) {
-	if version != "stable" || body {
-		r.t.Fatalf("unexpected document query: version=%q body=%t", version, body)
+func (r *catalogRepository) PublishedDocuments(version string) ([]domain.ProductDocument, error) {
+	if version != "stable" {
+		r.t.Fatalf("unexpected document query: version=%q", version)
 	}
 	r.treeReads++
 	return []domain.ProductDocument{{GroupID: 7, DocKey: "install"}}, nil
 }
 func TestCatalogReadsOnlyPublishedMetadataForSelectedVersion(t *testing.T) {
 	repo := &catalogRepository{t: t}
-	service := websiteContentService{docs: repo}
+	service := ManualService{docs: repo}
 	catalog, err := service.GetDocCatalog("", "")
 	if err != nil {
 		t.Fatal(err)

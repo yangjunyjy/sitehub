@@ -10,116 +10,41 @@ const { website } = useWebsiteContent();
 
 <template>
   <footer class="product-footer">
-    <div class="site-shell product-footer__top">
-      <div class="footer-brand">
-        <router-link class="footer-logo" :to="{ name: 'home' }"
-          ><BrandMark /><strong>{{
-            website.content.brand.name
-          }}</strong></router-link
-        >
-        <p>
-          {{ website.content.brand.fullName }}<br />{{
-            website.content.footer.slogan
-          }}
-        </p>
-      </div>
-      <div class="footer-links">
+    <div class="site-shell">
+      <div class="footer-main">
+        <router-link class="footer-brand" :to="{ name: 'home' }"><BrandMark />{{ website.content.brand.name }}</router-link>
         <nav aria-label="页脚导航">
           <MenuBranch v-for="item in navigation.links" :key="item.id" :item="item" mobile />
+          <a v-if="website.content.brand.contactEmail" :href="'mailto:' + website.content.brand.contactEmail">联系我们</a>
         </nav>
-        <a v-if="website.content.brand.contactEmail" :href="'mailto:' + website.content.brand.contactEmail">联系我们</a>
       </div>
-    </div>
-    <div class="site-shell product-footer__bottom">
-      <span
-        >© {{ year }}
-        {{
-          website.content.brand.copyright || "Deploy. All rights reserved."
-        }}</span
-      ><a
-        v-if="website.content.brand.recordNumber"
-        href="https://beian.miit.gov.cn/"
-        target="_blank"
-        rel="noopener"
-        >{{ website.content.brand.recordNumber }}</a
-      ><span v-else>{{ website.content.footer.statement }}</span>
+      <p v-if="website.content.footer.slogan" class="footer-copy">{{ website.content.footer.slogan }}</p>
+      <div class="footer-legal">
+        <span>© {{ year }} {{ website.content.brand.copyright || website.content.brand.name }}</span>
+        <span v-if="website.content.brand.fullName">{{ website.content.brand.fullName }}</span>
+        <a v-if="website.content.brand.recordNumber" href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">{{ website.content.brand.recordNumber }}</a>
+        <span v-if="website.content.footer.statement">{{ website.content.footer.statement }}</span>
+      </div>
     </div>
   </footer>
 </template>
-
-<style lang="scss" scoped>
+<style scoped>
 .product-footer {
   border-top: 1px solid var(--deploy-line);
+  padding-block: 26px;
   background: var(--deploy-white);
-  padding: 48px 0 24px;
+  color: var(--deploy-ink);
 }
-.product-footer__top {
-  display: flex;
-  justify-content: space-between;
-  gap: 48px;
-  padding-bottom: 32px;
-}
-.footer-logo {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-.footer-logo :deep(svg) {
-  width: 28px;
-  height: 28px;
-}
-.footer-logo strong {
-  font-size: 18px;
-  font-weight: 600;
-}
-.footer-brand p {
-  font-size: 12px;
-  line-height: 1.9;
-  max-width: 320px;
-  margin: 16px 0;
-  color: var(--deploy-faint);
-}
-.footer-links {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 60px;
-}
-.footer-links > div {
-  display: grid;
-  gap: 12px;
-  align-content: start;
-  font-size: 12px;
-}
-.footer-links strong {
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-.footer-links a {
-  color: var(--deploy-muted);
-}
-.footer-links a:hover {
-  color: var(--deploy-primary);
-}
-.product-footer__bottom {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  border-top: 1px solid var(--deploy-line);
-  padding-top: 20px;
-  color: var(--deploy-faint);
-  font-size: 11px;
-}
-@media (max-width: 760px) {
-  .product-footer__top {
-    flex-direction: column;
-    gap: 24px;
-  }
-  .footer-links {
-    gap: 24px;
-  }
-  .product-footer__bottom {
-    flex-direction: column;
-    gap: 8px;
-  }
+.footer-main, .footer-brand, .footer-main nav, .footer-legal { display: flex; align-items: center; }
+.footer-main { justify-content: space-between; gap: 18px; }
+.footer-brand { gap: 8px; font-weight: 650; font-size: 16px; }
+.footer-brand :deep(svg) { width: 22px; height: 22px; }
+.footer-main nav { flex-wrap: wrap; align-items: flex-start; gap: 8px 18px; font-size: 13px; }
+.footer-copy, .footer-legal { color: var(--deploy-muted); font-size: 12px; }
+.footer-copy { margin: 14px 0 0; }
+.footer-legal { flex-wrap: wrap; gap: 4px 18px; margin-top: 13px; }
+@media (max-width: 600px) {
+  .footer-main { align-items: flex-start; flex-wrap: wrap; }
+  .footer-legal { align-items: flex-start; flex-direction: column; }
 }
 </style>

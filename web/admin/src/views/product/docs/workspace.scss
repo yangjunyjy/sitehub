@@ -1,0 +1,128 @@
+.manual-workspace {
+  padding: clamp(14px, 2vw, 20px);
+  max-width: 1500px;
+  margin: auto;
+  min-height: 230px;
+  color: var(--el-text-color-primary);
+}
+.manual-section,
+.manual-actions,
+.manual-context {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.manual-section {
+  justify-content: space-between;
+}
+.manual-site-actions {
+  margin-inline-start: auto;
+  flex-wrap: wrap;
+}
+.manual-groups p {
+  margin: 5px 0;
+  color: var(--el-text-color-regular);
+  font-size: 13px;
+}
+.manual-panel {
+  background: white;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.manual-context {
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--el-border-color-light);
+}
+.manual-context label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.manual-context .el-select {
+  width: 145px;
+}
+.manual-context label:not(:first-child) {
+  margin-left: 12px;
+}
+.manual-directory {
+  display: grid;
+  grid-template-columns: minmax(170px, 22%) minmax(0, 1fr);
+  min-height: 280px;
+}
+.manual-groups {
+  padding: 16px;
+  border-right: 1px solid var(--el-border-color-light);
+}
+.manual-section {
+  min-height: 32px;
+  margin-bottom: 12px;
+}
+.manual-section h2 {
+  margin: 0;
+  font-size: 15px;
+}
+.manual-group,
+.manual-doc-link {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.manual-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px;
+  font-size: 14px;
+  border-radius: 5px;
+}
+.manual-group:hover,
+.manual-group.selected {
+  background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary-dark-2);
+}
+.manual-group small {
+  margin-left: auto;
+}
+.manual-documents {
+  padding: 18px;
+  min-width: 0;
+}
+.manual-doc-link {
+  padding: 0;
+  font-weight: 550;
+}
+.manual-doc-link:hover {
+  color: var(--el-color-primary);
+}
+.manual-documents small {
+  display: block;
+  color: var(--el-text-color-secondary);
+}
+@media (max-width: 760px) {
+  .manual-directory {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .manual-groups {
+    border-right: 0;
+    border-bottom: 1px solid var(--el-border-color-light);
+  }
+  .manual-group {
+    display: inline-flex;
+    width: auto;
+  }
+  .manual-context label:not(:first-child) {
+    margin-left: 0;
+  }
+  .manual-context .el-select {
+    width: 115px;
+  }
+}
+
+.manual-search { max-width: 280px; margin-bottom: 12px; }

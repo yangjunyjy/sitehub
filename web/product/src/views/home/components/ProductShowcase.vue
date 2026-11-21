@@ -1,213 +1,94 @@
 <script setup>
-import { ref } from "vue";
-const dialog = ref(null);
-const screenshot = `${import.meta.env.BASE_URL}images/product/workbench.png`;
+import { ref } from 'vue'
+defineProps({ brand: { type: String, required: true } })
+const dialog = ref(null)
+const fullSize = ref(false)
+const screenshot = import.meta.env.BASE_URL + 'images/product/workbench.png'
+function openPreview() {
+  fullSize.value = false
+  dialog.value.showModal()
+}
 </script>
 <template>
   <figure class="product-showcase">
-    <div class="showcase-bar">
-      <span class="showcase-dots" aria-hidden="true"><i></i><i></i><i></i></span
-      ><span>Deploy / 统一工作台</span
-      ><span class="showcase-live"><i></i> 产品实景</span>
-    </div>
-    <button
-      class="showcase-image"
-      type="button"
-      aria-label="放大查看产品工作台截图"
-      @click="dialog.showModal()"
-    >
-      <img
-        :src="screenshot"
-        width="1600"
-        height="632"
-        alt="Deploy 实际工作台：执行概览、近七日执行趋势、任务状态分布与平台资源统计"
-        fetchpriority="high"
-      /><span>放大查看 </span>
+    <button class="showcase-image" type="button" aria-label="放大查看产品工作台截图" @click="openPreview">
+      <img :src="screenshot" width="1600" height="632" loading="lazy" decoding="async"
+        :alt="brand + ' 工作台，展示执行趋势、任务状态与平台资源统计'" />
+      <span class="showcase-expand" aria-hidden="true">⤢</span>
     </button>
-    <figcaption>
-      <span>一个工作台，掌握执行进度与资源状态。</span
-      ><span>产品界面截图 · 非实时数据</span>
-    </figcaption>
   </figure>
-  <dialog
-    ref="dialog"
-    class="showcase-dialog"
-    aria-label="产品工作台截图"
-    @click="
-      (event) => {
-        if (event.target === dialog) dialog.close();
-      }
-    "
-  >
-    <button type="button" autofocus @click="dialog.close()">关闭预览 ×</button
-    ><img
-      :src="screenshot"
-      width="1600"
-      height="632"
-      alt="Deploy 产品工作台完整截图"
-    />
-    <p>产品界面实景 · 数据为截图时状态</p>
+  <dialog ref="dialog" class="showcase-dialog" aria-labelledby="preview-heading"
+    @click="event => { if (event.target === dialog) dialog.close() }">
+    <div class="showcase-dialog__body">
+      <header>
+        <h2 id="preview-heading">工作台截图</h2>
+        <button type="button" :aria-pressed="fullSize" @click="fullSize = !fullSize">{{ fullSize ? '适合窗口' : '原始尺寸' }}</button>
+        <button type="button" autofocus @click="dialog.close()">关闭</button>
+      </header>
+      <div class="showcase-dialog__image" tabindex="0" aria-label="工作台截图预览">
+        <img :src="screenshot" width="1600" height="632" :class="{ original: fullSize }" :alt="brand + ' 产品工作台完整截图'" />
+      </div>
+    </div>
   </dialog>
 </template>
-<style lang="scss" scoped>
-.product-showcase {
-  margin: 0;
-  overflow: hidden;
-  border: 1px solid var(--deploy-line);
-  border-radius: 8px;
-  background: var(--deploy-white);
-  box-shadow:
-    0 24px 70px #00000012,
-    0 3px 12px #00000012;
-  text-align: left;
-}
-.showcase-bar {
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 18px;
-  border-bottom: 1px solid var(--deploy-line);
-  background: var(--deploy-white);
-  color: var(--deploy-muted);
-  font-size: 10px;
-}
-.showcase-dots {
-  display: flex;
-  gap: 6px;
-  min-width: 90px;
-}
-.showcase-dots i {
-  width: 7px;
-  height: 7px;
-  border-radius: 100%;
-  background: var(--deploy-paper);
-}
-.showcase-dots i:first-child {
-  background: #edc7c7;
-}
-.showcase-dots i:nth-child(2) {
-  background: #efdfb8;
-}
-.showcase-dots i:last-child {
-  background: #bcdccd;
-}
-.showcase-live {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 90px;
-  justify-content: flex-end;
-}
-.showcase-live i {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #65b098;
-}
+<style scoped>
+.product-showcase { margin: 0; }
 .showcase-image {
   display: block;
-  width: 100%;
   position: relative;
+  width: 100%;
   padding: 0;
-  border: 0;
-  background: var(--deploy-paper);
-}
-.showcase-image img {
-  width: 100%;
-  height: auto;
-}
-.showcase-image > span {
-  position: absolute;
-  right: 16px;
-  bottom: 16px;
-  background: var(--deploy-white);
-  padding: 6px 12px;
-  border: 1px solid var(--deploy-line);
-  border-radius: 6px;
-  color: var(--deploy-primary);
-  opacity: 0;
-  transition: opacity 0.2s;
-  font-size: 12px;
-}
-.showcase-image:hover > span,
-.showcase-image:focus-visible > span {
-  opacity: 1;
-}
-.product-showcase figcaption {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 13px 18px;
-  border-top: 1px solid var(--deploy-line);
-  color: var(--deploy-muted);
-  font-size: 11px;
-}
-.product-showcase figcaption span:last-child {
-  color: var(--deploy-faint);
-}
-.showcase-dialog {
-  position: fixed;
-  max-width: calc(100vw - 40px);
-  width: 1500px;
-  max-height: 90dvh;
-  border: 1px solid var(--deploy-line);
-  border-radius: 8px;
-  padding: 16px;
-  background: var(--deploy-paper);
-}
-.showcase-dialog::backdrop {
-  background: var(--deploy-soft);
-  backdrop-filter: blur(5px);
-}
-.showcase-dialog > button {
-  display: block;
-  margin: 0 0 16px auto;
-  background: var(--deploy-white);
-  border: 1px solid var(--deploy-line);
+  overflow: hidden;
+  border: 1px solid var(--workbench-line);
   border-radius: 7px;
-  padding: 8px 16px;
-  color: var(--deploy-muted);
+  background: var(--workbench-paper);
+  cursor: zoom-in;
 }
-.showcase-dialog img {
-  width: 100%;
-  height: auto;
+.showcase-image img { width: 100%; height: auto; }
+.showcase-expand {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--workbench-line);
+  border-radius: 5px;
+  background: var(--workbench-paper);
+  color: var(--workbench-ink);
+  font: 20px/1 system-ui;
 }
-.showcase-dialog p {
-  text-align: center;
-  font-size: 12px;
-  color: var(--deploy-muted);
-  margin: 16px 0 0;
+.showcase-image:hover, .showcase-image:focus-visible { border-color: var(--workbench-accent); }
+.showcase-dialog {
+  width: min(1440px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--workbench-line);
+  border-radius: 8px;
+  background: var(--workbench-paper);
+  color: var(--workbench-ink);
 }
-@media (max-width: 600px) {
-  .showcase-bar {
-    padding-inline: 10px;
-    font-size: 9px;
-  }
-  .showcase-dots,
-  .showcase-live {
-    min-width: 50px;
-  }
-  .product-showcase {
-    border-radius: 9px;
-  }
-  .product-showcase figcaption {
-    padding: 10px;
-    font-size: 10px;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .showcase-image > span {
-    right: 8px;
-    bottom: 8px;
-    opacity: 1;
-    font-size: 10px;
-    padding: 3px 7px;
-  }
-  .showcase-dialog {
-    max-width: calc(100vw - 16px);
-    padding: 10px;
-  }
+.showcase-dialog::backdrop { background: #181712bf; }
+.showcase-dialog__body header {
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid var(--workbench-line);
+  padding: 10px 14px;
 }
+.showcase-dialog h2 { flex: 1; margin: 0; font-size: 15px; }
+.showcase-dialog button {
+  border: 1px solid var(--workbench-line);
+  border-radius: 4px;
+  padding: 5px 10px;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+}
+.showcase-dialog button:hover { border-color: var(--workbench-accent); }
+.showcase-dialog__image { max-height: calc(100dvh - 91px); overflow: auto; }
+.showcase-dialog__image img { width: 100%; height: auto; }
+.showcase-dialog__image img.original { width: 1600px; max-width: none; }
 </style>

@@ -309,9 +309,9 @@ onBeforeUnmount(() => {
 .tags-view {
   display: flex;
   align-items: center;
-  gap: 4px;
-  height: 38px;
-  flex: 0 0 38px;
+  gap: 2px;
+  height: 30px;
+  flex: 0 0 30px;
   min-width: 0;
   padding: 0 10px;
   background: #fff;
@@ -330,21 +330,18 @@ onBeforeUnmount(() => {
 }
 .tags-list {
   display: flex;
-  align-items: end;
-  gap: 4px;
-  height: 37px;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
   width: max-content;
-  padding-top: 3px;
 }
 .tag-item {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  height: 34px;
-  border-radius: 6px 6px 0 0;
+  position: relative;
+  height: 28px;
   color: #606266;
-  border: 1px solid transparent;
-  border-bottom: 0;
   transition:
     background 0.15s,
     color 0.15s;
@@ -354,20 +351,16 @@ onBeforeUnmount(() => {
   color: #409eff;
 }
 .tag-item.active {
-  color: #1683ef;
-  background: #eaf3ff;
-  border-top-color: #409eff;
+  color: var(--el-color-primary-dark-2);
 }
-.tag-item.active .tag-link {
-  font-weight: 600;
-}
-.tag-item.active .tag-link::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+.tag-item.active::after {
+  position: absolute;
+  right: 6px;
+  bottom: -1px;
+  left: 6px;
+  height: 2px;
   background: currentColor;
-  flex-shrink: 0;
+  content: '';
 }
 .tag-link,
 .tag-close,
@@ -382,36 +375,39 @@ onBeforeUnmount(() => {
 .tag-link {
   display: flex;
   align-items: center;
-  gap: 7px;
   max-width: 210px;
-  padding: 7px 12px;
+  height: 100%;
+  padding: 0 7px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 13px;
+  font-size: 12px;
   text-align: left;
 }
 .tag-close {
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 24px;
   padding: 0;
-  margin-right: 5px;
-  border-radius: 50%;
+  margin-right: 3px;
+  border-radius: 3px;
   font-size: 11px;
 }
+@media (hover: hover) and (pointer: fine) {
+  .tag-item:not(.active, :hover, :focus-within) .tag-close { opacity: 0; }
+}
 .tag-close:hover {
-  color: #fff;
-  background: #b4bccc;
+  color: var(--el-text-color-primary);
+  background: var(--el-fill-color);
 }
 .tags-action-btn,
 .tags-scroll-button {
   display: grid;
   place-items: center;
   width: 28px;
-  height: 30px;
-  font-size: 14px;
+  height: 28px;
+  font-size: 13px;
   color: #606266;
   flex-shrink: 0;
 }

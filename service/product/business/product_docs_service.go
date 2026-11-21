@@ -11,6 +11,14 @@ import (
 	productrepository "sitehub/service/product/model"
 )
 
+type ManualService struct {
+	docs productrepository.ProductDocsRepository
+}
+
+func NewManualService(repo productrepository.ProductDocsRepository) *ManualService {
+	return &ManualService{docs: repo}
+}
+
 var ErrWebsiteDocumentNotFound = productdomain.ErrDocumentNotFound
 var ErrWebsiteDocsConflict = productdomain.ErrDocumentConflict
 var ErrInvalidWebsiteDocs = productdomain.ErrInvalidDocument
@@ -18,73 +26,102 @@ var docVersionID = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]{0,79}$`)
 var documentSlug = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]{0,199}$`)
 
 func invalidDoc(message string) error { return fmt.Errorf("%w: %s", ErrInvalidWebsiteDocs, message) }
-func documentView(d productdomain.ProductDocument) productcontract.WebsiteDocDocument {
-	return productcontract.WebsiteDocDocument{ID: d.DocKey, Slug: d.Slug, Title: d.Title, Summary: d.Summary, Content: d.ContentMarkdown, Revision: d.Revision, GroupID: d.GroupID, UpdatedAt: d.UpdatedAt}
+func documentSummary(d productdomain.ProductDocument) productcontract.ManualDocumentSummary {
+	status := "draft"
+	if d.PublishedRevision > 0 {
+		status = "published"
+		if d.PublishedRevision != d.Revision {
+			status = "modified"
+		}
+	}
+	return productcontract.ManualDocumentSummary{Status: status, PublishedRevision: d.PublishedRevision, ID: d.DocKey, Slug: d.Slug, Title: d.Title, Summary: d.Summary, Revision: d.Revision, GroupID: d.GroupID, UpdatedAt: d.UpdatedAt}
 }
 
-// 管理导航只查询元数据。正文通过单篇接口读取，禁止整树回写。
-func (s *websiteContentService) GetDocs() (result productcontract.WebsiteDocs, err error) {
+func documentView(d productdomain.ProductDocument) productcontract.WebsiteDocDocument {
+	return productcontract.WebsiteDocDocument{ManualDocumentSummary: documentSummary(d), Content: d.ContentMarkdown}
+}
+
+// Workspace reads only the selected version's navigation. Opening an editor or
+// a history row issues a separate request for that document's Markdown.
+func (s *ManualService) Workspace(modeID, versionID string) (result productcontract.ManualWorkspace, err error) {
 	err = s.docs.Transaction(func(r productrepository.ProductDocsRepository) error {
-		site, e := r.Site(false)
-		if e != nil {
-			return e
+		site, err := r.Site(false)
+		if err != nil {
+			return err
 		}
-		versions, e := r.Versions()
-		if e != nil {
-			return e
+		versions, err := r.Versions()
+		if err != nil {
+			return err
 		}
-		modes, e := r.Modes()
-		if e != nil {
-			return e
+		modes, err := r.Modes()
+		if err != nil {
+			return err
 		}
-		groups, e := r.Groups("")
-		if e != nil {
-			return e
+		result = productcontract.ManualWorkspace{Title: site.Title, Description: site.Description, Revision: site.Revision, DefaultVersion: site.DefaultVersion, DefaultMode: defaultMode(versions, site.DefaultVersion), Modes: []productcontract.WebsiteDocMode{}, Versions: []productcontract.WebsiteDocVersion{}, Groups: []productcontract.WebsiteDocGroup{}}
+		if modeID == "" && versionID != "" {
+			modeID = defaultMode(versions, versionID)
 		}
-		docs, e := r.Documents("", false)
-		if e != nil {
-			return e
+		if modeID == "" {
+			modeID = result.DefaultMode
 		}
-		result = productcontract.WebsiteDocs{Title: site.Title, Description: site.Description, DefaultVersion: site.DefaultVersion, Revision: site.Revision, Versions: []productcontract.WebsiteDocVersion{}}
-		result.Modes = []productcontract.WebsiteDocMode{}
-		result.DefaultMode = defaultMode(versions, site.DefaultVersion)
+		if modeID == "" && len(modes) > 0 {
+			modeID = modes[0].ID
+		}
 		for _, m := range modes {
 			result.Modes = append(result.Modes, modeView(m))
+			if m.ID == modeID {
+				result.ModeID = m.ID
+				if versionID == "" {
+					versionID = m.DefaultVersion
+				}
+			}
+		}
+		if modeID != "" && result.ModeID == "" {
+			return ErrWebsiteDocumentNotFound
 		}
 		for _, v := range versions {
-			entry := productcontract.WebsiteDocVersion{ID: v.ID, Name: v.Name, Status: v.Status, Revision: v.Revision, Groups: []productcontract.WebsiteDocGroup{}}
-			entry.ModeID = v.ModeID
-			for _, g := range groups {
-				if g.VersionID != v.ID {
-					continue
-				}
-				group := productcontract.WebsiteDocGroup{ID: g.ID, Revision: g.Revision, Title: g.Title, Items: []productcontract.WebsiteDocDocument{}}
-				for _, d := range docs {
-					if d.GroupID == g.ID {
-						group.Items = append(group.Items, documentView(d))
-					}
-				}
-				entry.Groups = append(entry.Groups, group)
+			if v.ModeID != modeID {
+				continue
 			}
-			result.Versions = append(result.Versions, entry)
+			result.Versions = append(result.Versions, productcontract.WebsiteDocVersion{ID: v.ID, Name: v.Name, ModeID: v.ModeID, Status: v.Status, Revision: v.Revision})
+		}
+		if versionID == "" && len(result.Versions) > 0 {
+			versionID = result.Versions[0].ID
+		}
+		if versionID == "" {
+			return nil
+		}
+		for _, v := range result.Versions {
+			if v.ID == versionID {
+				result.VersionID = v.ID
+				break
+			}
+		}
+		if result.VersionID == "" {
+			return ErrWebsiteDocumentNotFound
+		}
+		groups, err := r.Groups(versionID)
+		if err != nil {
+			return err
+		}
+		docs, err := r.Documents(versionID, false)
+		if err != nil {
+			return err
+		}
+		items := make(map[uint64][]productcontract.ManualDocumentSummary)
+		for _, d := range docs {
+			items[d.GroupID] = append(items[d.GroupID], documentSummary(d))
+		}
+		for _, g := range groups {
+			children := items[g.ID]
+			if children == nil {
+				children = []productcontract.ManualDocumentSummary{}
+			}
+			result.Groups = append(result.Groups, productcontract.WebsiteDocGroup{ID: g.ID, Title: g.Title, Revision: g.Revision, Items: children})
 		}
 		return nil
 	})
 	return
-}
-func (s *websiteContentService) GetDocsNavigation(version string, requestedMode ...string) (productcontract.WebsiteDocsNavigation, error) {
-	mode := ""
-	if len(requestedMode) > 0 {
-		mode = requestedMode[0]
-	}
-	catalog, err := s.GetDocCatalog(version, mode)
-	if err != nil {
-		return productcontract.WebsiteDocsNavigation{}, err
-	}
-	if catalog.Navigation == nil {
-		return productcontract.WebsiteDocsNavigation{}, ErrWebsiteDocumentNotFound
-	}
-	return *catalog.Navigation, nil
 }
 
 func findVersion(r productrepository.ProductDocsRepository, id string) (productdomain.DocVersion, error) {
@@ -99,7 +136,7 @@ func findVersion(r productrepository.ProductDocsRepository, id string) (productd
 	}
 	return productdomain.DocVersion{}, ErrWebsiteDocumentNotFound
 }
-func (s *websiteContentService) readDocument(id, version string, public bool, mode string) (result productcontract.WebsiteDocDocument, err error) {
+func (s *ManualService) PublicDocument(id, version, mode string) (result productcontract.WebsiteDocDocument, err error) {
 	err = s.docs.Transaction(func(r productrepository.ProductDocsRepository) error {
 		if version == "" && mode == "" {
 			site, err := r.Site(false)
@@ -108,36 +145,27 @@ func (s *websiteContentService) readDocument(id, version string, public bool, mo
 			}
 			version = site.DefaultVersion
 		}
-		if public {
-			selected, err := publicDocVersion(r, version, mode)
-			if err != nil {
-				return err
-			}
-			version = selected.ID
+		selected, err := publicDocVersion(r, version, mode)
+		if err != nil {
+			return err
 		}
-		d, e := r.Document(version, id)
-		if e != nil {
-			return e
+		doc, err := r.PublishedDocument(selected.ID, id)
+		if err != nil {
+			return err
 		}
-		result = documentView(d)
+		result = documentView(doc)
 		return nil
 	})
 	return
 }
-func (s *websiteContentService) GetDocument(id, version string, requestedMode ...string) (productcontract.WebsiteDocDocument, error) {
-	mode := ""
-	if len(requestedMode) > 0 {
-		mode = requestedMode[0]
-	}
-	return s.readDocument(id, version, true, mode)
-}
-func (s *websiteContentService) GetAdminDocument(id, version string) (productcontract.WebsiteDocDocument, error) {
-	return s.readDocument(id, version, false, "")
+func (s *ManualService) Draft(id, version string) (productcontract.WebsiteDocDocument, error) {
+	d, err := s.docs.Document(version, id)
+	return documentView(d), err
 }
 
 // 所有关系写入先锁文档站行，保护版本/分组删除与新增引用。乐观版本号按资源检查，
 // 修改另一篇文档不会导致当前文档保存冲突。事务回调仅使用同一连接的仓储。
-func (s *websiteContentService) mutateDocs(fn func(productrepository.ProductDocsRepository, *productdomain.DocSite) error) error {
+func (s *ManualService) mutateDocs(fn func(productrepository.ProductDocsRepository, *productdomain.DocSite) error) error {
 	return s.docs.Transaction(func(r productrepository.ProductDocsRepository) error {
 		site, err := r.Site(true)
 		if err != nil {
@@ -146,7 +174,7 @@ func (s *websiteContentService) mutateDocs(fn func(productrepository.ProductDocs
 		return fn(r, &site)
 	})
 }
-func (s *websiteContentService) SaveDocSettings(in productdomain.DocSettingsInput) error {
+func (s *ManualService) SaveDocSettings(in productdomain.DocSettingsInput) error {
 	if strings.TrimSpace(in.Title) == "" || len([]rune(in.Title)) > 100 || len([]rune(in.Description)) > 500 {
 		return invalidDoc("请填写有效的文档站标题和介绍")
 	}
@@ -161,280 +189,15 @@ func (s *websiteContentService) SaveDocSettings(in productdomain.DocSettingsInpu
 	})
 }
 func snapshotDocument(r productrepository.ProductDocsRepository, d productdomain.ProductDocument, group, operation string, actor uint64) error {
-	return r.AddRevision(&productdomain.DocumentRevision{DocumentID: d.ID, Revision: d.Revision, ActorID: actor, VersionID: d.VersionID, DocKey: d.DocKey, Slug: d.Slug, Title: d.Title, Summary: d.Summary, ContentMarkdown: d.ContentMarkdown, GroupTitle: group, Operation: operation, CreatedAt: time.Now()})
+	return r.AddRevision(&productdomain.DocumentRevision{DocumentID: d.ID, Revision: d.Revision, ActorID: actor, VersionID: d.VersionID, DocKey: d.DocKey, Slug: d.Slug, Title: d.Title, Summary: d.Summary, ContentMarkdown: d.ContentMarkdown, GroupTitle: group, GroupID: d.GroupID, SortOrder: d.SortOrder, Operation: operation, CreatedAt: time.Now()})
 }
-func (s *websiteContentService) ChangeDocVersion(in productdomain.DocVersionInput, actor uint64) error {
-	if !docVersionID.MatchString(in.ID) {
-		return invalidDoc("版本标识无效")
-	}
-	return s.mutateDocs(func(r productrepository.ProductDocsRepository, site *productdomain.DocSite) error {
-		versions, err := r.Versions()
-		if err != nil {
-			return err
-		}
-		var current *productdomain.DocVersion
-		targetMode := in.ModeID
-		if targetMode == "" {
-			for _, v := range versions {
-				if v.ID == in.ID {
-					targetMode = v.ModeID
-				}
-			}
-			if targetMode == "" {
-				targetMode = defaultMode(versions, site.DefaultVersion)
-			}
-		}
-		for i := range versions {
-			v := &versions[i]
-			if v.ID == in.ID {
-				current = v
-			}
-			if in.Action == "save" && v.ID != in.ID && v.ModeID == targetMode && v.Name == strings.TrimSpace(in.Name) {
-				return invalidDoc("版本名称已存在")
-			}
-		}
-		if in.Action == "save" {
-			if current != nil && in.ModeID != "" && in.ModeID != current.ModeID {
-				return invalidDoc("版本所属模式不可直接变更，请复制为新版本")
-			}
-			if strings.TrimSpace(in.Name) == "" || len([]rune(in.Name)) > 60 {
-				return invalidDoc("请填写有效的版本名称")
-			}
-			if current != nil {
-				if current.Revision != in.Revision {
-					return ErrWebsiteDocsConflict
-				}
-				current.Name = strings.TrimSpace(in.Name)
-				current.Revision++
-				return r.PutVersion(*current)
-			}
-			if in.Revision != 0 {
-				return ErrWebsiteDocumentNotFound
-			}
-			if in.ModeID == "" {
-				in.ModeID = defaultMode(versions, site.DefaultVersion)
-			}
-			if _, err = findMode(r, in.ModeID); err != nil {
-				return err
-			}
-			if len(versions) >= 50 {
-				return invalidDoc("最多保留 50 个产品版本")
-			}
-			if in.Source != "" {
-				if _, err = findVersion(r, in.Source); err != nil {
-					return err
-				}
-			}
-			v := productdomain.DocVersion{ID: in.ID, Name: strings.TrimSpace(in.Name), Status: "draft", Revision: 1, ModeID: in.ModeID}
-			if err = r.PutVersion(v); err != nil {
-				return err
-			}
-			if in.Source == "" {
-				return r.PutGroup(&productdomain.DocGroup{VersionID: in.ID, Title: "快速开始", Revision: 1})
-			}
-			groups, err := r.Groups(in.Source)
-			if err != nil {
-				return err
-			}
-			docs, err := r.Documents(in.Source, true)
-			if err != nil {
-				return err
-			}
-			for _, g := range groups {
-				old := g.ID
-				g.ID = 0
-				g.VersionID = in.ID
-				g.Revision = 1
-				if err = r.PutGroup(&g); err != nil {
-					return err
-				}
-				for _, d := range docs {
-					if d.GroupID != old {
-						continue
-					}
-					d.ID = 0
-					d.VersionID = in.ID
-					d.GroupID = g.ID
-					d.Revision = 1
-					d.UpdatedBy = actor
-					d.CreatedAt = time.Time{}
-					d.UpdatedAt = time.Time{}
-					if err = r.PutDocument(&d); err != nil {
-						return err
-					}
-					if err = snapshotDocument(r, d, g.Title, "copy", actor); err != nil {
-						return err
-					}
-				}
-			}
-			return nil
-		}
-		if current == nil {
-			return ErrWebsiteDocumentNotFound
-		}
-		if current.Revision != in.Revision {
-			return ErrWebsiteDocsConflict
-		}
-		mode, err := findMode(r, current.ModeID)
-		if err != nil {
-			return err
-		}
-		switch in.Action {
-		case "status":
-			if in.Status != "draft" && in.Status != "published" {
-				return invalidDoc("版本状态无效")
-			}
-			if in.Status == "draft" && (site.DefaultVersion == in.ID || mode.DefaultVersion == in.ID) {
-				return invalidDoc("请先切换默认版本")
-			}
-			if in.Status == "published" {
-				docs, e := r.Documents(in.ID, false)
-				if e != nil {
-					return e
-				}
-				if len(docs) == 0 {
-					return invalidDoc("空版本不能发布")
-				}
-			}
-			current.Status = in.Status
-			current.Revision++
-			return r.PutVersion(*current)
-		case "default":
-			if current.Status != "published" {
-				return invalidDoc("默认版本必须已发布")
-			}
-			mode.DefaultVersion = in.ID
-			mode.Revision++
-			if err = r.PutMode(mode); err != nil {
-				return err
-			}
-			if defaultMode(versions, site.DefaultVersion) == mode.ID {
-				site.DefaultVersion = in.ID
-				site.Revision++
-				return r.PutSite(*site)
-			}
-			return nil
-		case "delete":
-			if current.Status != "draft" || site.DefaultVersion == in.ID || mode.DefaultVersion == in.ID {
-				return invalidDoc("只能删除非默认的草稿版本")
-			}
-			docs, e := r.Documents(in.ID, true)
-			if e != nil {
-				return e
-			}
-			groups, e := r.Groups(in.ID)
-			if e != nil {
-				return e
-			}
-			for _, d := range docs {
-				d.Revision++
-				if err = snapshotDocument(r, d, "", "delete", actor); err != nil {
-					return err
-				}
-				if err = r.DeleteDocument(d.ID); err != nil {
-					return err
-				}
-			}
-			for _, g := range groups {
-				if err = r.DeleteGroup(g.ID); err != nil {
-					return err
-				}
-			}
-			return r.DeleteVersion(in.ID)
-		}
-		return invalidDoc("版本操作无效")
-	})
-}
-func (s *websiteContentService) ChangeDocGroup(in productdomain.DocGroupInput) error {
-	return s.mutateDocs(func(r productrepository.ProductDocsRepository, site *productdomain.DocSite) error {
-		v, err := findVersion(r, in.Version)
-		if err != nil {
-			return err
-		}
-		groups, err := r.Groups(in.Version)
-		if err != nil {
-			return err
-		}
-		index := -1
-		for i, g := range groups {
-			if g.ID == in.ID {
-				index = i
-			}
-			if in.Action == "save" && g.ID != in.ID && g.Title == strings.TrimSpace(in.Title) {
-				return invalidDoc("分组名称已存在")
-			}
-		}
-		var g productdomain.DocGroup
-		if in.ID != 0 {
-			if index < 0 {
-				return ErrWebsiteDocumentNotFound
-			}
-			g = groups[index]
-			if g.Revision != in.Revision {
-				return ErrWebsiteDocsConflict
-			}
-		} else if in.Action != "save" || in.Revision != 0 {
-			return invalidDoc("缺少分组 ID")
-		}
-		switch in.Action {
-		case "save":
-			if strings.TrimSpace(in.Title) == "" || len([]rune(in.Title)) > 60 {
-				return invalidDoc("请填写有效的分组名称")
-			}
-			g.Title = strings.TrimSpace(in.Title)
-			g.VersionID = in.Version
-			g.Revision++
-			if in.ID == 0 {
-				g.SortOrder = len(groups)
-				if len(groups) > 0 {
-					g.SortOrder = groups[len(groups)-1].SortOrder + 1
-				}
-			}
-			err = r.PutGroup(&g)
-		case "move":
-			if in.Direction != 1 && in.Direction != -1 {
-				return invalidDoc("排序方向无效")
-			}
-			other := index + in.Direction
-			if other < 0 || other >= len(groups) {
-				return invalidDoc("分组已经位于边界")
-			}
-			groups[index], groups[other] = groups[other], groups[index]
-			for i := range groups {
-				groups[i].SortOrder = i
-				groups[i].Revision++
-				if err = r.PutGroup(&groups[i]); err != nil {
-					return err
-				}
-			}
-		case "delete":
-			docs, e := r.Documents(in.Version, false)
-			if e != nil {
-				return e
-			}
-			for _, d := range docs {
-				if d.GroupID == g.ID {
-					return fmt.Errorf("%w: 分组内仍有文档", ErrWebsiteDocsConflict)
-				}
-			}
-			err = r.DeleteGroup(g.ID)
-		default:
-			return invalidDoc("分组操作无效")
-		}
-		if err != nil {
-			return err
-		}
-		v.Revision++
-		return r.PutVersion(v)
-	})
-}
-func (s *websiteContentService) SaveDocument(in productdomain.DocumentInput, actor uint64) (saved productcontract.WebsiteDocDocument, err error) {
+func (s *ManualService) SaveDocument(in productdomain.DocumentInput, actor uint64) (saved productcontract.WebsiteDocDocument, err error) {
 	in.Slug = strings.TrimSpace(in.Slug)
-	if !documentSlug.MatchString(in.ID) || !documentSlug.MatchString(in.Slug) || strings.TrimSpace(in.Title) == "" || len([]rune(in.Title)) > 200 || len([]rune(in.Summary)) > 2000 || strings.TrimSpace(in.Content) == "" || len(in.Content) > 2*1024*1024 || in.GroupID == 0 {
+	if !documentSlug.MatchString(in.ID) || !documentSlug.MatchString(in.Slug) || strings.TrimSpace(in.Title) == "" || len([]rune(in.Title)) > 200 || len([]rune(in.Summary)) > 2000 || len(in.Content) > 2*1024*1024 || in.GroupID == 0 {
 		return saved, invalidDoc("请检查文档标题、标识、分组及正文（最多 2 MB）")
 	}
 	err = s.mutateDocs(func(r productrepository.ProductDocsRepository, site *productdomain.DocSite) error {
-		v, e := findVersion(r, in.Version)
+		_, e := findVersion(r, in.Version)
 		if e != nil {
 			return e
 		}
@@ -492,18 +255,14 @@ func (s *websiteContentService) SaveDocument(in productdomain.DocumentInput, act
 		if e = snapshotDocument(r, d, groupTitle, operation, actor); e != nil {
 			return e
 		}
-		v.Revision++
-		if e = r.PutVersion(v); e != nil {
-			return e
-		}
 		saved = documentView(d)
 		return nil
 	})
 	return
 }
-func (s *websiteContentService) DeleteDocument(in productdomain.DocumentDeleteInput, actor uint64) error {
+func (s *ManualService) DeleteDocument(in productdomain.DocumentDeleteInput, actor uint64) error {
 	return s.mutateDocs(func(r productrepository.ProductDocsRepository, site *productdomain.DocSite) error {
-		v, e := findVersion(r, in.Version)
+		_, e := findVersion(r, in.Version)
 		if e != nil {
 			return e
 		}
@@ -514,14 +273,8 @@ func (s *websiteContentService) DeleteDocument(in productdomain.DocumentDeleteIn
 		if d.Revision != in.Revision {
 			return ErrWebsiteDocsConflict
 		}
-		if v.Status == "published" {
-			docs, e := r.Documents(in.Version, false)
-			if e != nil {
-				return e
-			}
-			if len(docs) <= 1 {
-				return invalidDoc("已发布版本至少保留一篇文档")
-			}
+		if d.PublishedRevision > 0 {
+			return fmt.Errorf("%w: 请先撤回已发布文章", ErrWebsiteDocsConflict)
 		}
 		d.Revision++
 		if e = snapshotDocument(r, d, "", "delete", actor); e != nil {
@@ -530,28 +283,93 @@ func (s *websiteContentService) DeleteDocument(in productdomain.DocumentDeleteIn
 		if e = r.DeleteDocument(d.ID); e != nil {
 			return e
 		}
-		v.Revision++
-		return r.PutVersion(v)
+		return nil
 	})
 }
-func (s *websiteContentService) DocumentHistory(id, version string, historyID uint64) (any, error) {
-	var result any
-	err := s.docs.Transaction(func(r productrepository.ProductDocsRepository) error {
-		d, e := r.Document(version, id)
-		if e != nil {
-			return e
+func (s *ManualService) History(version, key string) (items []productdomain.DocumentRevision, err error) {
+	err = s.docs.Transaction(func(r productrepository.ProductDocsRepository) error {
+		id, err := r.DocumentID(version, key)
+		if err != nil {
+			return err
 		}
-		if historyID > 0 {
-			v, e := r.Historical(d.ID, historyID)
-			result = v
-			return e
+		items, err = r.History(id)
+		if items == nil {
+			items = []productdomain.DocumentRevision{}
 		}
-		v, e := r.History(d.ID)
-		if v == nil {
-			v = []productdomain.DocumentRevision{}
-		}
-		result = v
-		return e
+		return err
 	})
-	return result, err
+	return
+}
+
+func (s *ManualService) Historical(version, key string, historyID uint64) (row productdomain.DocumentRevision, err error) {
+	err = s.docs.Transaction(func(r productrepository.ProductDocsRepository) error {
+		id, err := r.DocumentID(version, key)
+		if err != nil {
+			return err
+		}
+		row, err = r.Historical(id, historyID)
+		return err
+	})
+	return
+}
+
+// SetDocumentPublished changes visibility and records an immutable revision in the
+// same transaction. Later saves only update the draft and its revision history.
+func (s *ManualService) SetDocumentPublished(in productdomain.DocumentDeleteInput, actor uint64, publish bool) (result productcontract.WebsiteDocDocument, err error) {
+	err = s.mutateDocs(func(r productrepository.ProductDocsRepository, site *productdomain.DocSite) error {
+		d, err := r.Document(in.Version, in.ID)
+		if err != nil {
+			return err
+		}
+		if d.Revision != in.Revision {
+			return ErrWebsiteDocsConflict
+		}
+		operation := "withdraw"
+		if publish {
+			if strings.TrimSpace(d.ContentMarkdown) == "" {
+				return invalidDoc("发布前请填写正文")
+			}
+			active, err := r.PublishedDocuments(in.Version)
+			if err != nil {
+				return err
+			}
+			for _, other := range active {
+				if other.ID != d.ID && strings.EqualFold(other.Slug, d.Slug) {
+					return invalidDoc("访问标识已被其他线上文章使用")
+				}
+			}
+			d.PublishedRevision = d.Revision + 1
+			operation = "publish"
+		} else {
+			if d.PublishedRevision == 0 {
+				return invalidDoc("文章尚未发布")
+			}
+			d.PublishedRevision = 0
+		}
+		groups, err := r.Groups(in.Version)
+		if err != nil {
+			return err
+		}
+		groupTitle := ""
+		for _, g := range groups {
+			if g.ID == d.GroupID {
+				groupTitle = g.Title
+				break
+			}
+		}
+		if groupTitle == "" {
+			return ErrWebsiteDocumentNotFound
+		}
+		d.Revision++
+		d.UpdatedBy = actor
+		if err = r.PutDocument(&d); err != nil {
+			return err
+		}
+		if err = snapshotDocument(r, d, groupTitle, operation, actor); err != nil {
+			return err
+		}
+		result = documentView(d)
+		return nil
+	})
+	return
 }

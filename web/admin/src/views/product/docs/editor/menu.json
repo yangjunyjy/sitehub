@@ -1,6 +1,6 @@
 {
   "name": "文档编辑",
-  "permission": "product:doc:edit",
+  "permission": "website:docs:edit",
   "sort": 21,
   "hidden": true
 }

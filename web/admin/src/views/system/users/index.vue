@@ -22,7 +22,9 @@
           clearable /></el-form-item
       ><el-form-item label="邮箱"
         ><el-input v-model="searchForm.email" placeholder="请输入邮箱" clearable /></el-form-item
-      ><el-form-item label="用户状态"
+      ></template>
+    <template #advanced>
+      <el-form-item label="用户状态"
         ><el-select v-model="searchForm.status" placeholder="全部状态" clearable
           ><el-option label="启用" :value="1" /><el-option
             label="禁用"
@@ -132,6 +134,7 @@
 
       <!-- 分配角色对话框 -->
       <RoleAssignDialog
+        v-if="assignDialogVisible"
         v-model="assignDialogVisible"
         :user-id="currentUser?.id"
         :existing-role-ids="currentUser?.roles || []"
@@ -230,7 +233,7 @@ const { loading, loadError, loadList } = useAdminList({
     page: pagination.page,
     pageSize: pagination.pageSize,
   }),
-  selectRows: (data) => (Array.isArray(data.list) ? data.list.map(normalizeUserRow) : []),
+  selectRows: (data) => (Array.isArray(data.items) ? data.items.map(normalizeUserRow) : []),
   errorMessage: '加载失败，请重试',
 })
 

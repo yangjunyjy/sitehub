@@ -1,13 +1,9 @@
 <template>
   <div class="admin-page">
     <h1 class="admin-sr-only">{{ title }}</h1>
-    <header v-if="$slots.actions" class="admin-page-head">
-      <div class="page-caption">
-        <h2>{{ title }}</h2>
-        <p v-if="description">{{ description }}</p>
-      </div>
-      <div class="page-actions"><slot name="actions" /></div>
-    </header>
+    <div v-if="$slots.actions" class="page-actions" role="group" :aria-label="title + '操作'">
+      <slot name="actions" />
+    </div>
     <el-alert
       v-if="error"
       :title="error"
@@ -22,7 +18,6 @@
 <script setup>
 defineProps({
   title: String,
-  description: String,
   loading: Boolean,
   error: String,
 })

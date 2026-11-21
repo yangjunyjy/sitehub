@@ -128,7 +128,7 @@
               <dd>{{ formatNumber(stats?.content?.tags) }}</dd>
             </div>
             <div>
-              <dt>产品文档</dt>
+              <dt>当前版本文档</dt>
               <dd>{{ documents ? documentCount : '—' }}</dd>
             </div>
             <div>
@@ -157,8 +157,7 @@ import { useRbacStore } from '@/store/rbac'
 import { getDashboardStats, getArticleStats, getViewTrend, getArticleTrend } from '@/api/statistics'
 import { getArticleList } from '@/api/article'
 import { getDocumentWorkspace } from '@/api/documents'
-import { getWebsiteDownloads } from '@/api/website'
-import { normalizePackage } from '@/utils/downloads'
+import { getReleaseFiles } from '@/api/downloads'
 import * as echarts from 'echarts/core'
 import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
@@ -181,7 +180,7 @@ const router = useRouter(),
   rbac = useRbacStore()
 const stats = ref(null),
   articleStats = ref(null),
-  website = ref(null),
+  releases = ref(null),
   documents = ref(null),
   articles = ref([])
 const loading = ref(false),
@@ -204,11 +203,7 @@ const today = new Date().toLocaleDateString('zh-CN', {
   day: 'numeric',
   weekday: 'long',
 })
-const packages = computed(() =>
-  (website.value?.downloads?.packages || []).map((item) =>
-    normalizePackage(item, website.value.downloads),
-  ),
-)
+const packages = computed(() => releases.value?.items || [])
 const platforms = computed(() => [...new Set(packages.value.map((item) => item.platform))])
 const publishedPackages = computed(
   () => packages.value.filter((item) => item.status === 'published').length,
@@ -217,7 +212,7 @@ const draftPackages = computed(
   () => packages.value.filter((item) => item.status === 'draft').length,
 )
 const documentCount = computed(() =>
-  (documents.value?.versions?.flatMap((version) => version.groups || []) || []).reduce(
+  (documents.value?.groups || []).reduce(
     (sum, group) => sum + (group.items?.length || 0),
     0,
   ),
@@ -245,9 +240,9 @@ const metrics = computed(() => [
     tone: 'amber',
   },
   {
-    label: '下载版本',
-    value: website.value ? packages.value.length : null,
-    note: `${website.value ? publishedPackages.value : '—'} 个版本已发布`,
+    label: '下载文件',
+    value: releases.value ? packages.value.length : null,
+    note: `${releases.value ? publishedPackages.value : '—'} 个文件已上架`,
     icon: Download,
     tone: 'green',
   },
@@ -385,9 +380,9 @@ const load = async () => {
     ],
     [
       '下载清单',
-      getWebsiteDownloads,
+      getReleaseFiles,
       (value) => {
-        website.value = value
+        releases.value = value
       },
     ],
     ['产品文档', getDocumentWorkspace, value => { documents.value = value }],
@@ -453,15 +448,15 @@ const pendingTasks = computed(() =>
     {
       label: '发布下载版本',
       note: '检查文件后发布到官网',
-      count: website.value ? draftPackages.value : 0,
+      count: releases.value ? draftPackages.value : 0,
       path: router.page('product/downloads/index'),
     },
     {
-      label: '补充文档内容',
-      note: '让产品文档更加完整',
-      count: (documents.value?.versions?.flatMap((version) => version.groups || []) || [])
+      label: '发布文档草稿',
+      note: '当前文档版本中待发布的草稿',
+      count: (documents.value?.groups || [])
         .flatMap((group) => group.items || [])
-        .filter((item) => !item.content?.trim()).length,
+        .filter((item) => item.status !== 'published').length,
       path: router.page('product/docs/index'),
     },
   ].filter((item) => {

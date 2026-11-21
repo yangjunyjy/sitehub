@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -70,17 +71,8 @@ func readDocModes(r productrepository.ProductDocsRepository) (productcontract.We
 	return result, versions, nil
 }
 
-func (s *websiteContentService) GetDocModes() (result productcontract.WebsiteDocModes, err error) {
-	err = s.docs.Transaction(func(r productrepository.ProductDocsRepository) error {
-		modes, _, err := readDocModes(r)
-		result = modes
-		return err
-	})
-	return
-}
-
 // 与版本创建使用同一文档站锁：引用检查与删除在同一事务中完成。
-func (s *websiteContentService) ChangeDocMode(in productdomain.DocModeInput) error {
+func (s *ManualService) SaveMode(in productdomain.DocModeInput) error {
 	if !docVersionID.MatchString(in.ID) {
 		return invalidDoc("模式标识无效")
 	}
@@ -100,7 +92,7 @@ func (s *websiteContentService) ChangeDocMode(in productdomain.DocModeInput) err
 			}
 		}
 		if current == nil {
-			if in.Action != "save" || in.Revision != 0 {
+			if in.Revision != 0 {
 				return ErrWebsiteDocumentNotFound
 			}
 			if len(modes) >= 50 {
@@ -108,25 +100,6 @@ func (s *websiteContentService) ChangeDocMode(in productdomain.DocModeInput) err
 			}
 		} else if current.Revision != in.Revision {
 			return ErrWebsiteDocsConflict
-		}
-		if in.Action == "delete" {
-			for _, v := range versions {
-				if v.ModeID == in.ID {
-					return invalidDoc("该模式仍有关联版本，请先处理所属版本后再删除")
-				}
-			}
-			return r.DeleteMode(in.ID)
-		}
-		if in.Action == "default" {
-			if current.Status != "published" || current.DefaultVersion == "" {
-				return invalidDoc("默认模式必须已上线且有默认版本")
-			}
-			site.DefaultVersion = current.DefaultVersion
-			site.Revision++
-			return r.PutSite(*site)
-		}
-		if in.Action != "save" {
-			return invalidDoc("模式操作无效")
 		}
 		in.Label = strings.TrimSpace(in.Label)
 		if in.Label == "" || len([]rune(in.Label)) > 60 || len([]rune(in.Description)) > 500 || in.SortOrder < 0 || in.SortOrder > 9999 {
@@ -175,6 +148,52 @@ func (s *websiteContentService) ChangeDocMode(in productdomain.DocModeInput) err
 			return r.PutSite(*site)
 		}
 		return nil
+	})
+}
+
+func (s *ManualService) DeleteMode(id string, revision uint64) error {
+	return s.mutateDocs(func(r productrepository.ProductDocsRepository, site *productdomain.DocSite) error {
+		mode, err := findMode(r, id)
+		if err != nil {
+			return err
+		}
+		if mode.Revision != revision {
+			return ErrWebsiteDocsConflict
+		}
+		versions, err := r.Versions()
+		if err != nil {
+			return err
+		}
+		for _, v := range versions {
+			if v.ModeID == id {
+				return fmt.Errorf("%w: 模式内仍有版本", ErrWebsiteDocsConflict)
+			}
+		}
+		return r.DeleteMode(id)
+	})
+}
+func (s *ManualService) DefaultMode(id string, revision uint64) error {
+	return s.mutateDocs(func(r productrepository.ProductDocsRepository, site *productdomain.DocSite) error {
+		mode, err := findMode(r, id)
+		if err != nil {
+			return err
+		}
+		if mode.Revision != revision {
+			return ErrWebsiteDocsConflict
+		}
+		if mode.Status != "published" || mode.DefaultVersion == "" {
+			return invalidDoc("默认模式必须已上线且有默认版本")
+		}
+		if site.DefaultVersion == mode.DefaultVersion {
+			return nil
+		}
+		mode.Revision++
+		if err = r.PutMode(mode); err != nil {
+			return err
+		}
+		site.DefaultVersion = mode.DefaultVersion
+		site.Revision++
+		return r.PutSite(*site)
 	})
 }
 

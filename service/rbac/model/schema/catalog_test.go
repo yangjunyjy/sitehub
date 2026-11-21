@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -92,6 +93,12 @@ func TestCatalogSeedingIsIdempotentAndDoesNotOverwriteCustomizations(t *testing.
 					mock.ExpectExec("UPDATE `sys_menu` SET").WillReturnResult(sqlmock.NewResult(0, 1))
 				}
 			}
+		}
+		for _, page := range []string{"product/docs/groups", "product/docs/modes", "product/docs/settings", "product/docs/versions", "product/download-settings"} {
+			component := page + "/index"
+			mock.ExpectQuery("SELECT .*FROM `sys_menu` WHERE menu_code = .*component = .*").
+				WithArgs("builtin:page-"+strings.ReplaceAll(component, "/", "-"), component, "admin", 1).
+				WillReturnRows(sqlmock.NewRows([]string{"id"}))
 		}
 		mock.ExpectCommit()
 		if err := SeedCatalog(db); err != nil {

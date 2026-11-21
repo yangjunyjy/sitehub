@@ -1,12 +1,31 @@
 import request from '@/utils/request'
 import { uint64 } from '../utils/native-api.mjs'
-const revision = data => ({ ...data, revision: uint64(data.revision) })
-export const changeDocMode = data => request.post('/product/docs/modes', revision(data))
-export const getDocumentWorkspace = () => request.get('/product/admin/docs')
-export const getAdminDocument = (id, version) => request.get('/product/admin/docs/document', { params: { id, version } })
-export const getDocumentHistory = (id, version, historyId) => request.get('/product/admin/docs/history', { params: { id, version, historyId } })
-export const saveDocument = data => request.post('/product/docs/save', { ...revision(data), groupID: uint64(data.groupID ?? data.groupId) })
-export const deleteDocument = data => request.post('/product/docs/delete', revision(data))
-export const changeDocVersion = data => request.post('/product/docs/versions', { ...revision(data), modeID: data.modeID ?? data.modeId })
-export const changeDocGroup = data => request.post('/product/docs/groups', { ...revision(data), id: uint64(data.id) })
-export const saveDocSettings = data => request.post('/product/docs/settings', revision(data))
+
+const base = '/product/admin/manuals'
+export const getDocumentWorkspace = (params = {}) => request.get(base + '/workspace', { params })
+export const getAdminDocument = (id, version) =>
+  request.get(base + '/document', { params: { id, version } })
+export const getDocumentHistory = (id, version) =>
+  request.get(base + '/history', { params: { id, version } })
+export const getDocumentRevision = (id, version, historyId) =>
+  request.get(base + '/history/detail', { params: { id, version, historyId } })
+
+const write = (path, data) =>
+  request.post(base + path, { ...data, revision: uint64(data.revision) })
+export const saveDocSettings = (data) => write('/settings/save', data)
+export const saveMode = (data) => write('/modes/save', data)
+export const defaultMode = (data) => write('/modes/default', data)
+export const deleteMode = (data) => write('/modes/delete', data)
+export const saveVersion = (data) => write('/versions/save', data)
+export const publishVersion = (data) => write('/versions/publish', data)
+export const withdrawVersion = (data) => write('/versions/withdraw', data)
+export const defaultVersion = (data) => write('/versions/default', data)
+export const deleteVersion = (data) => write('/versions/delete', data)
+export const saveGroup = (data) => write('/groups/save', { ...data, id: uint64(data.id) })
+export const moveGroup = (data) => write('/groups/move', { ...data, id: uint64(data.id) })
+export const deleteGroup = (data) => write('/groups/delete', { ...data, id: uint64(data.id) })
+export const saveDocument = (data) =>
+  write('/documents/save', { ...data, groupId: uint64(data.groupId) })
+export const publishDocument = (data) => write('/documents/publish', data)
+export const withdrawDocument = (data) => write('/documents/withdraw', data)
+export const deleteDocument = (data) => write('/documents/delete', data)

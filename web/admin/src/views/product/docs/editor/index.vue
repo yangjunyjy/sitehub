@@ -5,12 +5,12 @@
         <el-button
           :icon="ArrowLeft"
           aria-label="返回文档列表"
-          @click="router.push(location('product/docs/index'))"
+          @click="router.push(location('product/docs/index', { group: groupId }))"
         /><span>{{ version?.name || '文档' }}</span
         ><el-tag :type="version?.status === 'published' ? 'success' : 'info'" size="small">{{
           version?.status === 'published' ? '已发布版本' : '草稿版本'
         }}</el-tag
-        ><span class="save-state" role="status">{{ dirty ? '有未保存修改' : '已同步' }}</span>
+        ><span class="save-state" role="status">{{ dirty ? '有未保存修改' : documentStatus[recordStatus] || '新文档' }}</span>
       </div>
       <div class="document-actions">
         <el-button
@@ -19,7 +19,7 @@
           :disabled="saving || uploading"
           @click="reload"
         />
-        <el-button v-if="route.query.id" @click="openHistory" :disabled="saving || loading"
+        <el-button v-if="documentRevision" @click="openHistory" :disabled="saving || loading"
           >修订记录</el-button
         >
         <el-button :icon="View" @click="togglePreview">{{
@@ -34,10 +34,12 @@
           type="primary"
           :icon="Check"
           :loading="saving"
-          :disabled="loading || !!error || !version || mode === 'preview'"
+          :disabled="loading || !!error || !!conflict || !version || mode === 'preview'"
           @click="submit"
-          >{{ version?.status === 'published' ? '保存并更新' : '保存文档' }}</el-button
-        >
+          >保存草稿</el-button>
+        <el-button v-if="documentRevision && recordStatus !== 'published'" :loading="saving"
+          :disabled="!!conflict || dirty || !form.content.trim()" @click="changePublication(true)">发布文档</el-button>
+        <el-button v-if="recordStatus && recordStatus !== 'draft'" :disabled="!!conflict || dirty || saving" @click="changePublication(false)">撤回文档</el-button>
       </div>
     </header>
     <div v-if="error" class="document-error">
@@ -45,7 +47,11 @@
         >重新加载</el-button
       >
     </div>
-    <main v-else-if="version && initialized && !loading" class="document-sheet">
+    <div v-if="conflict" class="document-error" role="alert">
+      <el-alert title="此文档已有更新，当前编辑内容已保留。" type="warning" :closable="false" />
+      <el-button @click="compareConflict">查看服务器版本</el-button>
+    </div>
+    <main v-if="!error && version && initialized && !loading" class="document-sheet">
       <div class="document-title">
         <div class="document-eyebrow">
           <span>{{ groupTitle || '未选择分组' }}</span
@@ -69,11 +75,7 @@
           <p>{{ form.summary }}</p></template
         >
         <div class="document-meta">
-          <span>{{
-            version.status === 'published'
-              ? '保存后将更新此公开版本的内容'
-              : '草稿仅管理端可见，发布版本后供读者访问'
-          }}</span>
+          <span>{{ recordStatus === 'modified' ? '当前草稿有修改，公开页面继续显示已发布版本。' : '保存到草稿后，可单独发布此文档。' }}</span>
           <div v-if="mode !== 'preview'">
             <el-button text :icon="Upload" @click="importInput.click()">导入 Markdown</el-button
             ><el-button text :icon="Picture" :loading="uploading" @click="imageInput.click()"
@@ -117,23 +119,33 @@
       <el-form label-position="top"
         ><el-form-item label="产品版本"
           ><el-input :model-value="version?.name" disabled />
-          <p class="form-note">当前文档属于此版本。复制版本请前往版本管理。</p></el-form-item
+          <p class="form-note">可在文档工作区复制版本。</p></el-form-item
         ><el-form-item label="所属分组" required
-          ><el-select v-model="groupTitle"
+          ><el-select v-model="groupId"
             ><el-option
-              v-for="group in version?.groups"
-              :key="group.title"
-              :value="group.title"
+              v-for="group in groups"
+              :key="group.id"
+              :value="group.id"
               :label="group.title" /></el-select
-          ><router-link v-if="!version?.groups.length" :to="location('product/docs/groups/index')"
+          ><router-link v-if="!groups.length" :to="location('product/docs/index')"
             >先创建分组</router-link
           ></el-form-item
         ><el-form-item label="访问标识" required
           ><el-input v-model="form.slug" placeholder="quick-start" maxlength="100" />
-          <p class="form-note">/docs/{{ form.slug || 'quick-start' }}?version={{ versionID }}</p>
           <p class="form-note">同一产品版本内不能重复，保存时检查是否已被占用。</p></el-form-item
         ></el-form
       >
+    </el-drawer>
+    <el-drawer v-model="conflictVisible" title="对照服务器版本" size="min(760px, 100vw)">
+      <p class="form-note">先对照服务器修订，再决定如何保存当前编辑。</p>
+      <template v-if="remote">
+        <h3>{{ remote.title }}</h3><p>{{ remote.summary }}</p>
+        <pre class="remote-source">{{ remote.content }}</pre>
+      </template>
+      <template #footer>
+        <el-button @click="conflictVisible = false">继续编辑</el-button>
+        <el-button type="primary" :disabled="!remote" @click="rebase">保留本地稿并采用此修订号</el-button>
+      </template>
     </el-drawer>
     <el-drawer v-model="historyVisible" title="文档修订记录" size="min(760px, 100vw)">
       <p class="form-note">
@@ -186,16 +198,18 @@ import MarkdownEditor from '@/components/content/MarkdownEditor.vue'
 import MarkdownContent from '@/components/content/MarkdownContent.vue'
 import { useDocumentWorkspace } from '@/composables/useDocumentWorkspace'
 import { useUnsavedChanges } from '@/composables/useAdminResource'
-import { documentPayload, validateDocument } from '@/utils/documents'
+import { documentPayload, documentStatus, validateDocument } from '@/utils/documents'
 import { renderArticle, validateMarkdownFile } from '@/utils/article-editor'
 import { createUUID } from '@/utils/uuid'
-import { getAdminDocument, saveDocument, getDocumentHistory } from '@/api/documents'
+import { getAdminDocument, saveDocument, getDocumentHistory, getDocumentRevision, publishDocument, withdrawDocument } from '@/api/documents'
 import { uploadImage } from '@/api/upload'
 const route = useRoute(),
   router = useRouter()
-const { loading, saving, error, load, save, version, versionID, location } = useDocumentWorkspace()
+const { loading, saving, error, load, version, groups, location } = useDocumentWorkspace()
+const versionID = computed(() => version.value?.id)
+const conflict = ref(false), conflictVisible = ref(false), remote = ref(null), recordStatus = ref('')
 const form = reactive({ id: '', title: '', slug: '', summary: '', content: '' }),
-  groupTitle = ref(''),
+  groupId = ref(''),
   baseline = ref('')
 const mode = ref('edit'),
   initialized = ref(false),
@@ -208,10 +222,11 @@ const mode = ref('edit'),
   importInput = ref(),
   imageInput = ref(),
   uploading = ref(false)
-let documentRevision = 0,
-  initializeID = 0,
+const documentRevision = ref(0)
+const groupTitle = computed(() => groups.value.find(g => g.id === groupId.value)?.title)
+let initializeID = 0,
   resizeObserver
-const snapshot = () => JSON.stringify({ ...form, group: groupTitle.value })
+const snapshot = () => JSON.stringify({ ...form, group: groupId.value })
 const dirty = computed(() => !!baseline.value && snapshot() !== baseline.value)
 const confirmLeave = useUnsavedChanges(() => dirty.value || saving.value || uploading.value)
 const rendered = computed(() => renderArticle(form.content))
@@ -233,7 +248,11 @@ async function initialize() {
     return
   }
   if (current !== initializeID) return
-  documentRevision = original?.revision || 0
+  documentRevision.value = original?.revision || 0
+  recordStatus.value = original?.status || ''
+  conflict.value = false
+  conflictVisible.value = false
+  historyVisible.value = false
   if (route.query.id && !original) {
     error.value = '文档不存在或已被删除'
     return
@@ -244,11 +263,8 @@ async function initialize() {
       ? documentPayload(original)
       : { id: `doc-${createUUID()}`, title: '', slug: '', summary: '', content: '' },
   )
-  groupTitle.value =
-    version.value.groups.find((g) => g.id === original?.groupId)?.title ||
-    version.value.groups[0]?.title ||
-    ''
-  mode.value = route.query.mode === 'preview' ? 'preview' : 'edit'
+  groupId.value = original?.groupId || groups.value.find(group => String(group.id) === route.query.group)?.id || groups.value[0]?.id || ''
+  mode.value = route.query.view === 'preview' ? 'preview' : 'edit'
   editorKey.value++
   baseline.value = snapshot()
   initialized.value = true
@@ -256,42 +272,75 @@ async function initialize() {
 async function reload() {
   if (await confirmLeave()) await initialize()
 }
-onBeforeRouteUpdate(
-  async (to, from) =>
-    (to.query.id === from.query.id && to.query.version === from.query.version) ||
-    (await confirmLeave()),
-)
-watch(() => [route.query.id, route.query.version], initialize, { immediate: true })
+let promoting = false
+onBeforeRouteUpdate(async (to, from) =>
+  promoting || (to.query.id === from.query.id && to.query.version === from.query.version && to.query.mode === from.query.mode) || await confirmLeave())
+watch([() => route.query.id, () => route.query.version, () => route.query.mode], () => {
+  if (!promoting && route.meta.componentPath === 'product/docs/editor/index') initialize()
+}, { immediate: true })
 function togglePreview() {
   form.content = editor.value?.flush() ?? form.content
   mode.value = mode.value === 'preview' ? 'edit' : 'preview'
 }
 async function submit() {
-  if (saving.value || uploading.value || loading.value || mode.value === 'preview') return
-  form.content = editor.value?.flush() ?? form.content
+  if (saving.value || uploading.value || loading.value || conflict.value || mode.value === 'preview') return
+  editor.value?.flush()
   const submitted = snapshot()
-  const ok = await save(
-    async () => {
-      if (!form.slug || !form.title.trim() || !groupTitle.value) {
-        showSettings.value = true
-        throw new Error('请填写文档标题、分组和访问标识')
-      }
-      const payload = validateDocument(form)
-      const target = version.value.groups.find((group) => group.title === groupTitle.value)
-      if (!target) throw new Error('分组不存在，请重新加载')
-      const result = await saveDocument({
-        ...payload,
-        version: versionID.value,
-        groupId: target.id,
-        revision: documentRevision,
-      })
-      documentRevision = result.data.revision
-      baseline.value = submitted
-    },
-    version.value?.status === 'published' ? '当前版本的公开文档已更新' : '草稿文档已保存',
-  )
-  if (ok && !route.query.id)
-    await router.replace(location('product/docs/editor/index', { id: form.id }))
+  saving.value = true
+  try {
+    if (!form.slug || !form.title.trim() || !groupId.value) {
+      showSettings.value = true
+      throw new Error('请填写文档标题、分组和访问标识')
+    }
+    const result = await saveDocument({
+      ...validateDocument(form), version: versionID.value, groupId: groupId.value, revision: documentRevision.value,
+    })
+    documentRevision.value = result.data.revision
+    recordStatus.value = result.data.status
+    baseline.value = submitted
+    ElMessage.success('草稿已保存')
+    if (!route.query.id) {
+      promoting = true
+      try { await router.replace(location('product/docs/editor/index', { id: form.id, group: groupId.value })) }
+      finally { promoting = false }
+    }
+  } catch (failure) {
+    conflict.value = failure.response?.status === 409 && !!documentRevision.value
+    ElMessage.error(failure.message || '保存失败')
+  } finally { saving.value = false }
+}
+async function changePublication(publish) {
+  editor.value?.flush()
+  if (saving.value || conflict.value || dirty.value) return
+  try {
+    await ElMessageBox.confirm(publish ? '将当前保存的正文发布给读者？' : '将此文档从公开目录撤回？', publish ? '发布文档' : '撤回文档',
+      { confirmButtonText: '确认', cancelButtonText: '取消' })
+  } catch { return }
+  if (dirty.value || saving.value) return
+  saving.value = true
+  try {
+    const action = publish ? publishDocument : withdrawDocument
+    const result = await action({ id: form.id, version: versionID.value, revision: documentRevision.value })
+    documentRevision.value = result.data.revision
+    recordStatus.value = result.data.status
+    ElMessage.success(publish ? '文档已发布' : '文档已撤回')
+  } catch (failure) {
+    conflict.value = failure.response?.status === 409
+    ElMessage.error(failure.message)
+  } finally { saving.value = false }
+}
+async function compareConflict() {
+  try {
+    remote.value = (await getAdminDocument(form.id, versionID.value)).data
+    conflictVisible.value = true
+  } catch (failure) { ElMessage.error(failure.message) }
+}
+function rebase() {
+  documentRevision.value = remote.value.revision
+  recordStatus.value = remote.value.status
+  baseline.value = JSON.stringify({ ...documentPayload(remote.value), group: remote.value.groupId })
+  conflict.value = false
+  conflictVisible.value = false
 }
 const historyVisible = ref(false),
   historyLoading = ref(false),
@@ -316,7 +365,7 @@ async function previewHistory(entry) {
   historyError.value = ''
   selectedHistory.value = null
   try {
-    selectedHistory.value = (await getDocumentHistory(form.id, versionID.value, entry.id)).data
+    selectedHistory.value = (await getDocumentRevision(form.id, versionID.value, entry.id)).data
   } catch (e) {
     historyError.value = e.message || '修订内容加载失败'
   } finally {
@@ -332,8 +381,8 @@ async function loadHistoricalContent() {
     summary: item.summary,
     content: item.contentMarkdown,
   })
-  if (version.value.groups.some((g) => g.title === item.groupTitle))
-    groupTitle.value = item.groupTitle
+  const group = groups.value.find(g => g.title === item.groupTitle)
+  if (group) groupId.value = group.id
   mode.value = 'edit'
   editorKey.value++
   historyVisible.value = false

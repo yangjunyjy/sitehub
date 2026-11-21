@@ -2,9 +2,7 @@
   <el-dialog
     v-model="visible"
     :title="dialogTitle"
-    width="900px"
-    @open="loadRoleList()"
-    @close="resetRoleList()"
+    width="min(900px, calc(100vw - 24px))"
     :close-on-click-modal="false"
     :destroy-on-close="true"
     class="role-assign-dialog"
@@ -13,47 +11,27 @@
     <div class="dialog-content">
       <!-- 左侧区域 -->
       <div class="left-section">
-        <!-- 左上：搜索区域 -->
-        <div class="search-area">
-          <div class="search-form">
-            <el-form :inline="true" :model="searchForm" class="search-inline-form" @submit.prevent>
-              <el-form-item label="角色名称">
-                <el-input
-                  v-model="searchForm.roleName"
-                  placeholder="角色名称"
-                  clearable
-                  class="form-input"
-                />
-              </el-form-item>
-              <el-form-item label="角色编码">
-                <el-input
-                  v-model="searchForm.roleCode"
-                  placeholder="角色编码"
-                  clearable
-                  class="form-input"
-                />
-              </el-form-item>
-              <el-form-item>
-                <el-button
-                  type="primary"
-                  :icon="Search"
-                  @click.prevent="handleSearch"
-                  size="default"
-                >
-                  查询
-                </el-button>
-              </el-form-item>
-            </el-form>
-          </div>
-        </div>
-
+        <AdminSearchForm :model="searchForm" :loading="loading" @search="handleSearch" @reset="resetSearch">
+          <el-form-item label="角色名称">
+            <el-input v-model="searchForm.roleName" placeholder="角色名称" clearable />
+          </el-form-item>
+          <template #advanced>
+            <el-form-item label="角色编码">
+              <el-input v-model="searchForm.roleCode" placeholder="角色编码" clearable />
+            </el-form-item>
+          </template>
+        </AdminSearchForm>
+        <el-alert v-if="loadError" :title="loadError" type="error" :closable="false" />
         <!-- 左中：角色列表 -->
         <div class="role-list-area">
           <el-table
-            :data="filteredRoles"
+            ref="table"
+            :data="rows"
+            row-key="id"
             v-loading="loading"
             height="320"
-            @selection-change="handleSelectionChange"
+            @select="toggleRole"
+            @select-all="syncVisibleSelection"
             class="role-table"
           >
             <el-table-column type="selection" width="55" align="center" />
@@ -76,8 +54,7 @@
             :page-sizes="[10, 20, 50]"
             size="small"
             layout="total, prev, pager, next, jumper"
-            @size-change="handleSizeChange"
-            @current-change="handleCurrentChange"
+            @change="loadList"
           />
         </div>
       </div>
@@ -126,8 +103,10 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
-import { Search, Close } from '@element-plus/icons-vue'
+import { ref, reactive, computed, nextTick, onMounted } from 'vue'
+import AdminSearchForm from '@/components/admin/AdminSearchForm.vue'
+import { useAdminList } from '@/composables/useAdminList'
+import { Close } from '@element-plus/icons-vue'
 import { getRoleList } from '@/api/role'
 
 // Props
@@ -157,133 +136,65 @@ const props = defineProps({
 // Emits
 const emit = defineEmits(['update:modelValue', 'confirm', 'cancel'])
 
-// 响应式数据
-const visible = ref(false)
-const searchForm = ref({
-  roleName: '',
-  roleCode: '',
+const visible = computed({
+  get: () => props.modelValue,
+  set: value => emit('update:modelValue', value),
 })
-const loading = ref(false)
+const table = ref()
+const searchForm = reactive({ roleName: '', roleCode: '' })
+const applied = reactive({ ...searchForm })
 const submitting = ref(false)
 const selectedRoles = ref([])
-
-const roleIds = ref([])
-
-// 分页数据
-const pagination = ref({
-  page: 1,
-  pageSize: 10,
-  total: 0,
-})
-
-// 从 API 加载的角色数据
-const allRoles = ref([])
-
-const translate = () => {
-  roleIds.value = props.existingRoleIds.map((role) => role.id || role)
-}
-const loadRoleList = async () => {
-  const dataParams = {
-    roleName: searchForm.value.roleName,
-    roleCode: searchForm.value.roleCode,
-    status: 1,
-    page: pagination.value.page,
-    pageSize: pagination.value.pageSize,
-  }
-  const data = await getRoleList(dataParams)
-  allRoles.value = data.data.list
-  pagination.value.total = data.data.total
-
-  // 角色列表加载完成后初始化已选角色
-  initSelectedRoles()
-}
-
-const resetRoleList = () => {
-  allRoles.value = []
-}
-// 计算属性
-const dialogTitle = computed(() => {
-  return props.title
-})
-
-// 过滤后的角色列表
-const filteredRoles = computed(() => {
-  let result = allRoles.value.filter((role) => role.status === 1)
-  return result
-})
-
-// 获取角色标签类型
-const getRoleTagType = (role) => {
-  const typeMap = {
-    admin: 'danger',
-    editor: 'success',
-    auditor: 'info',
-  }
-  return typeMap[role.code] || 'info'
-}
-
-// 监听 modelValue 变化
-watch(
-  () => props.modelValue,
-  (newVal) => {
-    visible.value = newVal
-    if (newVal) {
-      // 打开对话框时先转换数据
-      translate()
-      // 角色列表加载后会在 loadRoleList 中调用 initSelectedRoles
+const rows = ref([])
+const pagination = reactive({ page: 1, pageSize: 10, total: 0 })
+const dialogTitle = computed(() => props.title)
+const getRoleTagType = role => ({ admin: 'danger', editor: 'success', auditor: 'info' })[role.roleCode] || 'info'
+const { loading, loadError, loadList } = useAdminList({
+  fetcher: getRoleList,
+  rows,
+  pagination,
+  params: () => ({ ...applied, status: 1, page: pagination.page, pageSize: pagination.pageSize }),
+  selectRows: data => data.items || [],
+  errorMessage: '角色加载失败，请重新查询',
+  onLoaded: async () => {
+    await nextTick()
+    for (const role of rows.value) {
+      if (selectedRoles.value.some(selected => selected.id === role.id)) table.value?.toggleRowSelection(role, true)
     }
   },
-)
-
-watch(visible, (newVal) => {
-  emit('update:modelValue', newVal)
 })
 
-// 初始化已选角色
-const initSelectedRoles = () => {
-  const existingRoles = allRoles.value.filter((role) => roleIds.value.includes(role.id))
-  selectedRoles.value = [...existingRoles]
+onMounted(() => {
+  selectedRoles.value = props.existingRoleIds.map(role =>
+    typeof role === 'object' ? role : { id: role, roleName: String(role) })
+  resetSearch()
+})
+
+function handleSearch() {
+  Object.assign(applied, { roleName: searchForm.roleName.trim(), roleCode: searchForm.roleCode.trim() })
+  pagination.page = 1
+  loadList()
 }
 
-// 搜索
-const handleSearch = () => {
-  pagination.value.page = 1
-  loadRoleList()
+function resetSearch() {
+  Object.assign(searchForm, { roleName: '', roleCode: '' })
+  handleSearch()
 }
 
-// 表格选择变化
-const handleSelectionChange = (selection) => {
-
-  // 将表格选择的角色添加到已选角色列表(去重)
-  selection.forEach((role) => {
-    if (!selectedRoles.value.some((r) => r.id === role.id)) {
-      selectedRoles.value.push(role)
-    }
-  })
-
-  // 从已选角色中移除未被选择的
-  const selectedIds = selection.map((r) => r.id)
-  selectedRoles.value = selectedRoles.value.filter(
-    (r) => selectedIds.includes(r.id) || roleIds.value.includes(r.id),
-  )
-
+function toggleRole(selection, row) {
+  const others = selectedRoles.value.filter(role => role.id !== row.id)
+  selectedRoles.value = selection.some(role => role.id === row.id) ? [...others, row] : others
 }
 
-// 移除角色
-const handleRemoveRole = (roleId) => {
-  const index = selectedRoles.value.findIndex((r) => r.id === roleId)
-  if (index !== -1) {
-    selectedRoles.value.splice(index, 1)
-  }
+function syncVisibleSelection(selection) {
+  const visibleIds = new Set(rows.value.map(role => role.id))
+  selectedRoles.value = [...selectedRoles.value.filter(role => !visibleIds.has(role.id)), ...selection]
 }
 
-// 分页变化
-const handleSizeChange = (size) => {
-  pagination.value.pageSize = size
-}
-
-const handleCurrentChange = (page) => {
-  pagination.value.page = page
+function handleRemoveRole(id) {
+  selectedRoles.value = selectedRoles.value.filter(role => role.id !== id)
+  const row = rows.value.find(role => role.id === id)
+  if (row) table.value?.toggleRowSelection(row, false)
 }
 
 // 取消
@@ -359,44 +270,8 @@ const handleConfirm = async () => {
   flex-direction: column;
   gap: 12px;
 
-  .search-area {
-    padding: 12px;
-    border-radius: 6px;
-
-    .search-form {
-      width: 100%;
-
-      .search-inline-form {
-        display: flex;
-        align-items: center;
-        margin: 0;
-
-        :deep(.el-form-item) {
-          margin-bottom: 0;
-          margin-right: 12px;
-
-          &:last-child {
-            margin-right: 0;
-          }
-
-          .el-form-item__label {
-            font-size: 13px;
-            color: #303133;
-            font-weight: 500;
-          }
-
-          .form-input {
-            width: 140px;
-
-            :deep(.el-input__wrapper) {
-              padding: 4px 11px;
-            }
-          }
-        }
-      }
-    }
-  }
-
+  min-width: 0;
+  .admin-search-card { padding: 0; }
   .role-list-area {
     flex: 1;
     overflow: hidden;
@@ -551,5 +426,10 @@ const handleConfirm = async () => {
   .el-button {
     padding: 10px 28px;
   }
+}
+@media (max-width: 760px) {
+  .dialog-content { flex-direction: column; height: auto; }
+  .right-section { width: auto; padding: 0; border-left: 0; }
+  .selected-list { max-height: 150px; }
 }
 </style>

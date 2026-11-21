@@ -19,7 +19,9 @@
         ><el-input v-model="searchForm.name" placeholder="请输入角色名称" clearable /></el-form-item
       ><el-form-item label="角色编码"
         ><el-input v-model="searchForm.code" placeholder="请输入角色编码" clearable /></el-form-item
-      ><el-form-item label="角色状态"
+      ></template>
+    <template #advanced>
+      <el-form-item label="角色状态"
         ><el-select v-model="searchForm.status" placeholder="全部状态" clearable
           ><el-option label="启用" :value="1" /><el-option
             label="禁用"
@@ -189,7 +191,7 @@ const { loading, loadError, loadList } = useAdminList({
     page: pagination.page,
     pageSize: pagination.pageSize,
   }),
-  selectRows: (data) => (Array.isArray(data.list) ? data.list : []),
+  selectRows: (data) => (Array.isArray(data.items) ? data.items : []),
   errorMessage: '加载失败，请重试',
 })
 

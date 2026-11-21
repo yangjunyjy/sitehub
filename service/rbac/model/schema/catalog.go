@@ -2,6 +2,7 @@ package schema
 
 import (
 	"errors"
+	"strings"
 
 	"gorm.io/gorm"
 	"sitehub/service/rbac/model/entity"
@@ -99,7 +100,7 @@ func SeedCatalog(db *gorm.DB) error {
 			}
 			ids[seed.Code] = current.ID
 		}
-		return nil
+		return retireProductPages(tx)
 	})
 }
 
@@ -123,6 +124,32 @@ func AssociateAdminMenus(db *gorm.DB) error {
 			if err := db.Create(&entity.SysRoleMenu{RoleID: role.ID, MenuID: menu.ID}).Error; err != nil {
 				return err
 			}
+		}
+	}
+	return nil
+}
+
+// Remove the built-in pages that moved into the two product workspaces.
+// Promote custom children one level within their own tree, keeping their grants.
+func retireProductPages(tx *gorm.DB) error {
+	for _, path := range []string{"product/docs/groups", "product/docs/modes", "product/docs/settings", "product/docs/versions", "product/download-settings"} {
+		component := path + "/index"
+		var retired entity.SysMenu
+		err := tx.Where("menu_code = ? AND component = ? AND system_code = ? AND deleted = 0", "builtin:page-"+strings.ReplaceAll(component, "/", "-"), component, "admin").Take(&retired).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		if err = tx.Model(&entity.SysMenu{}).Where("parent_id = ?", retired.ID).Update("parent_id", retired.ParentID).Error; err != nil {
+			return err
+		}
+		if err = tx.Where("menu_id = ?", retired.ID).Delete(&entity.SysRoleMenu{}).Error; err != nil {
+			return err
+		}
+		if err = tx.Model(&retired).Updates(map[string]any{"deleted": 1, "is_visible": false, "status": 0}).Error; err != nil {
+			return err
 		}
 	}
 	return nil

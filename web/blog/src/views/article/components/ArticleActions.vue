@@ -1,7 +1,8 @@
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, ref, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import BlogIcon from "@/components/BlogIcon.vue";
+import ArticleActionDock from "./ArticleActionDock.vue";
 import NewFolderForm from "@/components/member/NewFolderForm.vue";
 import {
   getInteraction,
@@ -19,6 +20,8 @@ const state = ref(null),
   busy = ref(false),
   error = ref(""),
   dialog = ref(null),
+  favoriteButton = ref(null),
+  modalOpen = ref(false),
   folders = ref([]),
   selected = ref("0"),
   newFolder = ref(false);
@@ -70,6 +73,8 @@ async function choose() {
   try {
     if (!(await requireMember())) return;
     selected.value = String(state.value.folderId || "0");
+    modalOpen.value = true;
+    await nextTick();
     dialog.value.showModal();
     await loadFolders();
   } catch (err) {
@@ -105,23 +110,28 @@ async function save(enabled) {
     busy.value = false;
   }
 }
+async function dialogClosed() {
+  modalOpen.value = false;
+  await nextTick();
+  if (document.activeElement === document.body && favoriteButton.value?.isConnected)
+    favoriteButton.value.focus({preventScroll:true});
+}
 onMounted(load);
 </script>
 <template>
-  <div class="reader-actions">
+  <ArticleActionDock :modal-open="modalOpen">
     <button
       type="button"
       :aria-pressed="!!state?.liked"
       :disabled="busy || !state"
       @click="like"
     >
-      <BlogIcon name="heart" :size="17" />{{
-        state?.liked ? "已点赞" : "点赞"
-      }}
+      <BlogIcon name="heart" :size="17" />{{ state?.liked ? "已点赞" : "点赞" }}
       <span v-if="state">{{ state.likes }}</span>
     </button>
     <button
       type="button"
+      ref="favoriteButton"
       :aria-pressed="!!state?.favorited"
       :disabled="busy || !state"
       @click="choose"
@@ -134,78 +144,73 @@ onMounted(load);
     <p v-if="error" role="alert">
       {{ error }} <button v-if="!state" @click="load">重试</button>
     </p>
-    <dialog
-      ref="dialog"
-      aria-labelledby="folder-dialog-title"
-      @cancel="busy && $event.preventDefault()"
-    >
-      <header>
-        <h2 id="folder-dialog-title">收藏到文件夹</h2>
-        <button
-          class="close"
-          type="button"
-          aria-label="关闭"
-          :disabled="busy"
-          @click="dialog.close()"
-        >
-          <BlogIcon name="close" :size="18" />
-        </button>
-      </header>
-      <p v-if="loadingFolders" role="status">正在读取收藏夹…</p>
-      <div v-else class="choices">
-        <label v-for="folder in folders" :key="folder.id">
-          <input
-            v-model="selected"
-            type="radio"
-            name="folder"
-            :value="String(folder.id)"
-          />
-          <BlogIcon name="folder" :size="17" /><strong>{{ folder.name }}</strong
-          ><small>{{ folder.count }} 篇</small>
-        </label>
-      </div>
-      <NewFolderForm v-if="newFolder" @created="created" />
+  </ArticleActionDock>
+  <dialog
+    ref="dialog"
+    aria-labelledby="folder-dialog-title"
+    @close="dialogClosed"
+    @cancel="busy && $event.preventDefault()"
+  >
+    <header>
+      <h2 id="folder-dialog-title">收藏到文件夹</h2>
       <button
-        v-else-if="folders.length"
-        class="new"
+        class="close"
         type="button"
-        @click="newFolder = true"
+        aria-label="关闭"
+        :disabled="busy"
+        @click="dialog.close()"
       >
-        ＋ 新建收藏夹
+        <BlogIcon name="close" :size="18" />
       </button>
-      <p v-if="folderError" role="alert">
-        {{ folderError }}
-        <button v-if="!folders.length" @click="loadFolders">重试</button>
-      </p>
-      <footer>
-        <button
-          v-if="state?.favorited"
-          type="button"
-          class="remove"
-          :disabled="busy"
-          @click="save(false)"
-        >
-          取消收藏
-        </button>
-        <button
-          type="button"
-          class="save"
-          :disabled="busy || !folders.some((f) => String(f.id) === selected)"
-          @click="save(true)"
-        >
-          {{ busy ? "保存中…" : "保存收藏" }}
-        </button>
-      </footer>
-    </dialog>
-  </div>
+    </header>
+    <p v-if="loadingFolders" role="status">正在读取收藏夹…</p>
+    <div v-else class="choices">
+      <label v-for="folder in folders" :key="folder.id">
+        <input
+          v-model="selected"
+          type="radio"
+          name="folder"
+          :value="String(folder.id)"
+        />
+        <BlogIcon name="folder" :size="17" /><strong>{{ folder.name }}</strong
+        ><small>{{ folder.count }} 篇</small>
+      </label>
+    </div>
+    <NewFolderForm v-if="newFolder" @created="created" />
+    <button
+      v-else-if="folders.length"
+      class="new"
+      type="button"
+      @click="newFolder = true"
+    >
+      ＋ 新建收藏夹
+    </button>
+    <p v-if="folderError" role="alert">
+      {{ folderError }}
+      <button v-if="!folders.length" @click="loadFolders">重试</button>
+    </p>
+    <footer>
+      <button
+        v-if="state?.favorited"
+        type="button"
+        class="remove"
+        :disabled="busy"
+        @click="save(false)"
+      >
+        取消收藏
+      </button>
+      <button
+        type="button"
+        class="save"
+        :disabled="busy || !folders.some((f) => String(f.id) === selected)"
+        @click="save(true)"
+      >
+        {{ busy ? "保存中…" : "保存收藏" }}
+      </button>
+    </footer>
+  </dialog>
 </template>
 <style scoped>
-.reader-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 9px;
-}
 button {
   background: white;
   color: #32473b;
@@ -214,10 +219,19 @@ button {
   font-size: 14px;
   padding: 7px 13px;
 }
-.reader-actions > button {
+button[aria-pressed] {
+  justify-content: flex-start;
+  border: 0;
+  background: transparent;
+  min-height: 40px;
+  width: 100%;
+  padding: 6px 9px;
   display: inline-flex;
   gap: 7px;
   align-items: center;
+}
+button[aria-pressed] span {
+  margin-left: auto;
 }
 button[aria-pressed="true"] {
   background: #e8f1e7;
@@ -303,7 +317,7 @@ button {
     color 0.16s,
     border-color 0.16s;
 }
-.reader-actions > button:hover:enabled,
+button[aria-pressed]:hover:enabled,
 .choices label:hover {
   background: #f0f5ed;
 }

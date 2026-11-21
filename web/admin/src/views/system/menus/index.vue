@@ -28,7 +28,9 @@
           v-model="searchForm.title"
           placeholder="请输入菜单名称"
           clearable /></el-form-item
-      ><el-form-item label="菜单类型"
+      ></template>
+    <template #advanced>
+      <el-form-item label="菜单类型"
         ><el-select v-model="searchForm.type" placeholder="全部类型" clearable
           ><el-option label="目录" :value="1" /><el-option
             label="菜单"

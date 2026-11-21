@@ -29,7 +29,9 @@
             :key="item.id"
             :label="item.name"
             :value="item.id" /></el-select></el-form-item
-      ><el-form-item label="文章标签"
+      ></template>
+    <template #advanced>
+      <el-form-item label="文章标签"
         ><el-select v-model="filters.tagId" placeholder="全部标签" clearable
           ><el-option
             v-for="item in tags"

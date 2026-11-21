@@ -49,7 +49,7 @@ func NewServiceContext(configuration config.Config) (*ServiceContext, error) {
 	}
 	service.rbacConnection = rbac.Conn()
 	service.Rbac = rbacpb.NewRbacClient(rbac.Conn())
-	store := settings.Scope(settings.NewSystemConfigService(settingsrepo.NewSystemConfigRepository(database)), "website.content", "website.downloads")
+	store := settings.Scope(settings.NewSystemConfigService(settingsrepo.NewSystemConfigRepository(database)), "website.content")
 	service.Core = product.New(database, store, fileclient.New(configuration.BlogURL, configuration.ServiceKey))
 	return service, nil
 }

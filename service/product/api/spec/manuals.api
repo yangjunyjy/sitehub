@@ -1,0 +1,169 @@
+syntax = "v1"
+
+type ManualCatalogQuery {
+	Mode    string `form:"mode,optional"`
+	Version string `form:"version,optional"`
+}
+
+type ManualPublicDocumentQuery {
+	ID      string `form:"id"`
+	Version string `form:"version,optional"`
+	Mode    string `form:"mode,optional"`
+}
+
+type ManualDocumentQuery {
+	Version string `form:"version"`
+	ID      string `form:"id"`
+}
+
+type ManualHistoryQuery {
+	Version   string `form:"version"`
+	ID        string `form:"id"`
+	HistoryID uint64 `form:"historyId"`
+}
+
+type ManualSettingsRequest {
+	Title       string `json:"title"`
+	Description string `json:"description,optional"`
+	Revision    uint64 `json:"revision"`
+}
+
+type ManualModeRequest {
+	ID             string `json:"id"`
+	Label          string `json:"label"`
+	Description    string `json:"description,optional"`
+	Icon           string `json:"icon"`
+	Status         string `json:"status"`
+	DefaultVersion string `json:"defaultVersion,optional"`
+	SortOrder      int    `json:"sortOrder,optional"`
+	Revision       uint64 `json:"revision,optional"`
+}
+
+type ManualNamedRevision {
+	ID       string `json:"id"`
+	Revision uint64 `json:"revision"`
+}
+
+type ManualVersionRequest {
+	ID       string `json:"id"`
+	ModeID   string `json:"modeId"`
+	Name     string `json:"name"`
+	Source   string `json:"source,optional"`
+	Revision uint64 `json:"revision,optional"`
+}
+
+type ManualGroupRequest {
+	Version  string `json:"version"`
+	ID       uint64 `json:"id,optional"`
+	Title    string `json:"title"`
+	Revision uint64 `json:"revision,optional"`
+}
+
+type ManualGroupRevision {
+	Version  string `json:"version"`
+	ID       uint64 `json:"id"`
+	Revision uint64 `json:"revision"`
+}
+
+type ManualGroupMoveRequest {
+	Version   string `json:"version"`
+	ID        uint64 `json:"id"`
+	Revision  uint64 `json:"revision"`
+	Direction int    `json:"direction"`
+}
+
+type ManualDraftRequest {
+	Version  string `json:"version"`
+	ID       string `json:"id"`
+	GroupID  uint64 `json:"groupId"`
+	Slug     string `json:"slug"`
+	Title    string `json:"title"`
+	Summary  string `json:"summary,optional"`
+	Content  string `json:"content,optional"`
+	Revision uint64 `json:"revision,optional"`
+}
+
+type ManualDocumentRevision {
+	Version  string `json:"version"`
+	ID       string `json:"id"`
+	Revision uint64 `json:"revision"`
+}
+
+@server (
+	group:  manuals
+	prefix: /v1/product/manuals
+)
+service product-api {
+	@handler ManualCatalog
+	get /catalog (ManualCatalogQuery) returns (Response)
+
+	@handler ManualPublicDocument
+	get /document (ManualPublicDocumentQuery) returns (Response)
+}
+
+@server (
+	group:  manualadmin
+	prefix: /v1/product/admin/manuals
+)
+service product-api {
+	@handler ManualWorkspace
+	get /workspace (ManualCatalogQuery) returns (Response)
+
+	@handler ManualDraft
+	get /document (ManualDocumentQuery) returns (Response)
+
+	@handler ManualHistory
+	get /history (ManualDocumentQuery) returns (Response)
+
+	@handler ManualHistoryDetail
+	get /history/detail (ManualHistoryQuery) returns (Response)
+
+	@handler ManualSettingsSave
+	post /settings/save (ManualSettingsRequest) returns (Response)
+
+	@handler ManualModeSave
+	post /modes/save (ManualModeRequest) returns (Response)
+
+	@handler ManualModeDelete
+	post /modes/delete (ManualNamedRevision) returns (Response)
+
+	@handler ManualModeDefault
+	post /modes/default (ManualNamedRevision) returns (Response)
+
+	@handler ManualVersionSave
+	post /versions/save (ManualVersionRequest) returns (Response)
+
+	@handler ManualVersionPublish
+	post /versions/publish (ManualNamedRevision) returns (Response)
+
+	@handler ManualVersionWithdraw
+	post /versions/withdraw (ManualNamedRevision) returns (Response)
+
+	@handler ManualVersionDefault
+	post /versions/default (ManualNamedRevision) returns (Response)
+
+	@handler ManualVersionDelete
+	post /versions/delete (ManualNamedRevision) returns (Response)
+
+	@handler ManualGroupSave
+	post /groups/save (ManualGroupRequest) returns (Response)
+
+	@handler ManualGroupMove
+	post /groups/move (ManualGroupMoveRequest) returns (Response)
+
+	@handler ManualGroupDelete
+	post /groups/delete (ManualGroupRevision) returns (Response)
+
+	@handler ManualDocumentSave
+	post /documents/save (ManualDraftRequest) returns (Response)
+
+	@handler ManualDocumentPublish
+	post /documents/publish (ManualDocumentRevision) returns (Response)
+
+	@handler ManualDocumentWithdraw
+	post /documents/withdraw (ManualDocumentRevision) returns (Response)
+
+	@handler ManualDocumentDelete
+	post /documents/delete (ManualDocumentRevision) returns (Response)
+}
+

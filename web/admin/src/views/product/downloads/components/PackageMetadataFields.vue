@@ -24,7 +24,7 @@ defineProps({ groups: Array, editionOptions: Array });
           :value="group.id"
       /></el-select>
       <p class="field-note">
-        分组名称和顺序可在“下载页设置”维护。
+        分组名称与顺序可在「管理分组」中调整。
       </p></el-form-item
     >
     <el-form-item label="版本类型"
@@ -51,7 +51,7 @@ defineProps({ groups: Array, editionOptions: Array });
         :precision="0"
       />
       <p class="field-note">
-        数值越小越靠前，相同数值保留原顺序。
+        数值越小越靠前，相同数值按标识排序。
       </p></el-form-item
     >
   </div>

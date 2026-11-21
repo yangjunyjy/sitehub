@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { readCatalog } from '@/api/documents';
-import ProductIcon from './ProductIcon.vue';
+import ResourceIcon from '@shared/icons/ResourceIcon.vue';
 
 const emit = defineEmits(['open', 'close']);
 const route = useRoute();
@@ -64,14 +64,14 @@ onBeforeUnmount(() => { disposed = true; close(); controller?.abort(); window.re
 </script>
 
 <template>
-  <button ref="trigger" class="search-trigger" type="button" aria-label="搜索产品文档" @click="show">
-    <ProductIcon name="search" /><span>搜索文档</span><kbd>⌘ K</kbd>
+  <button ref="trigger" class="search-trigger" type="button" aria-label="搜索产品文档" aria-keyshortcuts="Control+k Meta+k" title="搜索文档 (Ctrl / ⌘ K)" @click="show">
+    <ResourceIcon name="operations/search" :size="18" />
   </button>
   <dialog ref="dialog" class="site-search" aria-labelledby="product-search-title" @cancel.prevent="close"
     @click="event => event.target === dialog && close()">
     <div class="search-dialog">
       <header><h2 id="product-search-title">搜索产品文档</h2><button type="button" aria-label="关闭搜索" @click="close">Esc</button></header>
-      <label class="search-input"><ProductIcon name="search" /><input ref="input" v-model="keyword" type="search" placeholder="搜索安装、配置与使用指南" /></label>
+      <label class="search-input"><ResourceIcon name="operations/search" :size="18" /><input ref="input" v-model="keyword" type="search" placeholder="搜索安装、配置与使用指南" /></label>
       <p v-if="loading" class="search-state" role="status">正在加载文档…</p>
       <div v-else-if="error" class="search-state" role="alert"><p>{{ error }}</p><button type="button" @click="load">重新加载</button></div>
       <div v-else class="search-results">
@@ -87,9 +87,11 @@ onBeforeUnmount(() => { disposed = true; close(); controller?.abort(); window.re
 </template>
 
 <style lang="scss" scoped>
-.search-trigger { display: flex; align-items: center; gap: 10px; width: 240px; border: 1px solid var(--deploy-line); border-radius: 7px; padding: 8px 11px; background: var(--deploy-paper); color: var(--deploy-muted); text-align: left;
-  :deep(svg) { width: 16px; height: 16px; }
-  span { flex: 1; } kbd { font: inherit; font-size: 11px; border: 1px solid var(--deploy-line); border-radius: 3px; padding: 1px 4px; }
+.search-trigger {
+  display: grid; place-items: center; width: 36px; height: 36px; padding: 0;
+  border: 0; border-radius: 50%; color: var(--deploy-muted); background: transparent;
+  transition: color .16s, background .16s;
+  &:hover, &:focus-visible { color: var(--deploy-ink); background: var(--deploy-paper); }
 }
 .site-search { width: min(680px, calc(100vw - 32px)); max-height: min(720px, calc(100vh - 80px)); margin: 64px auto auto; padding: 0; border: 1px solid var(--deploy-line); border-radius: 12px; background: var(--deploy-white); color: var(--deploy-ink); box-shadow: 0 20px 80px #0003;
   &::backdrop { background: #0006; backdrop-filter: blur(3px); }
@@ -107,5 +109,5 @@ onBeforeUnmount(() => { disposed = true; close(); controller?.abort(); window.re
   &:hover, &:focus-visible { background: var(--deploy-paper); } small, span { color: var(--deploy-muted); font-size: 12px; } strong { font-size: 14px; }
 }
 .search-state { text-align: center; padding: 32px; color: var(--deploy-muted); }
-@media (max-width: 760px) { .search-trigger { width: auto; span, kbd { display: none; } }.site-search { margin-top: 24px; } }
+@media (max-width: 760px) { .site-search { margin-top: 24px; } }
 </style>

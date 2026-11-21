@@ -10,9 +10,15 @@ import (
 )
 
 type Module struct {
-	Content productservice.WebsiteContentService
+	Content  productservice.WebsiteContentService
+	Manuals  *productservice.ManualService
+	Releases *productservice.ReleaseService
 }
 
 func New(db *gorm.DB, store settings.Store, files filecontract.Settings) *Module {
-	return &Module{Content: productservice.NewWebsiteContentService(store, mysql.NewProductDocsRepository(db), files)}
+	return &Module{
+		Content:  productservice.NewWebsiteContentService(store),
+		Manuals:  productservice.NewManualService(mysql.NewProductDocsRepository(db)),
+		Releases: productservice.NewReleaseService(db, files),
+	}
 }

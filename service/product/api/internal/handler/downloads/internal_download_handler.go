@@ -24,7 +24,7 @@ func InternalDownloadHandler(service *svc.ServiceContext) http.HandlerFunc {
 			servicehttp.Write(writer, nil, err)
 			return
 		}
-		value, err := service.Core.Content.GetPublishedDownload(request.URL.Query().Get("id"))
+		value, err := service.Core.Releases.Resolve(request.Context(), request.URL.Query().Get("id"))
 		servicehttp.Write(writer, value, err)
 	}
 }

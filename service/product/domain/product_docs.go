@@ -34,9 +34,9 @@ type DocMode struct {
 	Revision       uint64
 }
 type DocModeInput struct {
-	Action, ID, Label, Description, Icon, Status, DefaultVersion string
-	SortOrder                                                    int
-	Revision                                                     uint64
+	ID, Label, Description, Icon, Status, DefaultVersion string
+	SortOrder                                            int
+	Revision                                             uint64
 }
 type DocGroup struct {
 	ID        uint64
@@ -55,6 +55,7 @@ type ProductDocument struct {
 	Summary              string `gorm:"type:text"`
 	ContentMarkdown      string `gorm:"type:longtext;not null"`
 	SortOrder            int
+	PublishedRevision    uint64 `gorm:"not null;default:0"`
 	Revision, UpdatedBy  uint64
 	CreatedAt, UpdatedAt time.Time
 }
@@ -69,6 +70,8 @@ type DocumentRevision struct {
 	Title           string    `json:"title"`
 	Summary         string    `json:"summary"`
 	ContentMarkdown string    `json:"contentMarkdown,omitempty" gorm:"type:longtext"`
+	GroupID         uint64    `json:"groupId,string"`
+	SortOrder       int       `json:"sortOrder"`
 	GroupTitle      string    `json:"groupTitle"`
 	Operation       string    `json:"operation"`
 	CreatedAt       time.Time `json:"createdAt"`
@@ -79,14 +82,13 @@ type DocSettingsInput struct {
 	Revision           uint64
 }
 type DocVersionInput struct {
-	Action, ID, Name, Status, Source string
-	ModeID                           string
-	Revision                         uint64
+	ID, Name, Source string
+	ModeID           string
+	Revision         uint64
 }
 type DocGroupInput struct {
-	Action, Version, Title string
-	ID, Revision           uint64
-	Direction              int
+	Version, Title string
+	ID, Revision   uint64
 }
 type DocumentInput struct {
 	Version, ID, Slug, Title, Summary, Content string

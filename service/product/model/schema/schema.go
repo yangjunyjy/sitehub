@@ -9,6 +9,9 @@ import (
 )
 
 func Apply(db *gorm.DB) error {
+	if err := ApplyReleases(db); err != nil {
+		return err
+	}
 	if err := db.AutoMigrate(&settingsmodel.SystemConfig{}); err != nil {
 		return err
 	}

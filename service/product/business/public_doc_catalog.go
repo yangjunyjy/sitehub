@@ -8,7 +8,7 @@ import (
 
 // The reader sees modes, published versions and the selected sidebar from one snapshot.
 // Document bodies remain individually addressable and are never loaded for a catalog.
-func (s *websiteContentService) GetDocCatalog(version, mode string) (result productcontract.WebsiteDocCatalog, err error) {
+func (s *ManualService) GetDocCatalog(version, mode string) (result productcontract.WebsiteDocCatalog, err error) {
 	err = s.docs.Transaction(func(r productrepository.ProductDocsRepository) error {
 		modes, versions, err := readDocModes(r)
 		if err != nil {
@@ -72,7 +72,7 @@ func publishedNavigation(r productrepository.ProductDocsRepository, site product
 	if err != nil {
 		return nav, err
 	}
-	docs, err := r.Documents(version, false)
+	docs, err := r.PublishedDocuments(version)
 	if err != nil {
 		return nav, err
 	}

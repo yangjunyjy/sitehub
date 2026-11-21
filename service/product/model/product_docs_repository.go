@@ -16,6 +16,9 @@ type ProductDocsRepository interface {
 	Documents(version string, body bool) ([]productdomain.ProductDocument, error)
 	Document(version, key string) (productdomain.ProductDocument, error)
 	DocumentBySlug(version, slug string) (productdomain.ProductDocument, error)
+	PublishedDocument(version, key string) (productdomain.ProductDocument, error)
+	PublishedDocuments(version string) ([]productdomain.ProductDocument, error)
+	DocumentID(version, key string) (uint64, error)
 	History(documentID uint64) ([]productdomain.DocumentRevision, error)
 	Historical(documentID, historyID uint64) (productdomain.DocumentRevision, error)
 	PutSite(productdomain.DocSite) error

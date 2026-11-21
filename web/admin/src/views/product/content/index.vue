@@ -1,31 +1,31 @@
 <template>
   <AdminPage
     title="官网内容"
-    description="按页面维护文案，发布后同步到官网。"
     :loading="loading"
     :error="error"
   >
-    <template #actions
-      ><span class="save-state">{{ dirty ? '有未发布修改' : '内容已同步' }}</span
-      ><el-button @click="preview">预览页面</el-button
-      ><el-button @click="reload">重新加载</el-button
-      ><el-button type="primary" :loading="saving" :disabled="!manifest || !!error" @click="submit"
-        >发布内容</el-button
-      ></template
-    >
+    <el-button v-if="error && !manifest" @click="reload">重新加载</el-button>
     <div v-if="manifest">
-      <nav class="content-tabs" aria-label="内容分区">
-        <button
-          v-for="tab in tabs"
-          :key="tab.key"
-          type="button"
-          :class="{ active: activeSection === tab.key }"
-          :aria-pressed="activeSection === tab.key"
-          @click="activeSection = tab.key"
-        >
-          {{ tab.label }}
-        </button>
-      </nav>
+      <div class="content-toolbar">
+        <nav class="content-tabs" aria-label="内容分区">
+          <button
+            v-for="tab in tabs"
+            :key="tab.key"
+            type="button"
+            :class="{ active: activeSection === tab.key }"
+            :aria-pressed="activeSection === tab.key"
+            @click="activeSection = tab.key"
+          >
+            {{ tab.label }}
+          </button>
+        </nav>
+        <div class="content-actions">
+          <span class="save-state">{{ dirty ? '有未发布修改' : '内容已同步' }}</span>
+          <el-button @click="preview">预览页面</el-button>
+          <el-button @click="reload">重新加载</el-button>
+          <el-button type="primary" :loading="saving" :disabled="!!error" @click="submit">发布内容</el-button>
+        </div>
+      </div>
       <div v-show="activeSection === 'home'" class="editor-grid hero-grid">
         <AdminFormSection>
           <template #header>
@@ -53,6 +53,19 @@
               ><el-form-item label="次按钮"
                 ><el-input v-model="manifest.content.home.secondaryAction"
               /></el-form-item>
+            </div>
+            <el-form-item label="粒子起始形态">
+              <el-radio-group v-model="manifest.content.home.particleShape" aria-label="粒子起始形态">
+                <el-radio-button v-for="(scene, id) in particleScenes" :key="id" :value="id">{{ scene.label }}</el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+            <div class="two-columns">
+              <el-form-item label="自动播放">
+                <el-switch v-model="manifest.content.home.particleAutoplay" aria-label="自动播放" />
+              </el-form-item>
+              <el-form-item label="允许旋转交互">
+                <el-switch v-model="manifest.content.home.particleInteractive" aria-label="允许旋转交互" />
+              </el-form-item>
             </div>
           </el-form>
         </AdminFormSection>
@@ -213,6 +226,7 @@
   </AdminPage>
 </template>
 <script setup>
+import { particleScenes } from '@shared/product/particle-scenes'
 import { createUUID } from '@/utils/uuid'
 import IconPicker from '@/components/icons/IconPicker.vue'
 import AdminFormSection from '@/components/admin/AdminFormSection.vue'

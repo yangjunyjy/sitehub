@@ -148,7 +148,7 @@ onBeforeUnmount(() => document.documentElement.classList.remove("menu-open"));
         <ThemeToggle />
         <router-link
           class="header-contact"
-          :to="member.user ? '/account' : '/login'"
+          :to="{ name: member.user ? 'account' : 'login' }"
           ><svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="12" cy="8" r="3.5" />
             <path d="M5 21v-3a7 7 0 0 1 14 0v3" /></svg
@@ -179,7 +179,7 @@ onBeforeUnmount(() => document.documentElement.classList.remove("menu-open"));
           v-if="website.content.brand.contactEmail"
           :href="`mailto:${website.content.brand.contactEmail}?subject=Deploy 企业版咨询`"
           >企业咨询 </a
-        ><router-link :to="member.user ? '/account' : '/login'"
+        ><router-link :to="{ name: member.user ? 'account' : 'login' }"
           >{{ member.user ? "我的账号" : "登录" }}
         </router-link>
         <router-link

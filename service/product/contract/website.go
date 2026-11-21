@@ -1,9 +1,6 @@
 package contract
 
-import "time"
-
 // WebsiteContent is the editable content manifest consumed by the product website.
-// It intentionally contains content only; visual presentation remains a frontend concern.
 type WebsiteContent struct {
 	Brand         WebsiteBrand          `json:"brand"`
 	Navigation    []WebsiteNavigation   `json:"navigation"`
@@ -31,21 +28,24 @@ type WebsiteNavigation struct {
 }
 
 type WebsiteHomeContent struct {
-	Eyebrow         string   `json:"eyebrow"`
-	Title           string   `json:"title"`
-	Highlight       string   `json:"highlight"`
-	Description     string   `json:"description"`
-	PrimaryAction   string   `json:"primaryAction"`
-	SecondaryAction string   `json:"secondaryAction"`
-	Meta            []string `json:"meta"`
-	CapabilityTitle string   `json:"capabilityTitle"`
-	CapabilityIntro string   `json:"capabilityIntro"`
-	FlowTitle       string   `json:"flowTitle"`
-	FlowIntro       string   `json:"flowIntro"`
-	AudienceTitle   string   `json:"audienceTitle"`
-	AudienceIntro   string   `json:"audienceIntro"`
-	BlogTitle       string   `json:"blogTitle"`
-	CTA             string   `json:"cta"`
+	ParticleShape       string   `json:"particleShape"`
+	ParticleAutoplay    bool     `json:"particleAutoplay"`
+	ParticleInteractive bool     `json:"particleInteractive"`
+	Eyebrow             string   `json:"eyebrow"`
+	Title               string   `json:"title"`
+	Highlight           string   `json:"highlight"`
+	Description         string   `json:"description"`
+	PrimaryAction       string   `json:"primaryAction"`
+	SecondaryAction     string   `json:"secondaryAction"`
+	Meta                []string `json:"meta"`
+	CapabilityTitle     string   `json:"capabilityTitle"`
+	CapabilityIntro     string   `json:"capabilityIntro"`
+	FlowTitle           string   `json:"flowTitle"`
+	FlowIntro           string   `json:"flowIntro"`
+	AudienceTitle       string   `json:"audienceTitle"`
+	AudienceIntro       string   `json:"audienceIntro"`
+	BlogTitle           string   `json:"blogTitle"`
+	CTA                 string   `json:"cta"`
 }
 
 type WebsiteCapability struct {
@@ -116,47 +116,6 @@ type WebsiteFooterContent struct {
 	Statement string `json:"statement"`
 }
 
-type WebsiteDownloads struct {
-	Title                string                   `json:"title"`
-	Groups               []WebsiteDownloadGroup   `json:"groups"`
-	Version              string                   `json:"version"`
-	ReleaseDate          string                   `json:"releaseDate"`
-	SupportArchitectures string                   `json:"supportArchitectures"`
-	Description          string                   `json:"description"`
-	Packages             []WebsiteDownloadPackage `json:"packages"`
-	InstallOptions       []WebsiteInstallOption   `json:"installOptions"`
-	Requirements         []WebsiteRequirement     `json:"requirements"`
-	SupportTitle         string                   `json:"supportTitle"`
-	SupportDescription   string                   `json:"supportDescription"`
-}
-
-// Groups are ordered by their position in the download manifest.
-type WebsiteDownloadGroup struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
-
-type WebsiteDownloadPackage struct {
-	ID          string `json:"id"`
-	GroupID     string `json:"groupId,omitempty"`
-	Edition     string `json:"edition,omitempty"`
-	SortOrder   int    `json:"sortOrder"`
-	Platform    string `json:"platform"`
-	Arch        string `json:"arch"`
-	Format      string `json:"format"`
-	URL         string `json:"url"`
-	Checksum    string `json:"checksum"`
-	Icon        string `json:"icon"`
-	Product     string `json:"product,omitempty"`
-	Version     string `json:"version,omitempty"`
-	Description string `json:"description,omitempty"`
-	FileName    string `json:"fileName,omitempty"`
-	Size        int64  `json:"size,omitempty"`
-	ReleaseDate string `json:"releaseDate,omitempty"`
-	Status      string `json:"status,omitempty"`
-}
-
 type WebsiteInstallOption struct {
 	ID          string `json:"id"`
 	Title       string `json:"title"`
@@ -168,93 +127,4 @@ type WebsiteInstallOption struct {
 type WebsiteRequirement struct {
 	Label string `json:"label"`
 	Value string `json:"value"`
-}
-
-type WebsiteDocs struct {
-	Modes          []WebsiteDocMode    `json:"modes"`
-	DefaultMode    string              `json:"defaultMode"`
-	Revision       uint64              `json:"revision,string"`
-	DefaultVersion string              `json:"defaultVersion"`
-	Versions       []WebsiteDocVersion `json:"versions"`
-	Title          string              `json:"title"`
-	Description    string              `json:"description"`
-}
-
-type WebsiteDocVersion struct {
-	ModeID   string            `json:"modeId"`
-	Revision uint64            `json:"revision,string"`
-	ID       string            `json:"id"`
-	Name     string            `json:"name"`
-	Status   string            `json:"status"`
-	Groups   []WebsiteDocGroup `json:"groups"`
-}
-type WebsiteDocMode struct {
-	VersionIDs     []string `json:"versionIds,omitempty"`
-	ID             string   `json:"id"`
-	Label          string   `json:"label"`
-	Description    string   `json:"description"`
-	Icon           string   `json:"icon"`
-	Status         string   `json:"status"`
-	Available      bool     `json:"available"`
-	DefaultVersion string   `json:"defaultVersion"`
-	SortOrder      int      `json:"sortOrder"`
-	Revision       uint64   `json:"revision,string"`
-}
-type WebsiteDocModes struct {
-	Title       string           `json:"title"`
-	Description string           `json:"description"`
-	DefaultMode string           `json:"defaultMode"`
-	Modes       []WebsiteDocMode `json:"modes"`
-}
-
-type WebsiteDocVersionSummary struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
-type WebsiteDocGroup struct {
-	ID       uint64               `json:"id,string"`
-	Revision uint64               `json:"revision,string"`
-	Title    string               `json:"title"`
-	Items    []WebsiteDocDocument `json:"items"`
-}
-
-type WebsiteDocDocument struct {
-	Revision  uint64    `json:"revision,string"`
-	GroupID   uint64    `json:"groupId,string"`
-	UpdatedAt time.Time `json:"updatedAt"`
-	ID        string    `json:"id"`
-	Slug      string    `json:"slug"`
-	Title     string    `json:"title"`
-	Summary   string    `json:"summary"`
-	Content   string    `json:"content,omitempty"`
-}
-
-type WebsiteDocCatalog struct {
-	WebsiteDocModes
-	ModeID     string                 `json:"modeId"`
-	Navigation *WebsiteDocsNavigation `json:"navigation"`
-}
-
-type WebsiteDocsNavigation struct {
-	ModeID         string                      `json:"modeId"`
-	VersionID      string                      `json:"versionId"`
-	DefaultVersion string                      `json:"defaultVersion"`
-	Versions       []WebsiteDocVersionSummary  `json:"versions"`
-	Title          string                      `json:"title"`
-	Description    string                      `json:"description"`
-	Version        string                      `json:"version"`
-	Groups         []WebsiteDocNavigationGroup `json:"groups"`
-}
-
-type WebsiteDocNavigationGroup struct {
-	Title string                         `json:"title"`
-	Items []WebsiteDocNavigationDocument `json:"items"`
-}
-
-type WebsiteDocNavigationDocument struct {
-	ID      string `json:"id"`
-	Slug    string `json:"slug"`
-	Title   string `json:"title"`
-	Summary string `json:"summary"`
 }

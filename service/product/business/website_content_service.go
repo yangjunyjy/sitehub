@@ -1,125 +1,92 @@
 package services
 
 import (
-	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/mail"
-	"net/url"
+	"slices"
 	"strings"
 
 	errorx "sitehub/common/errorx"
 	settingsservice "sitehub/common/settings/contract"
 	settingsmodel "sitehub/common/settings/model"
-	filecontract "sitehub/service/blog/contract"
 	productcontract "sitehub/service/product/contract"
-	productdomain "sitehub/service/product/domain"
-	productrepository "sitehub/service/product/model"
 )
 
-const (
-	websiteContentKey   = "website.content"
-	websiteDownloadsKey = "website.downloads"
-	websiteStorageKey   = "website.storage"
-)
-
-var ErrInvalidWebsiteDownloads = errors.New("下载内容校验失败")
+const websiteContentKey = "website.content"
 
 type WebsiteContentService interface {
 	EnsureDefaults() error
 	GetContent() (productcontract.WebsiteContent, error)
-	GetDownloads() (productcontract.WebsiteDownloads, error)
-	GetPublicDownloads() (productcontract.WebsiteDownloads, error)
-	GetPublishedDownload(id string) (productcontract.ProductDownload, error)
-	GetDocs() (productcontract.WebsiteDocs, error)
-	GetDocModes() (productcontract.WebsiteDocModes, error)
-	GetDocCatalog(version, mode string) (productcontract.WebsiteDocCatalog, error)
-	ChangeDocMode(productdomain.DocModeInput) error
-	GetStorage() (filecontract.WebsiteStorage, error)
-	GetDocsNavigation(version string, mode ...string) (productcontract.WebsiteDocsNavigation, error)
-	GetDocument(id, version string, mode ...string) (productcontract.WebsiteDocDocument, error)
-	SaveContent(content productcontract.WebsiteContent) error
-	SaveDownloads(downloads productcontract.WebsiteDownloads) error
-	GetAdminDocument(id, version string) (productcontract.WebsiteDocDocument, error)
-	SaveDocSettings(productdomain.DocSettingsInput) error
-	ChangeDocVersion(productdomain.DocVersionInput, uint64) error
-	ChangeDocGroup(productdomain.DocGroupInput) error
-	SaveDocument(productdomain.DocumentInput, uint64) (productcontract.WebsiteDocDocument, error)
-	DeleteDocument(productdomain.DocumentDeleteInput, uint64) error
-	DocumentHistory(id, version string, historyID uint64) (any, error)
-	SaveStorage(storage filecontract.WebsiteStorage) error
+	SaveContent(productcontract.WebsiteContent) error
 }
 
 type websiteContentService struct {
 	configs settingsservice.Store
-	docs    productrepository.ProductDocsRepository
-	files   filecontract.Settings
 }
 
-func NewWebsiteContentService(configs settingsservice.Store, docs productrepository.ProductDocsRepository, files filecontract.Settings) WebsiteContentService {
-	return &websiteContentService{configs: configs, docs: docs, files: files}
+func NewWebsiteContentService(store settingsservice.Store) WebsiteContentService {
+	return &websiteContentService{configs: store}
 }
 
 func (s *websiteContentService) EnsureDefaults() error {
-	if s.files != nil {
-		if err := s.files.EnsureDefaults(); err != nil {
-			return err
-		}
+	row, err := s.configs.GetConfig(websiteContentKey)
+	if err != nil || row != nil {
+		return err
 	}
-	// 文档只由迁移初始化。缺少新表时拒绝启动，不能回退到 JSON 或生成覆盖性默认数据。
-	if _, err := s.docs.Site(false); err != nil {
-		return fmt.Errorf("产品文档迁移未完成，请先运行 cmd/migrate（007_product_documents.sql）: %w", err)
+	raw, err := json.Marshal(DefaultWebsiteContent())
+	if err != nil {
+		return err
 	}
-	defaults := []struct {
-		key         string
-		label       string
-		description string
-		value       any
-		sort        int
-		public      bool
-	}{
-		{websiteContentKey, "官网内容", "Deploy 产品官网的品牌、首页、产品与关于页内容", DefaultWebsiteContent(), 1, true},
-		{websiteDownloadsKey, "下载中心", "版本、安装包、安装方式和环境要求", DefaultWebsiteDownloads(), 2, false},
-	}
-
-	for _, item := range defaults {
-		existing, err := s.configs.GetConfig(item.key)
-		if err != nil {
-			return fmt.Errorf("读取配置 %s 失败: %w", item.key, err)
-		}
-		if existing != nil {
-			// Storage credentials must never be exposed by generic public-config readers.
-			// This also repairs rows created by earlier refactor revisions.
-			if (item.key == websiteStorageKey || item.key == websiteDownloadsKey) && existing.IsPublic {
-				existing.IsPublic = false
-				if err := s.configs.UpdateConfig(existing); err != nil {
-					return fmt.Errorf("收紧存储配置可见性失败: %w", err)
-				}
-			}
-			continue
-		}
-		value, err := json.Marshal(item.value)
-		if err != nil {
-			return fmt.Errorf("序列化默认配置 %s 失败: %w", item.key, err)
-		}
-		if err := s.configs.CreateConfig(&settingsmodel.SystemConfig{
-			Key: item.key, Value: string(value), Category: settingsmodel.ConfigCategoryContent,
-			ConfigType: settingsmodel.ConfigTypeJSON, Label: item.label, Description: item.description,
-			IsPublic: item.public, IsEditable: true, IsRequired: true, SortOrder: item.sort,
-		}); err != nil {
-			return fmt.Errorf("创建默认配置 %s 失败: %w", item.key, err)
-		}
-	}
-	return nil
+	return s.configs.CreateConfig(&settingsmodel.SystemConfig{
+		Key: websiteContentKey, Value: string(raw), Category: settingsmodel.ConfigCategoryContent,
+		ConfigType: settingsmodel.ConfigTypeJSON, Label: "官网内容", Description: "品牌、首页和产品介绍",
+		IsPublic: true, IsEditable: true, IsRequired: true, SortOrder: 1,
+	})
 }
 
 func (s *websiteContentService) GetContent() (productcontract.WebsiteContent, error) {
-	value := DefaultWebsiteContent()
-	return value, s.load(websiteContentKey, &value)
+	defaults := DefaultWebsiteContent()
+	content := defaults
+	if err := s.load(websiteContentKey, &content); err != nil {
+		return content, err
+	}
+	// Existing installations persist the original seed. Adapt matching fields for display
+	// without writing settings during a read or replacing edited copy from the same site.
+	content.Home.ParticleShape = publishedParticleShape(content.Home.ParticleShape)
+	for _, field := range []struct {
+		value        *string
+		old, current string
+	}{
+		{&content.Home.Eyebrow, "为自建基础设施而设计", defaults.Home.Eyebrow},
+		{&content.Home.Title, "让部署、运维与", defaults.Home.Title},
+		{&content.Home.Highlight, "安全管理", defaults.Home.Highlight},
+		{&content.Home.Description, "统一资产、自动化发布、远程运维与审计，帮助技术团队更快、更稳、更安全地交付应用。", defaults.Home.Description},
+		{&content.Home.PrimaryAction, "获取 Deploy", defaults.Home.PrimaryAction},
+		{&content.Home.SecondaryAction, "了解产品能力", defaults.Home.SecondaryAction},
+		{&content.Home.CapabilityTitle, "一个控制面，接住交付链路上的每个关键动作", defaults.Home.CapabilityTitle},
+		{&content.Home.CapabilityIntro, "Deploy 将基础设施、发布流程和安全治理放进同一上下文，让团队看到一条完整链路，而不是更多孤立工具。", defaults.Home.CapabilityIntro},
+		{&content.Home.FlowTitle, "把复杂发布，变成清晰、可控的交付路径", defaults.Home.FlowTitle},
+		{&content.Home.FlowIntro, "代码、制品、环境、审批与操作记录天然关联，每一步都能回到同一条发布记录。", defaults.Home.FlowIntro},
+		{&content.Home.AudienceTitle, "面向真实团队与复杂环境", defaults.Home.AudienceTitle},
+		{&content.Home.AudienceIntro, "适用于拥有自建服务器或 Kubernetes 环境的软件企业、政企 IT 与交付团队。", defaults.Home.AudienceIntro},
+		{&content.Home.BlogTitle, "来自 Deploy 团队的实践与洞察", defaults.Home.BlogTitle},
+		{&content.Home.CTA, "从下一次发布开始，把复杂留给 Deploy。", defaults.Home.CTA},
+		{&content.Footer.Slogan, "让交付更快、更稳、更安全。", defaults.Footer.Slogan},
+		{&content.Footer.Statement, "用确定的流程，交付不确定的未来。", defaults.Footer.Statement},
+	} {
+		if *field.value == field.old {
+			*field.value = field.current
+		}
+	}
+	if slices.Equal(content.Home.Meta, []string{"Server + K8s", "Playbook + Pipeline", "RBAC + Audit"}) {
+		content.Home.Meta = []string{}
+	}
+	return content, nil
 }
 
 func (s *websiteContentService) SaveContent(content productcontract.WebsiteContent) error {
+	content.Home.ParticleShape = publishedParticleShape(content.Home.ParticleShape)
 	if err := validateWebsiteContent(content); err != nil {
 		return errorx.Invalid(err.Error())
 	}
@@ -159,7 +126,26 @@ func (s *websiteContentService) save(key string, value any) error {
 	}})
 }
 
+// Preserve the selected preset and both motion preferences on existing sites.
+func publishedParticleShape(shape string) string {
+	switch shape {
+	case "ring":
+		return "artifact"
+	case "wave":
+		return "cluster"
+	case "helix":
+		return "terminal"
+	default:
+		return shape
+	}
+}
+
 func validateWebsiteContent(content productcontract.WebsiteContent) error {
+	switch content.Home.ParticleShape {
+	case "artifact", "cluster", "terminal":
+	default:
+		return fmt.Errorf("请选择有效的首页粒子形态")
+	}
 	if strings.TrimSpace(content.Brand.Name) == "" || strings.TrimSpace(content.Home.Title) == "" {
 		return fmt.Errorf("品牌名称和首页标题不能为空")
 	}
@@ -174,105 +160,6 @@ func validateWebsiteContent(content productcontract.WebsiteContent) error {
 	return nil
 }
 
-func validateWebsiteDownloads(downloads productcontract.WebsiteDownloads) error {
-	groups := make(map[string]struct{}, len(downloads.Groups))
-	for _, group := range downloads.Groups {
-		if group.ID == "" || group.ID == "ungrouped" || len(group.ID) > 200 || group.Name == "" || len([]rune(group.Name)) > 80 {
-			return fmt.Errorf("下载分组需要有效标识和不超过 80 字的名称")
-		}
-		if _, exists := groups[group.ID]; exists {
-			return fmt.Errorf("下载分组标识重复")
-		}
-		groups[group.ID] = struct{}{}
-	}
-	ids := make(map[string]struct{}, len(downloads.Packages))
-	for _, item := range downloads.Packages {
-		if item.GroupID != "" {
-			if _, exists := groups[item.GroupID]; !exists {
-				return fmt.Errorf("文件 %s 的下载分组不存在，请先调整文件所属分组", item.ID)
-			}
-		}
-		if len([]rune(item.Edition)) > 80 || item.SortOrder < 0 || item.SortOrder > 99999 {
-			return fmt.Errorf("版本类型不能超过 80 字，排序应在 0 到 99999 之间")
-		}
-		if strings.TrimSpace(item.ID) == "" || strings.TrimSpace(item.Platform) == "" {
-			return fmt.Errorf("安装包 ID 和平台名称不能为空")
-		}
-		if _, exists := ids[item.ID]; exists {
-			return fmt.Errorf("安装包 ID %s 重复", item.ID)
-		}
-		ids[item.ID] = struct{}{}
-		if item.Status != "draft" && item.Status != "published" && item.Status != "archived" {
-			return fmt.Errorf("安装包 %s 状态无效", item.ID)
-		}
-		if item.Size < 0 {
-			return fmt.Errorf("安装包大小不能为负数")
-		}
-		if !ValidDownloadName(item.FileName) {
-			return fmt.Errorf("下载文件名不能包含路径、特殊符号或超过 255 字节")
-		}
-		if item.URL != "" && !validDownloadURL(item.URL) {
-			return fmt.Errorf("下载地址仅支持 HTTP、HTTPS 或站内绝对路径")
-		}
-		if item.Status == "published" && (item.URL == "" || strings.TrimSpace(item.Version) == "") {
-			return fmt.Errorf("发布安装包前请填写版本号和下载地址")
-		}
-		if item.Checksum != "" {
-			if decoded, err := hex.DecodeString(item.Checksum); err != nil || len(decoded) != 32 {
-				return fmt.Errorf("SHA256 必须为 64 位十六进制字符")
-			}
-		}
-	}
-	return nil
-}
-
-func validDownloadURL(raw string) bool {
-	parsed, err := url.Parse(raw)
-	if err != nil || raw == "" || strings.ContainsAny(raw, "\\\r\n\t") {
-		return false
-	}
-	if parsed.Scheme == "" {
-		return strings.HasPrefix(raw, "/") && !strings.HasPrefix(raw, "//") && parsed.Host == ""
-	}
-	return (parsed.Scheme == "https" || parsed.Scheme == "http") && parsed.Host != "" && parsed.User == nil
-}
-
-func normalizeWebsiteDownloads(value *productcontract.WebsiteDownloads) {
-	value.Title = strings.TrimSpace(value.Title)
-	if value.Title == "" {
-		value.Title = "下载中心"
-	}
-	if value.Groups == nil {
-		value.Groups = []productcontract.WebsiteDownloadGroup{}
-	}
-	for i := range value.Groups {
-		value.Groups[i].ID = strings.TrimSpace(value.Groups[i].ID)
-		value.Groups[i].Name = strings.TrimSpace(value.Groups[i].Name)
-		value.Groups[i].Description = strings.TrimSpace(value.Groups[i].Description)
-	}
-	for i := range value.Packages {
-		item := &value.Packages[i]
-		if item.Status == "" {
-			item.Status = "draft"
-		}
-		item.GroupID = strings.TrimSpace(item.GroupID)
-		item.Edition = strings.TrimSpace(item.Edition)
-		item.ID = strings.TrimSpace(item.ID)
-		item.Platform = strings.TrimSpace(item.Platform)
-		item.URL = normalizeReleaseURL(item.URL)
-		item.Checksum = strings.TrimSpace(item.Checksum)
-		if item.Product == "" {
-			item.Product = "Deploy"
-		}
-		if item.Version == "" {
-			item.Version = value.Version
-		}
-		if item.ReleaseDate == "" {
-			item.ReleaseDate = value.ReleaseDate
-		}
-	}
-}
-
 func DefaultWebsiteContent() productcontract.WebsiteContent {
 	return productcontract.WebsiteContent{
 		Brand: productcontract.WebsiteBrand{
@@ -282,12 +169,9 @@ func DefaultWebsiteContent() productcontract.WebsiteContent {
 		},
 		Navigation: []productcontract.WebsiteNavigation{{Label: "首页", Path: "/"}, {Label: "产品", Path: "/product"}, {Label: "下载", Path: "/download"}, {Label: "文档", Path: "/docs"}, {Label: "关于", Path: "/about"}},
 		Home: productcontract.WebsiteHomeContent{
-			Eyebrow: "为自建基础设施而设计", Title: "让部署、运维与", Highlight: "安全管理", Description: "统一资产、自动化发布、远程运维与审计，帮助技术团队更快、更稳、更安全地交付应用。",
-			PrimaryAction: "获取 Deploy", SecondaryAction: "了解产品能力", Meta: []string{"Server + K8s", "Playbook + Pipeline", "RBAC + Audit"},
-			CapabilityTitle: "一个控制面，接住交付链路上的每个关键动作", CapabilityIntro: "Deploy 将基础设施、发布流程和安全治理放进同一上下文，让团队看到一条完整链路，而不是更多孤立工具。",
-			FlowTitle: "把复杂发布，变成清晰、可控的交付路径", FlowIntro: "代码、制品、环境、审批与操作记录天然关联，每一步都能回到同一条发布记录。",
-			AudienceTitle: "面向真实团队与复杂环境", AudienceIntro: "适用于拥有自建服务器或 Kubernetes 环境的软件企业、政企 IT 与交付团队。",
-			BlogTitle: "来自 Deploy 团队的实践与洞察", CTA: "从下一次发布开始，把复杂留给 Deploy。",
+			ParticleShape: "artifact", ParticleAutoplay: true, ParticleInteractive: true,
+			Title: "部署与运维", PrimaryAction: "下载", SecondaryAction: "文档", Meta: []string{},
+			CapabilityTitle: "产品功能", FlowTitle: "交付流程", AudienceTitle: "适用团队",
 		},
 		Capabilities: []productcontract.WebsiteCapability{
 			{Key: "assets", Index: "01", Title: "统一资产管理", Description: "集中纳管服务器、Kubernetes 集群、主机账号与运行环境，让资产状态和责任边界始终清晰。", Tags: []string{"Server", "Kubernetes", "环境分组"}},
@@ -320,24 +204,5 @@ func DefaultWebsiteContent() productcontract.WebsiteContent {
 			Principles: []productcontract.WebsitePrinciple{{Index: "01", Title: "以交付结果为中心", Description: "从代码、构建、制品到多环境发布，围绕一条可追踪的交付链路组织能力。"}, {Index: "02", Title: "自动化但不失控", Description: "将重复动作沉淀为标准流程，同时保留审批、权限、审计与人工确认边界。"}, {Index: "03", Title: "适配真实基础设施", Description: "同时面向传统服务器与 Kubernetes 环境，让团队可以按自己的节奏演进。"}},
 			TeamTitle:  "为需要对生产环境负责的人而设计", TeamIntro: "Deploy 关注企业基础设施里的实际协作：谁可以访问、谁批准发布、发生了什么，以及如何快速回溯。", TeamRoles: []string{"运维工程师", "DevOps 工程师", "系统管理员", "交付实施人员", "技术负责人"},
 		},
-		Footer: productcontract.WebsiteFooterContent{Slogan: "让交付更快、更稳、更安全。", Statement: "用确定的流程，交付不确定的未来。"},
 	}
-}
-
-func DefaultWebsiteDownloads() productcontract.WebsiteDownloads {
-	return productcontract.WebsiteDownloads{
-		Version: "即将发布", ReleaseDate: "待公布", SupportArchitectures: "AMD64 / ARM64", Description: "选择适合基础设施的安装方式。下载地址由企业发布流程统一配置，正式发布前不会提供无效安装包。",
-		Packages:       []productcontract.WebsiteDownloadPackage{{ID: "linux-amd64", Platform: "Linux", Arch: "x86_64 / AMD64", Format: "二进制安装包", Icon: "LINUX"}, {ID: "linux-arm64", Platform: "Linux", Arch: "ARM64", Format: "二进制安装包", Icon: "ARM"}, {ID: "offline-amd64", Platform: "离线部署包", Arch: "x86_64 / AMD64", Format: "镜像与依赖集合", Icon: "OFFLINE"}},
-		InstallOptions: []productcontract.WebsiteInstallOption{{ID: "docker", Title: "Docker Compose", Badge: "快速体验", Description: "适合单机体验、功能评估和小规模团队内部使用。", Command: "docker compose up -d"}, {ID: "linux", Title: "Linux 安装包", Badge: "推荐", Description: "适合自建服务器环境，按节点规划独立部署与持久化目录。", Command: "chmod +x deploy-installer && sudo ./deploy-installer"}, {ID: "kubernetes", Title: "Kubernetes / Helm", Badge: "集群部署", Description: "适合已有 Kubernetes 的团队，便于统一资源编排和弹性扩展。", Command: "helm upgrade --install deploy ./deploy-chart -n deploy --create-namespace"}},
-		Requirements:   []productcontract.WebsiteRequirement{{Label: "操作系统", Value: "主流 64 位 Linux 发行版"}, {Label: "容器环境", Value: "Docker / containerd"}, {Label: "Kubernetes", Value: "生产环境建议使用受支持版本"}, {Label: "浏览器", Value: "Chrome / Edge / Firefox 最新两个大版本"}, {Label: "网络", Value: "允许平台访问被纳管资产与镜像仓库"}, {Label: "安全", Value: "生产环境必须配置 HTTPS 与独立密钥"}},
-		SupportTitle:   "需要私有化部署与实施支持？", SupportDescription: "企业版面向正式生产环境提供部署规划、升级策略与技术支持。",
-	}
-}
-
-// Compatibility methods preserve the current HTTP contract; file owns the data.
-func (s *websiteContentService) GetStorage() (filecontract.WebsiteStorage, error) {
-	return s.files.GetStorage()
-}
-func (s *websiteContentService) SaveStorage(value filecontract.WebsiteStorage) error {
-	return s.files.SaveStorage(value)
 }

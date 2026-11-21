@@ -13,6 +13,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 	"sitehub/common/rpcx"
 	"sitehub/service/product"
 	"sitehub/service/product/api/internal/config"
@@ -20,6 +22,8 @@ import (
 	"sitehub/service/product/api/internal/svc"
 	business "sitehub/service/product/business"
 	"sitehub/service/product/contract"
+	domain "sitehub/service/product/domain"
+	"sitehub/service/product/model/schema"
 	rbac "sitehub/service/rbac/rpc/pb/rbac"
 )
 
@@ -40,23 +44,21 @@ func (auth *downloadAuth) Authorize(ctx context.Context, input *rbac.AuthorizeRe
 	return &rbac.Principal{Id: 8}, nil
 }
 
-type publishedManifest struct {
-	business.WebsiteContentService
-	reads int
-}
-
-func (manifest *publishedManifest) GetPublishedDownload(id string) (contract.ProductDownload, error) {
-	manifest.reads++
-	if id != "release" {
-		return contract.ProductDownload{}, status.Error(codes.NotFound, "withdrawn")
-	}
-	return contract.ProductDownload{URL: "/v1/file/local/releases/app.zip", FileName: "app.zip"}, nil
-}
-
 func TestInternalDownloadRequiresBothServiceAndMemberBeforeResolvingRelease(t *testing.T) {
 	const key = "0123456789abcdef0123456789abcdef"
-	auth, manifest := &downloadAuth{}, &publishedManifest{}
-	service := &svc.ServiceContext{Config: config.Config{ServiceKey: key}, Core: &product.Module{Content: manifest}, Rbac: auth}
+	auth := &downloadAuth{}
+	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := schema.ApplyReleases(db); err != nil {
+		t.Fatal(err)
+	}
+	releases := business.NewReleaseService(db, nil)
+	if err := db.Create(&domain.ReleaseFile{ID: "release", Status: "published", Revision: 1, URL: "https://files.example.test/app.zip", FileName: "app.zip"}).Error; err != nil {
+		t.Fatal(err)
+	}
+	service := &svc.ServiceContext{Config: config.Config{ServiceKey: key}, Core: &product.Module{Releases: releases}, Rbac: auth}
 	server, err := rest.NewServer(rest.RestConf{})
 	if err != nil {
 		t.Fatal(err)
@@ -87,7 +89,7 @@ func TestInternalDownloadRequiresBothServiceAndMemberBeforeResolvingRelease(t *t
 			}
 		}
 	}
-	if auth.calls != 3 || manifest.reads != 2 {
-		t.Fatalf("authorize = %d, manifest reads = %d", auth.calls, manifest.reads)
+	if auth.calls != 3 {
+		t.Fatalf("authorize = %d", auth.calls)
 	}
 }

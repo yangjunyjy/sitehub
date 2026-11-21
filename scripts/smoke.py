@@ -137,7 +137,10 @@ try:
     check('published asset becomes public through blog authorization')
     data=b'0123456789-native-release'
     release=upload('file','/v1/file/upload','native.tgz',data,admin,'release')
-    request('product','/v1/product/downloads',dict(version='v1',packages=[dict(id='native',platform='Linux',status='published',version='v1',url=release['url'],fileName='native.tgz')]),admin)
+    release_admin='/v1/product/admin/releases'
+    request('product',release_admin+'/groups/create',dict(id='native-tools',name='Native tools'),admin)
+    package=request('product',release_admin+'/files/create',dict(id='native',groupId='native-tools',platform='Linux',product='Deploy',version='v1',url=release['url'],fileName='native.tgz'),admin)
+    request('product',release_admin+'/files/publish',dict(id='native',revision=int(package['revision'])),admin)
     request('file','/v1/file/download?id=native',expect=401)
     request('file',release['url'],expect=404)
     email='member@example.test';code='654321';digest=hmac.new(secret.encode(),('product-register:'+email+':'+code).encode(),hashlib.sha256).hexdigest()
@@ -149,18 +152,21 @@ try:
     assert 'native.tgz' in headers['Content-Disposition']
     request('rbac','/v1/rbac/users',token=member,expect=401)
     check('member-only downloads, Range/HEAD and admin/member separation')
-    docs=request('product','/v1/product/docs/navigation');assert docs is not None
-    request('product','/v1/product/docs/groups',dict(action='save',version='v1',title='Native group',revision=0),admin)
-    groups=request('product','/v1/product/admin/docs',token=admin)
-    with sqlite3.connect(run/'product.db') as db:group_id=db.execute('SELECT id FROM product_doc_groups WHERE title=?',('Native group',)).fetchone()[0]
-    document=dict(version='v1',id='native-doc',slug='native-document-slug',title='Native document',summary='summary',content='# Native documentation',groupID=group_id,revision=0)
-    saved=request('product','/v1/product/docs/save',document,admin)
-    assert request('product','/v1/product/docs/document?id=native-doc&version=v1')['content']=='# Native documentation'
-    request('product','/v1/product/docs/document?id=native-document-slug&version=v1',expect=404)
-    request('product','/v1/product/docs/save',document,admin,expect=409)
-    history=request('product','/v1/product/admin/docs/history?id=native-doc&version=v1',token=admin);assert len(history['items'])==1
-    request('product','/v1/product/docs/groups',dict(action='delete',version='v1',id=group_id,revision=1),admin,expect=409)
-    check('product documents, revision history, edit conflicts and group references')
+    manuals='/v1/product/admin/manuals'
+    request('product',manuals+'/groups/save',dict(version='v1',title='Native group'),admin)
+    workspace=request('product',manuals+'/workspace?version=v1',token=admin)
+    group=next(g for g in workspace['groups'] if g['title']=='Native group')
+    document=dict(version='v1',id='native-doc',slug='native-document-slug',title='Native document',summary='summary',content='# Native documentation',groupId=int(group['id']),revision=0)
+    saved=request('product',manuals+'/documents/save',document,admin)
+    public='/v1/product/manuals/document?id=native-doc&version=v1'
+    request('product',public,expect=404)
+    request('product',manuals+'/documents/publish',dict(id='native-doc',version='v1',revision=int(saved['revision'])),admin)
+    assert request('product',public)['content']=='# Native documentation'
+    request('product',manuals+'/documents/save',document,admin,expect=409)
+    history=request('product',manuals+'/history?id=native-doc&version=v1',token=admin)
+    assert len(history)>0
+    request('product',manuals+'/groups/delete',dict(version='v1',id=int(group['id']),revision=int(group['revision'])),admin,expect=409)
+    check('product documents, publication, revision history, edit conflicts and group references')
     scheduled_input=dict(draft_input);scheduled_input['slug']='scheduled-native';scheduled_input['title']='Scheduled native'
     future=request('blog','/v1/blog/admin/articles/draft',dict(requestID=uuid.uuid4().hex,input=scheduled_input),admin)
     due=(datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(minutes=2)).isoformat()

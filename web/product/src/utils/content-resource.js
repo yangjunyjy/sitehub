@@ -53,7 +53,7 @@ export function emptyWebsiteContent() {
       recordNumber: "",
       copyright: "",
     },
-    home: { meta: [] },
+    home: { meta: [], particleShape: "artifact", particleAutoplay: true, particleInteractive: true },
     capabilities: [],
     deliverySteps: [],
     audiences: [],

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
+import { readerArticle, checkReaderLayout } from "./reader-layout.mjs";
 import { createFrontendServer } from "../server/server.mjs";
 
 // Fixtures isolate full reader workflows from real member accounts and published content.
@@ -29,7 +30,7 @@ const reader = {id:"99", email:"reader@example.test"};
 const folders = [{id:"0", name:"默认收藏夹"}];
 const interaction = () => ({liked, likes:Number(liked), favorited:savedIn!==null,
   favorites:Number(savedIn!==null), folderId:savedIn ?? "0"});
-await context.route("**/v1/**", async (route) => {
+const apiFixture = async (route) => {
   const path = new URL(route.request().url()).pathname;
   if (path.endsWith("/members/me") && !signedIn)
     return route.fulfill({
@@ -69,6 +70,10 @@ await context.route("**/v1/**", async (route) => {
         "# Reader heading\n\n" + 'A paragraph.\n\n'.repeat(65) + "<script>window.untrustedArticle=true</script>",
       tags: [],
     };
+  if (path.endsWith("/articles/detail") && new URL(route.request().url()).searchParams.get("id") === "2")
+    data=readerArticle("markdown");
+  if (path.endsWith("/articles/detail") && new URL(route.request().url()).searchParams.get("id") === "3")
+    data=readerArticle("html");
   const post = route.request().method() === "POST";
   const values = post ? route.request().postDataJSON() : {};
   if(path.endsWith("/members/me")) data=reader;
@@ -109,9 +114,17 @@ await context.route("**/v1/**", async (route) => {
     data={id:"1",status:"pending"};
   }
   return route.fulfill({ json: { code: 0, message: "ok", data } });
-});
+};
+await context.route("**/v1/**",apiFixture);
 const page = await context.newPage();
 page.on("pageerror", (error) => errors.push(error.message));
+async function openReaderDock(page) {
+  const trigger=page.getByRole("button",{name:"文章互动工具"});
+  await trigger.waitFor();
+  const width=await page.evaluate(()=>document.documentElement.clientWidth);
+  await page.mouse.move(width-2, Math.round(page.viewportSize().height*.5));
+  await page.locator("#reader-action-panel").waitFor();
+}
 async function scrollHeaderTo(position, shown) {
   await page.evaluate((top) => window.scrollTo(0, top), position);
   await page.waitForFunction(([top, visible]) => {
@@ -248,6 +261,7 @@ try {
   await page.goto(origin + "/article/1", { waitUntil: "networkidle" });
   await page.getByRole("link", {name:/登录后写评论/}).waitFor();
   await page.getByRole("img", {name:"👏"}).waitFor();
+  await openReaderDock(page);
   await page.getByRole("button", {name:/^收藏/}).click();
   await page.getByRole("heading", {name:"登录读者账号"}).waitFor();
   await page.getByRole("link", {name:/注册账号/}).click();
@@ -262,12 +276,16 @@ try {
   await page.screenshot({path:artifacts+"/register-desktop.png"});
   await page.getByRole("button", {name:"注册并登录"}).click();
   await page.waitForURL("**/article/1");
+  await openReaderDock(page);
   await page.getByRole("button", {name:/^点赞/}).click();
   await page.getByRole("button", {name:"已点赞 1"}).waitFor();
+  await openReaderDock(page);
   await page.getByRole("button", {name:/^收藏/}).click();
   const dialog=page.getByRole("dialog");
   assert(await dialog.getByRole("radio", {name:/默认收藏夹/}).isChecked());
   await dialog.getByRole("button", {name:"保存收藏"}).click();
+  await dialog.waitFor({state:"hidden"});
+  await openReaderDock(page);
   await page.getByRole("button", {name:/^已收藏/}).click();
   await dialog.getByRole("button", {name:/新建收藏夹/}).click();
   await dialog.getByLabel("新收藏夹名称").fill("技术笔记");
@@ -283,6 +301,7 @@ try {
   await page.getByRole("link", {name:/Isolated article fixture/}).waitFor();
   await page.screenshot({path:artifacts+"/account-desktop.png"});
   await page.getByRole("link", {name:/Isolated article fixture/}).click();
+  await openReaderDock(page);
   await page.getByRole("button", {name:/^已收藏/}).click();
   await dialog.getByRole("button", {name:"取消收藏"}).click();
   await dialog.waitFor({state:"hidden"});
@@ -453,9 +472,11 @@ try {
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
   await page.getByRole('heading', { name: '切回博客后继续播放' }).waitFor();
   await checkMeteorFlight();
+  await checkReaderLayout({browser,page,apiFixture,artifacts,origin});
   customPaths=true;
   signedIn=false;
   await page.goto(origin+"/read/1",{waitUntil:"networkidle"});
+  await openReaderDock(page);
   await page.getByRole("button",{name:/^收藏/}).click();
   await page.waitForURL("**/signin?**");
   await page.getByRole("link",{name:/注册账号/}).click();

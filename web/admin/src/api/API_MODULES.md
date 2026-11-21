@@ -10,8 +10,9 @@
 | community | `/blog/admin/community` |
 | article | `/blog/admin/articles`、`/blog/assets/upload` |
 | category、tag、statistics | `/blog/categories`、`/blog/tags`、`/blog/statistics` |
-| documents | `/product/admin/docs`、`/product/docs` |
-| website | `/product/content`、`/product/downloads`、`/product/admin/downloads`、`/file/settings` |
+| documents | `/product/admin/manuals` |
+| downloads | `/product/admin/releases`、`/file/upload` |
+| website | `/product/content`、`/file/settings` |
 | upload | `/file/upload` |
 
 GET 使用 query；写操作使用 POST JSON，上传使用 multipart。文章保存发送 `requestID`、`version` 和 `input`，动作统一发送 `action`；文档写入发送 `revision`。ID 和版本在 UI 保留字符串，提交使用本应用 `src/utils/native-api.mjs` 精确编码为 JSON 数字。

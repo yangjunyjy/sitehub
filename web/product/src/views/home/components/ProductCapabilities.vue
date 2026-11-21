@@ -1,54 +1,24 @@
 <script setup>
 import ResourceIcon from '@shared/icons/ResourceIcon.vue'
-defineProps({ items: { type: Array, default: () => [] }, linked: Boolean });
+defineProps({ items: { type: Array, required: true } })
 </script>
 <template>
-  <div class="product-grid">
-    <article
-      v-for="item in items"
-      :key="item.key"
-      class="product-card"
-      :id="`capability-${item.key}`"
-    >
-      <div class="product-card__top">
-        <span class="product-card__icon"><ResourceIcon :name="item.icon || item.key" :size="24" /></span
-        ><span class="product-card__index">/ {{ item.index }}</span>
-      </div>
-      <div class="product-card__body">
+  <ul v-if="items.length" class="capability-list">
+    <li v-for="item in items" :key="item.key" :id="'capability-' + item.key">
+      <ResourceIcon class="capability-icon" :name="item.icon || item.key" :size="17" />
+      <div>
         <h3>{{ item.title }}</h3>
-        <p>{{ item.description }}</p>
-        <div class="tag-row">
-          <span v-for="tag in item.tags" :key="tag">{{ tag }}</span>
-        </div>
-        <router-link v-if="linked" class="capability-link" :to="{ name: 'docs', params: { id: '' } }"
-          >查看使用文档 <span aria-hidden="true">→</span></router-link
-        >
+        <p v-if="item.description">{{ item.description }}</p>
+        <p v-if="item.tags?.length" class="capability-tags">{{ item.tags.join(' · ') }}</p>
       </div>
-    </article>
-  </div>
+    </li>
+  </ul>
 </template>
-<style lang="scss" scoped>
-.product-card {
-  scroll-margin-top: 110px;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
-}
-.product-card:hover {
-  border-color: var(--deploy-line);
-  box-shadow: 0 8px 24px #00000012;
-}
-.capability-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 20px;
-  color: var(--deploy-primary);
-  font-size: 13px;
-  font-weight: 600;
-  min-height: 32px;
-}
-.capability-link:hover {
-  gap: 14px;
-}
+<style scoped>
+.capability-list { display: grid; gap: 14px; margin: 0; padding: 0 0 18px; list-style: none; }
+.capability-list li { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 9px; }
+.capability-icon { color: var(--workbench-accent); margin-top: 3px; }
+h3 { margin: 0; font-size: 14px; font-weight: 600; }
+p { margin: 3px 0 0; color: var(--workbench-muted); font-size: 13px; line-height: 1.7; }
+.capability-tags { margin-top: 3px; font-size: 11px; }
 </style>

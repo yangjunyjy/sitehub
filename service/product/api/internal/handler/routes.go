@@ -7,10 +7,12 @@ import (
 	"net/http"
 
 	content "sitehub/service/product/api/internal/handler/content"
-	docsettings "sitehub/service/product/api/internal/handler/docsettings"
-	documents "sitehub/service/product/api/internal/handler/documents"
 	downloads "sitehub/service/product/api/internal/handler/downloads"
 	health "sitehub/service/product/api/internal/handler/health"
+	manualadmin "sitehub/service/product/api/internal/handler/manualadmin"
+	manuals "sitehub/service/product/api/internal/handler/manuals"
+	releaseadmin "sitehub/service/product/api/internal/handler/releaseadmin"
+	releases "sitehub/service/product/api/internal/handler/releases"
 	"sitehub/service/product/api/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
@@ -36,109 +38,6 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
-				Method:  http.MethodPost,
-				Path:    "/docs/groups",
-				Handler: docsettings.ChangeDocGroupHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/docs/modes",
-				Handler: docsettings.ChangeDocModeHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/docs/settings",
-				Handler: docsettings.SaveDocSettingsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/docs/versions",
-				Handler: docsettings.ChangeDocVersionHandler(serverCtx),
-			},
-		},
-		rest.WithPrefix("/v1/product"),
-	)
-
-	server.AddRoutes(
-		[]rest.Route{
-			{
-				Method:  http.MethodGet,
-				Path:    "/admin/docs",
-				Handler: documents.DocsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/admin/docs/document",
-				Handler: documents.AdminDocumentHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/admin/docs/history",
-				Handler: documents.DocumentHistoryHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/docs/catalog",
-				Handler: documents.DocCatalogHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/docs/delete",
-				Handler: documents.DeleteDocumentHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/docs/document",
-				Handler: documents.DocumentHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/docs/modes",
-				Handler: documents.DocModesHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/docs/navigation",
-				Handler: documents.DocsNavigationHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/docs/save",
-				Handler: documents.SaveDocumentHandler(serverCtx),
-			},
-		},
-		rest.WithPrefix("/v1/product"),
-	)
-
-	server.AddRoutes(
-		[]rest.Route{
-			{
-				Method:  http.MethodGet,
-				Path:    "/admin/downloads",
-				Handler: downloads.AdminDownloadsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/downloads",
-				Handler: downloads.DownloadsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/downloads",
-				Handler: downloads.SaveDownloadsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/downloads/resolve",
-				Handler: downloads.ResolveDownloadHandler(serverCtx),
-			},
-		},
-		rest.WithPrefix("/v1/product"),
-	)
-
-	server.AddRoutes(
-		[]rest.Route{
-			{
 				Method:  http.MethodGet,
 				Path:    "/download",
 				Handler: downloads.InternalDownloadHandler(serverCtx),
@@ -155,5 +54,204 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 				Handler: health.HealthHandler(serverCtx),
 			},
 		},
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/document",
+				Handler: manualadmin.ManualDraftHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/documents/delete",
+				Handler: manualadmin.ManualDocumentDeleteHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/documents/publish",
+				Handler: manualadmin.ManualDocumentPublishHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/documents/save",
+				Handler: manualadmin.ManualDocumentSaveHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/documents/withdraw",
+				Handler: manualadmin.ManualDocumentWithdrawHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/groups/delete",
+				Handler: manualadmin.ManualGroupDeleteHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/groups/move",
+				Handler: manualadmin.ManualGroupMoveHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/groups/save",
+				Handler: manualadmin.ManualGroupSaveHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/history",
+				Handler: manualadmin.ManualHistoryHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/history/detail",
+				Handler: manualadmin.ManualHistoryDetailHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/modes/default",
+				Handler: manualadmin.ManualModeDefaultHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/modes/delete",
+				Handler: manualadmin.ManualModeDeleteHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/modes/save",
+				Handler: manualadmin.ManualModeSaveHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/settings/save",
+				Handler: manualadmin.ManualSettingsSaveHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/versions/default",
+				Handler: manualadmin.ManualVersionDefaultHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/versions/delete",
+				Handler: manualadmin.ManualVersionDeleteHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/versions/publish",
+				Handler: manualadmin.ManualVersionPublishHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/versions/save",
+				Handler: manualadmin.ManualVersionSaveHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/versions/withdraw",
+				Handler: manualadmin.ManualVersionWithdrawHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/workspace",
+				Handler: manualadmin.ManualWorkspaceHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/product/admin/manuals"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/catalog",
+				Handler: manuals.ManualCatalogHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/document",
+				Handler: manuals.ManualPublicDocumentHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/product/manuals"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/files",
+				Handler: releaseadmin.ReleaseFilesHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/files/create",
+				Handler: releaseadmin.CreateReleaseFileHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/files/delete",
+				Handler: releaseadmin.DeleteReleaseFileHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/files/publish",
+				Handler: releaseadmin.PublishReleaseFileHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/files/update",
+				Handler: releaseadmin.UpdateReleaseFileHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/files/withdraw",
+				Handler: releaseadmin.WithdrawReleaseFileHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/groups",
+				Handler: releaseadmin.ReleaseGroupsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/groups/create",
+				Handler: releaseadmin.CreateReleaseGroupHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/groups/delete",
+				Handler: releaseadmin.DeleteReleaseGroupHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/groups/update",
+				Handler: releaseadmin.UpdateReleaseGroupHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/settings",
+				Handler: releaseadmin.ReleaseSettingsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/settings/update",
+				Handler: releaseadmin.SaveReleaseSettingsHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/product/admin/releases"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/catalog",
+				Handler: releases.ReleaseCatalogHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/product/releases"),
 	)
 }
