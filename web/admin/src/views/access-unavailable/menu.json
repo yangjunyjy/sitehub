@@ -1,0 +1,13 @@
+{
+  "menu": false,
+  "layout": false,
+  "routes": [
+    {
+      "path": "/access-unavailable",
+      "name": "AccessUnavailable",
+      "meta": {
+        "title": "后台加载失败"
+      }
+    }
+  ]
+}

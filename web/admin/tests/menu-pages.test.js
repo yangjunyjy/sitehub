@@ -14,16 +14,23 @@ import { createAdminRouter } from "../src/router/runtime.js";
 
 const views = fileURLToPath(new URL("../src/views/", import.meta.url));
 const modules = {};
+const settings = {};
 function discover(directory) {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const file = join(directory, entry.name);
     if (entry.isDirectory()) discover(file);
-    else if (entry.name === "index.vue") {
+    else if (entry.name === "menu.json") {
+      settings['../views/' + relative(views, file).replaceAll('\\','/')] = JSON.parse(readFileSync(file, 'utf8'));
+    } else if (entry.name === "index.vue") {
       const path = relative(views, file).replaceAll("\\", "/");
       const source = readFileSync(file, "utf8");
       const { descriptor, errors } = parse(source, { filename: file });
       assert.deepEqual(errors, [], path);
-      assert(descriptor.template, path);
+      if (!descriptor.template) {
+        const shared = descriptor.script?.content.match(/export \{ default \} from ['"](.+\.vue)['"]/);
+        assert(shared, path);
+        assert(parse(readFileSync(join(directory, shared[1]), "utf8")).descriptor.template, path);
+      }
       modules[`../views/${path}`] = { name: path, template: "<div />" };
     }
   }
@@ -35,10 +42,10 @@ function menu(id, path, component, extra = {}) {
     id,
     path,
     component,
-    title: `页面 ${id}`,
-    type: "menu",
+    menu_name: `页面 ${id}`,
+    menu_type: 2,
     status: 1,
-    isVisible: true,
+    is_visible: true,
     ...extra,
   };
 }
@@ -67,7 +74,7 @@ function setup(menus = []) {
   };
   const router = createAdminRouter({
     history: createMemoryHistory(),
-    modules,
+    modules, settings,
     layout: { template: "<router-view />" },
     store: () => rbac,
     storage,
@@ -190,7 +197,7 @@ test("workspace links follow renamed home, profile and parametrized editor recor
   const { router } = setup([
     menu(1, "/studio", "dashboard/index"),
     menu(2, "/account", "profile/index"),
-    menu(3, "/stories/:id/edit", "blog/articles/editor/index", { isVisible: false }),
+    menu(3, "/stories/:id/edit", "blog/articles/editor/index", { is_visible: false }),
   ]);
   await router.push("/");
   assert.equal(router.currentRoute.value.path, "/studio");
@@ -208,28 +215,28 @@ test("navigation preserves only backend hierarchy, paths, order and visibility",
   const source = [
     {
       id: 1,
-      title: "自定义目录",
-      type: "directory",
+      menu_name: "自定义目录",
+      menu_type: 1,
       path: "/custom",
-      isVisible: true,
+      is_visible: true,
       children: [
         menu(2, "people", "system/users/index", {
-          title: "自定义用户",
+          menu_name: "自定义用户",
           sort: 2,
         }),
         menu(3, "/downloads", "product/downloads/index", { sort: 1 }),
-        menu(4, "/editor", "blog/articles/create/index", { isVisible: false }),
+        menu(4, "/editor", "blog/articles/create/index", { is_visible: false }),
         menu(5, "/email", "admin/settings/email/index"),
-        { id: 6, type: "button", permission: "system:user:create", status: 1 },
+        { id: 6, menu_type: 3, permission: "system:user:create", status: 1 },
       ],
     },
   ];
   const before = structuredClone(source);
   assert.deepEqual(
-    navigationMenus(source)[0].children.map((item) => item.path),
+    navigationMenus(source, false, settings)[0].children.map((item) => item.path),
     ["/downloads", "/custom/people"],
   );
-  assert.equal(navigationMenus(source, true)[0].children.length, 3);
+  assert.equal(navigationMenus(source, true, settings)[0].children.length, 3);
   assert.equal(filterMenuTree(source)[0].children.length, 5);
   assert.deepEqual(source, before);
   assert.deepEqual(navigationMenus([]), []);

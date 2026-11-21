@@ -1,13 +1,13 @@
 :root {
-  --deploy-primary: #208fa9;
-  --deploy-primary-hover: #15788f;
+  --deploy-primary: #116b80;
+  --deploy-primary-hover: #0c586a;
   --deploy-soft: #3ab9d41a;
-  --deploy-ink: #3c3c43;
-  --deploy-muted: #67676c;
-  --deploy-faint: #929298;
-  --deploy-paper: #f9f9f9;
+  --deploy-ink: #202d34;
+  --deploy-muted: #4d606a;
+  --deploy-faint: #61737c;
+  --deploy-paper: #f7f9f9;
   --deploy-white: #fff;
-  --deploy-line: #e2e2e3;
+  --deploy-line: #dce3e6;
   --deploy-blue: #3ab9d4;
   --deploy-shadow: 0 8px 32px #0000000d;
   --header-bg: #ffffffed;
@@ -35,7 +35,7 @@
   --deploy-soft: #3ab9d41c;
   --deploy-ink: #dfdfd6;
   --deploy-muted: #a6a6ae;
-  --deploy-faint: #7f7f89;
+  --deploy-faint: #a0a6ac;
   --deploy-paper: #202127;
   --deploy-white: #1b1b1f;
   --deploy-line: #34343b;
@@ -150,11 +150,11 @@ select {
   font-size: 12px;
 }
 .site-button--primary {
-  background: #3ab9d4;
+  background: var(--deploy-primary);
   color: #fff;
 }
 .site-button--primary:hover {
-  background: #28a5c0;
+  background: var(--deploy-primary-hover);
 }
 .site-button--outline {
   background: var(--deploy-paper);

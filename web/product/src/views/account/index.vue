@@ -67,11 +67,11 @@ onMounted(load);
       </div>
       <h2 class="account-next">开始使用 Deploy</h2>
       <div class="account-links">
-        <router-link to="/download"
+        <router-link :to="{ name: 'download' }"
           ><span>01 / GET STARTED</span>
           <h3>下载产品</h3>
           <p>选择合适的版本与部署方式。</p></router-link
-        ><router-link to="/docs"
+        ><router-link :to="{ name: 'docs', params: { id: '' } }"
           ><span>02 / LEARN</span>
           <h3>阅读文档</h3>
           <p>从安装到配置，一步步完成部署。</p></router-link
@@ -80,110 +80,4 @@ onMounted(load);
     </template>
   </section>
 </template>
-<style lang="scss" scoped>
-.member-account {
-  padding-block: 64px 96px;
-  min-height: 65vh;
-}
-.member-account h1 {
-  font-size: 28px;
-  margin: 12px 0 32px;
-}
-.account-profile {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-  padding: 32px;
-  border: 1px solid var(--deploy-line);
-  border-radius: 8px;
-  background: var(--deploy-white);
-}
-.account-avatar {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  width: 56px;
-  height: 56px;
-  border-radius: 8px;
-  color: var(--deploy-primary);
-  background: var(--deploy-soft);
-  font-size: 24px;
-}
-.account-profile h2 {
-  font-size: 20px;
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-.account-profile p {
-  font-size: 13px;
-  color: var(--deploy-muted);
-  margin: 6px 0 0;
-}
-.account-profile p span {
-  margin-inline: 8px;
-}
-.account-profile button {
-  margin-left: auto;
-  flex-shrink: 0;
-}
-.account-next {
-  font-size: 23px;
-  margin: 44px 0 20px;
-}
-.account-links {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-}
-.account-links a {
-  padding: 28px;
-  border: 1px solid var(--deploy-line);
-  border-radius: 12px;
-  background: var(--deploy-white);
-}
-.account-links a:hover {
-  border-color: var(--deploy-line);
-}
-.account-links span {
-  font-size: 11px;
-  color: var(--deploy-muted);
-  letter-spacing: 0.06em;
-}
-.account-links h3 {
-  font-size: 18px;
-  margin: 24px 0 10px;
-}
-.account-links p {
-  font-size: 14px;
-  color: var(--deploy-muted);
-  margin: 0;
-}
-.account-error {
-  color: #b54444;
-  margin-bottom: 20px;
-}
-@media (max-width: 760px) {
-  .member-account {
-    padding-block: 36px 60px;
-  }
-  .account-profile {
-    padding: 24px;
-    flex-wrap: wrap;
-    gap: 16px;
-  }
-  .account-profile > div {
-    min-width: 0;
-    flex: 1;
-  }
-  .account-profile button {
-    width: 100%;
-    margin-top: 8px;
-  }
-  .account-profile h2 {
-    font-size: 16px;
-  }
-  .account-links {
-    grid-template-columns: 1fr;
-  }
-}
-</style>
+<style lang="scss" scoped src="./account.scss"></style>

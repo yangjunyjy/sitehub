@@ -45,5 +45,14 @@ func (repo *CommunityRepository) PublishedMessages(ctx context.Context, articleI
 	return messages, total, err
 }
 func (repo *CommunityRepository) Submit(ctx context.Context, message *entity.GuestMessage) error {
-	return repo.db.WithContext(ctx).Create(message).Error
+	db := repo.db.WithContext(ctx)
+	if message.ArticleID == 0 {
+		return db.Create(message).Error
+	}
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := lockPublished(tx, message.ArticleID); err != nil {
+			return err
+		}
+		return tx.Create(message).Error
+	})
 }

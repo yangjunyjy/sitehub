@@ -1,0 +1,379 @@
+#packages {
+  padding-top: 28px;
+}
+.page-hero__inner { max-width: none; }
+.page-hero h1 { margin-top: 0; }
+.page-hero { padding-block: clamp(32px, 5vw, 64px); }
+.catalog-toolbar {
+  margin-bottom: 26px;
+  padding: 20px 22px 0;
+  background: var(--deploy-white);
+  border: 1px solid var(--deploy-line);
+  border-radius: 10px;
+}
+.download-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--deploy-line);
+}
+.download-groups button {
+  min-height: 38px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--deploy-muted);
+  font-size: 14px;
+}
+.download-groups button.active {
+  background: var(--deploy-soft);
+  color: var(--deploy-primary);
+}
+.download-groups small {
+  margin-left: 6px;
+  font-size: 11px;
+}
+.catalog-filters {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(180px, 1.5fr);
+  gap: 12px;
+  padding-top: 18px;
+}
+.catalog-filters label {
+  min-width: 0;
+  font-size: 12px;
+  color: var(--deploy-muted);
+}
+.catalog-filters select,
+.catalog-search > div {
+  display: flex;
+  width: 100%;
+  height: 38px;
+  margin-top: 6px;
+  border: 1px solid var(--deploy-line);
+  border-radius: 6px;
+  background: var(--deploy-white);
+  color: var(--deploy-ink);
+  font: inherit;
+}
+.catalog-filters select {
+  padding: 0 8px;
+}
+.catalog-search input {
+  min-width: 0;
+  width: 100%;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  font-size: 13px;
+}
+.catalog-search button,
+.catalog-count button {
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  color: var(--deploy-primary);
+  padding: 0 10px;
+  font-size: 13px;
+}
+.catalog-count {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 0;
+  color: var(--deploy-muted);
+  font-size: 12px;
+}
+.catalog-count > span:last-child {
+  margin-left: auto;
+}
+.catalog-group + .catalog-group {
+  margin-top: 32px;
+}
+.catalog-group > header {
+  margin-bottom: 14px;
+}
+.catalog-group h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+}
+.catalog-group header p {
+  margin: 4px 0 0;
+  color: var(--deploy-muted);
+  font-size: 14px;
+}
+.edition-label {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--deploy-soft);
+  color: var(--deploy-primary);
+  font-size: 12px;
+  font-weight: 500;
+  vertical-align: middle;
+}
+.download-icon svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+.package-description {
+  margin-top: 6px !important;
+}
+.package-details {
+  margin-top: 8px;
+  color: var(--deploy-muted);
+  font-size: 12px;
+}
+.package-details summary {
+  cursor: pointer;
+  list-style: none;
+  width: fit-content;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.package-details summary::-webkit-details-marker {
+  display: none;
+}
+.package-details code {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1100px) {
+  .catalog-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .catalog-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .catalog-toolbar {
+    padding: 16px 14px 0;
+  }
+}
+
+.download-message {
+  padding: 12px 16px;
+  border: 1px solid var(--deploy-line);
+  border-radius: 10px;
+  background: var(--deploy-soft);
+  color: var(--deploy-muted);
+  font-size: 14px;
+}
+.download-message--error {
+  background: var(--deploy-paper);
+  border-color: #f4dcd6;
+  color: #a44f43;
+}
+.release-meta { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 18px; }
+.release-meta > span { display: inline-flex; align-items: baseline; gap: 8px; }
+.release-meta small { font-size: 13px; color: var(--deploy-muted); }
+.release-meta strong, .release-meta time { font: 500 14px/1.5 var(--site-mono); }
+.catalog-group { border: 1px solid var(--deploy-line); border-radius: 10px; overflow: clip; }
+.catalog-group > header { background: var(--deploy-paper); margin: 0; padding: 14px 20px; }
+.catalog-group h2 { font-size: 16px; }
+.download-list article {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+  padding: 18px 20px;
+  border-top: 1px solid var(--deploy-line);
+}
+.download-icon {
+  display: grid; place-items: center; width: 40px; height: 40px;
+  color: var(--deploy-primary); background: var(--deploy-soft); border-radius: 8px;
+}
+.download-list h3 {
+  margin: 0 0 7px;
+  font-size: 18px;
+}
+.download-list p {
+  margin: 0;
+  color: var(--deploy-muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.download-list .site-button {
+  white-space: nowrap;
+}
+.pending-button {
+  min-width: 122px;
+  min-height: 42px;
+  border: 1px solid var(--deploy-line);
+  border-radius: 8px;
+  background: var(--deploy-paper);
+  color: var(--deploy-muted);
+  font-size: 13px;
+}
+.install-section {
+  background: var(--deploy-white);
+}
+.install-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.install-grid article {
+  min-width: 0;
+  padding: 26px;
+  border: 1px solid var(--deploy-line);
+  border-radius: 8px;
+  background: var(--deploy-white);
+}
+.install-grid header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.install-grid header span {
+  color: var(--deploy-muted);
+  font-size: 12px;
+}
+.install-grid header strong {
+  font-size: 17px;
+}
+.install-grid header em {
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: var(--deploy-paper);
+  color: var(--deploy-primary);
+  font-size: 11px;
+  font-style: normal;
+}
+.install-grid p {
+  min-height: 60px;
+  margin: 24px 0 18px;
+  color: var(--deploy-muted);
+  font-size: 14px;
+}
+.install-grid code {
+  display: block;
+  overflow-x: auto;
+  padding: 14px;
+  border: 1px solid var(--deploy-line);
+  border-radius: 8px;
+  background: var(--deploy-paper);
+  color: var(--deploy-muted);
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.install-grid button {
+  min-height: 44px;
+  margin-top: 12px;
+  padding-inline: 12px;
+  border: 1px solid var(--deploy-line);
+  border-radius: 8px;
+  background: var(--deploy-white);
+  color: var(--deploy-primary);
+  font-size: 13px;
+}
+.copy-error {
+  color: #af6a41;
+}
+.requirements__layout {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 80px;
+}
+.requirements dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--deploy-line);
+  border-radius: 8px;
+  background: var(--deploy-white);
+}
+.requirements dl div {
+  padding: 24px;
+  border-bottom: 1px solid var(--deploy-line);
+}
+.requirements dl div:nth-child(even) {
+  border-left: 1px solid var(--deploy-line);
+}
+.requirements dt {
+  color: var(--deploy-muted);
+  font-size: 13px;
+}
+.requirements dd {
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+.support-banner {
+  padding: 60px 0;
+  border-top: 1px solid var(--deploy-line);
+  background: var(--deploy-paper);
+}
+.support-banner > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 48px;
+}
+.support-banner h2 {
+  margin: 12px 0;
+  font-size: 26px;
+}
+.support-banner p:not(.site-kicker) {
+  max-width: 700px;
+  margin: 0;
+  color: var(--deploy-muted);
+  font-size: 15px;
+}
+.support-banner .site-button {
+  flex-shrink: 0;
+}
+.support-pending {
+  color: var(--deploy-muted);
+  font-size: 13px;
+}
+@media (max-width: 900px) {
+  .install-grid {
+    grid-template-columns: 1fr;
+  }
+  .requirements__layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+@media (max-width: 760px) {
+  .support-banner > div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .download-list article {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 16px;
+    padding: 20px;
+  }
+  .download-icon {
+    width: 46px;
+    height: 46px;
+  }
+  .download-list article > a,
+  .download-list article > button {
+    grid-column: 1 / -1;
+  }
+  .release-meta {
+    gap: 10px;
+  }
+}
+@media (max-width: 500px) {
+  .requirements dl {
+    grid-template-columns: 1fr;
+  }
+  .requirements dl div:nth-child(even) {
+    border-left: 0;
+  }
+}

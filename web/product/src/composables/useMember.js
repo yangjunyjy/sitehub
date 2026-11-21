@@ -20,8 +20,10 @@ export const useMember = () => ({
 })
 
 // Only allow local product routes as post-login destinations.
-export const memberDestination = (value) => {
-  if (typeof value !== 'string' || !/^\/(?!\/)/.test(value) || /[\\\s]/.test(value)) return '/account'
-  const path = value.split(/[?#]/)[0]
-  return /^\/(account|download|docs(?:\/[^/]+)?)?\/?$/.test(path) ? value : '/account'
+export const memberDestination = (value, router) => {
+  const account = { name: 'account' }
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//') || /[\\\s]/.test(value)) return account
+  const destination = router.resolve(value)
+  if (destination.meta.notFound || !destination.name || ['login', 'register'].includes(destination.name)) return account
+  return destination.fullPath
 }

@@ -1,0 +1,6 @@
+{
+  "name": "工作台",
+  "code": "admin-dashboard",
+  "path": "/dashboard/index",
+  "sort": 1
+}

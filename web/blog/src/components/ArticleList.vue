@@ -26,7 +26,7 @@ const failImage = (id) => {
           >
         </div>
         <h2>
-          <router-link :to="'/article/' + article.id">{{
+          <router-link :to="{ name: 'article', params: { id: article.id } }">{{
             article.title
           }}</router-link>
         </h2>
@@ -40,7 +40,7 @@ const failImage = (id) => {
             <router-link
               v-for="tag in (article.tags || []).slice(0, 2)"
               :key="tag.id"
-              :to="{ path: '/tags', query: { tags: String(tag.id) } }"
+              :to="{ name: 'tags', query: { tags: String(tag.id) } }"
               ># {{ tag.name }}</router-link
             >
           </div>
@@ -48,7 +48,7 @@ const failImage = (id) => {
       </div>
       <router-link
         class="article-row__cover"
-        :to="'/article/' + article.id"
+        :to="{ name: 'article', params: { id: article.id } }"
         :aria-label="'阅读：' + article.title"
         ><img
           v-if="safeURL(article.cover) && !brokenImages.has(String(article.id))"

@@ -23,9 +23,9 @@ const visible = ref(false),
 let cooldown;
 const emailValid = () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim());
 const alternate = computed(() => ({
-  path: registering.value ? "/login" : "/register",
+  name: registering.value ? "login" : "register",
   query: route.query.redirect
-    ? { redirect: memberDestination(route.query.redirect) }
+    ? { redirect: router.resolve(memberDestination(route.query.redirect, router)).fullPath }
     : {},
 }));
 watch(
@@ -103,7 +103,7 @@ async function submit() {
       code.value = "";
     } else {
       await login(values);
-      await router.replace(memberDestination(route.query.redirect));
+      await router.replace(memberDestination(route.query.redirect, router));
     }
   } catch (e) {
     error.value = e.message;
@@ -116,7 +116,7 @@ async function submit() {
 <template>
   <div class="member-auth">
     <aside class="auth-story">
-      <router-link to="/" class="auth-brand">
+      <router-link :to="{ name: 'home' }" class="auth-brand">
         <BrandMark /><strong>Deploy</strong>
       </router-link>
       <div class="auth-story__copy">
@@ -136,7 +136,7 @@ async function submit() {
       <p class="auth-story__footer">从代码到生产，每一步都清晰可见。</p>
     </aside>
     <section class="auth-content">
-      <router-link class="auth-back" to="/"> 返回官网</router-link>
+      <router-link class="auth-back" :to="{ name: 'home' }"> 返回官网</router-link>
       <div v-if="completed" class="auth-form auth-success" role="status">
         <span class="success-mark">✓</span>
         <p class="auth-eyebrow">YOU'RE ALL SET</p>
@@ -270,7 +270,7 @@ async function submit() {
         </p>
       </form>
       <footer class="auth-content__footer">
-        <router-link to="/docs">使用文档 </router-link
+        <router-link :to="{ name: 'docs', params: { id: '' } }">使用文档 </router-link
         ><span>Deploy · 让交付更简单</span>
       </footer>
     </section>

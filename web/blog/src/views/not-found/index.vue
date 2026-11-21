@@ -7,7 +7,7 @@ import SkyHero from "@/components/SkyHero.vue";
     subtitle="这一页似乎飘到了云的另一边。"
     eyebrow="404 · NOT FOUND"
     full
-    ><router-link class="button button--glass" to="/"
+    ><router-link class="button button--glass" :to="{ name: 'home' }"
       >回到首页 ↗</router-link
     ></SkyHero
   >

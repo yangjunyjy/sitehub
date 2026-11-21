@@ -3,6 +3,7 @@ package entity
 import "time"
 
 type FriendLink struct {
+	MemberID    uint64 `gorm:"not null;default:0"`
 	ID          uint64 `gorm:"primaryKey"`
 	Name        string `gorm:"size:80;not null"`
 	URL         string `gorm:"size:500;not null"`
@@ -13,6 +14,7 @@ type FriendLink struct {
 }
 
 type GuestMessage struct {
+	MemberID  uint64 `gorm:"not null;default:0"`
 	ArticleID uint64 `gorm:"not null;default:0;index:idx_message_thread,priority:1"`
 	ID        uint64 `gorm:"primaryKey"`
 	Nickname  string `gorm:"size:40"`

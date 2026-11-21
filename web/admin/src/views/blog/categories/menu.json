@@ -1,0 +1,5 @@
+{
+  "name": "分类管理",
+  "permission": "blog:category:list",
+  "sort": 12
+}

@@ -1,7 +1,4 @@
 <script setup>
-import SkyHero from "@/components/SkyHero.vue";
-import LoginForm from "./components/LoginForm.vue";
+import MemberAuth from "@/components/member/MemberAuth.vue";
 </script>
-<template>
-  <SkyHero scene="pink" full><LoginForm /></SkyHero>
-</template>
+<template><MemberAuth /></template>

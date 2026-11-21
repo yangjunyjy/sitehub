@@ -1,5 +1,5 @@
 import { reactive, readonly } from "vue";
-import { getWebsiteContent } from "@/api";
+import { getWebsiteContent } from "@/api/site";
 import {
   createContentResource,
   emptyWebsiteContent,

@@ -1,7 +1,7 @@
 <script setup>
 import { onBeforeUnmount, ref, watch } from "vue";
 import { useRoute } from "vue-router";
-import SkyHero from "@/components/SkyHero.vue";
+import ArticleActions from "./components/ArticleActions.vue";
 import ContentState from "@/components/ContentState.vue";
 import ArticleBody from "./components/ArticleBody.vue";
 import DiscussionFeed from "@/components/DiscussionFeed.vue";
@@ -34,8 +34,8 @@ async function load() {
     if (id !== generation) return;
     if (!result.data || typeof result.data.content !== "string")
       throw new Error("文章响应无效，请稍后重试");
-    if (result.data.content_format && result.data.content_format !== 'markdown')
-      throw new Error('这篇文章的格式暂不支持阅读，请联系博主');
+    if (result.data.content_format && result.data.content_format !== "markdown")
+      throw new Error("这篇文章的格式暂不支持阅读，请联系博主");
     article.value = result.data;
     document.title = article.value.title + " · 云间小记";
     recordView(route.params.id).catch(() => {});
@@ -63,52 +63,90 @@ onBeforeUnmount(() => {
 });
 </script>
 <template>
-  <SkyHero
-    :title="article?.title || '云间的一段文字'"
-    :subtitle="
-      article
-        ? articleDate(article) +
-          (article.category?.name ? ' · ' + article.category.name : '')
-        : 'THE JOURNAL'
-    "
-    eyebrow="WORDS, THOUGHTS & LITTLE DISCOVERIES"
-  />
-  <section class="content-shell">
-    <ContentState v-if="loading" loading /><ContentState
-      v-else-if="notFound"
-      title="这篇文章暂时不在这里"
-      description="文章可能已下线，回到首页看看其他故事吧。"
-    /><ContentState
-      v-else-if="error"
-      :error="error"
-      @retry="load"
-    /><ArticleBody v-else-if="article" :article="article" />
-    <div v-if="article" class="article-bottom">
-      <div>
-        <router-link
-          v-for="tag in article.tags || []"
-          :key="tag.id"
-          :to="{ path: '/tags', query: { tags: String(tag.id) } }"
-          ># {{ tag.name }}</router-link
+  <div class="reader-page">
+    <section class="reader-shell">
+      <header v-if="article" class="reader-title">
+        <router-link :to="{ name: 'home' }">云间小记</router-link>
+        <span v-if="article.category?.name">
+          / {{ article.category.name }}</span
         >
+        <h1>{{ article.title }}</h1>
+        <p>{{ articleDate(article) }}</p>
+      </header>
+      <ContentState v-if="loading" loading /><ContentState
+        v-else-if="notFound"
+        title="这篇文章暂时不在这里"
+        description="文章可能已下线，回到首页看看其他故事吧。"
+      /><ContentState
+        v-else-if="error"
+        :error="error"
+        @retry="load"
+      /><ArticleBody v-else-if="article" :article="article" />
+      <div v-if="article" class="article-bottom">
+        <div>
+          <router-link
+            v-for="tag in article.tags || []"
+            :key="tag.id"
+            :to="{ name: 'tags', query: { tags: String(tag.id) } }"
+            ># {{ tag.name }}</router-link
+          >
+        </div>
+        <ArticleActions
+          :key="String(route.params.id)"
+          :article-id="String(route.params.id)"
+        />
+        <button class="text-button" @click="share">分享这篇文章 ↗</button>
+        <p v-if="copyNotice" role="status">{{ copyNotice }}</p>
       </div>
-      <button class="text-button" @click="share">分享这篇文章 ↗</button>
-      <p v-if="copyNotice" role="status">{{ copyNotice }}</p>
-    </div>
-    <DiscussionFeed v-if="article" :key="route.params.id" :article-id="String(route.params.id)" />
-    <div class="article-back">
-      <router-link to="/">← 回到文章列表</router-link>
-    </div>
-  </section>
+      <DiscussionFeed
+        v-if="article"
+        :key="route.params.id"
+        :article-id="String(route.params.id)"
+      />
+      <div class="article-back">
+        <router-link :to="{ name: 'home' }">← 回到文章列表</router-link>
+      </div>
+    </section>
+  </div>
 </template>
 <style lang="scss" scoped>
+.reader-page {
+  min-height: 80vh;
+  background: #fff;
+  color: #25312b;
+  padding: 100px 20px 32px;
+}
+.reader-shell {
+  width: min(100%, 1020px);
+  margin: auto;
+}
+.reader-title {
+  border-bottom: 1px solid #dce2d9;
+  padding-bottom: 24px;
+  font-size: 13px;
+  color: #607365;
+}
+.reader-title h1 {
+  margin: 15px 0 8px;
+  color: #202a24;
+  font:
+    650 clamp(32px, 5vw, 52px) / 1.25 Georgia,
+    "Songti SC",
+    SimSun,
+    serif;
+  letter-spacing: -0.04em;
+}
+.reader-title p {
+  margin: 0;
+  font-size: 13px;
+}
 .article-bottom {
   display: flex;
   justify-content: space-between;
   gap: 20px;
   flex-wrap: wrap;
   border-top: 1px solid var(--line);
-  padding: 25px 0 10px;
+  padding: 25px 0 32px;
   > div {
     display: flex;
     gap: 10px;
@@ -116,8 +154,8 @@ onBeforeUnmount(() => {
     align-items: center;
     a {
       font-size: 11px;
-      color: #a68db6;
-      background: #f6f1fa;
+      color: #4a6852;
+      background: #f2f5ee;
       padding: 5px 12px;
       border-radius: 3px;
     }

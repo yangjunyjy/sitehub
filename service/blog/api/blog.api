@@ -11,8 +11,8 @@ type Response {
 }
 
 type HomeSettingsRequest {
-	HomeAnimation bool `json:"homeAnimation"`
-	HomeVerse string `json:"homeVerse"`
+	HomeAnimation bool   `json:"homeAnimation"`
+	HomeVerse     string `json:"homeVerse"`
 }
 
 type FriendApplication {
@@ -22,31 +22,56 @@ type FriendApplication {
 	Avatar      string `json:"avatar,optional"`
 }
 
+type ArticleInteractionQuery {
+	ArticleID uint64 `form:"articleId"`
+}
+
+type LikeArticleRequest {
+	ArticleID uint64 `json:"articleId"`
+	Liked     bool   `json:"liked"`
+}
+
+type FavoriteArticleRequest {
+	ArticleID uint64 `json:"articleId"`
+	Favorited bool   `json:"favorited"`
+	FolderID  uint64 `json:"folderId,optional"`
+}
+
+type CreateFavoriteFolderRequest {
+	Name string `json:"name"`
+}
+
+type FavoriteArticlesQuery {
+	FolderID uint64 `form:"folderId,optional"`
+	Page     int    `form:"page,default=1"`
+	PageSize int    `form:"pageSize,default=20"`
+}
+
 type GuestPost {
 	ArticleID uint64 `json:"articleId,optional"`
-	Nickname string `json:"nickname,optional"`
-	Content  string `json:"content"`
+	Nickname  string `json:"nickname,optional"`
+	Content   string `json:"content"`
 }
 
 type CommunityPage {
 	ArticleID uint64 `form:"articleId,optional"`
-	Page     int64 `form:"page,optional"`
-	PageSize int64 `form:"pageSize,optional"`
+	Page      int64  `form:"page,optional"`
+	PageSize  int64  `form:"pageSize,optional"`
 }
 
 type ReviewQueue {
-	Kind string `form:"kind"`
+	Kind   string `form:"kind"`
 	Status string `form:"status"`
-	Page int `form:"page,optional"`
+	Page   int    `form:"page,optional"`
 }
 
 type ReviewDecision {
-	Kind string `json:"kind"`
+	Kind   string `json:"kind"`
 	Status string `json:"status"`
-	ID uint64 `json:"id"`
+	ID     uint64 `json:"id"`
 }
 
-type SaveStorageRequest {
+type StorageSettings {
 	Provider    string   `json:"provider,optional"`
 	LocalPath   string   `json:"localPath,optional"`
 	URLPrefix   string   `json:"urlPrefix,optional"`
@@ -59,6 +84,19 @@ type SaveStorageRequest {
 	PathStyle   bool     `json:"pathStyle,optional"`
 	AllowedExts []string `json:"allowedExts,optional"`
 	MaxSize     int64    `json:"maxSize,optional"`
+}
+
+type FileIDRequest {
+	ID string `form:"id"`
+}
+
+type LocalFileRequest {
+	Kind string `path:"kind"`
+	Name string `path:"name"`
+}
+
+type ValidateReleaseRequest {
+	Location string `json:"location"`
 }
 
 type PublicArticlesRequest {
@@ -231,134 +269,275 @@ type ArticleInput {
 	TagIDs        []uint64 `json:"tag_ids,optional"`
 }
 
+@server (
+	group:  community
+	prefix: /v1/blog
+)
 service blog-api {
 	@handler ListFriends
-	get /v1/blog/friends returns (Response)
-
-	@handler CommunityReviewQueue
-	get /v1/blog/admin/community (ReviewQueue) returns (Response)
-
-	@handler ReviewCommunity
-	post /v1/blog/admin/community (ReviewDecision) returns (Response)
+	get /friends returns (Response)
 
 	@handler ApplyFriend
-	post /v1/blog/friends (FriendApplication) returns (Response)
+	post /friends (FriendApplication) returns (Response)
 
 	@handler ListMessages
-	get /v1/blog/messages (CommunityPage) returns (Response)
+	get /messages (CommunityPage) returns (Response)
 
 	@handler SendMessage
-	post /v1/blog/messages (GuestPost) returns (Response)
+	post /messages (GuestPost) returns (Response)
+}
 
+@server (
+	group:  review
+	prefix: /v1/blog/admin
+)
+service blog-api {
+	@handler CommunityReviewQueue
+	get /community (ReviewQueue) returns (Response)
+
+	@handler ReviewCommunity
+	post /community (ReviewDecision) returns (Response)
+}
+
+@server (
+	group:  settings
+	prefix: /v1/blog
+)
+service blog-api {
 	@handler GetAbout
-	get /v1/blog/about returns (Response)
+	get /about returns (Response)
 
 	@handler SaveHomeSettings
-	post /v1/blog/home/settings (HomeSettingsRequest) returns (Response)
+	post /home/settings (HomeSettingsRequest) returns (Response)
+}
 
+@server (
+	group: health
+)
+service blog-api {
 	@handler Health
 	get /health returns (Response)
+}
 
+@server (
+	group:  articles
+	prefix: /v1/blog
+)
+service blog-api {
 	@handler PublicArticles
-	get /v1/blog/articles (PublicArticlesRequest) returns (Response)
+	get /articles (PublicArticlesRequest) returns (Response)
 
 	@handler PublicArticle
-	get /v1/blog/articles/detail (PublicArticleRequest) returns (Response)
-
-	@handler AdminArticles
-	get /v1/blog/admin/articles (AdminArticlesRequest) returns (Response)
-
-	@handler EditorArticle
-	get /v1/blog/admin/articles/detail (EditorArticleRequest) returns (Response)
-
-	@handler GetArticleOptions
-	get /v1/blog/admin/articles/options returns (Response)
-
-	@handler SaveDraft
-	post /v1/blog/admin/articles/draft (SaveDraftRequest) returns (Response)
-
-	@handler ApplyArticleAction
-	post /v1/blog/admin/articles/action (ApplyArticleActionRequest) returns (Response)
-
-	@handler GetArticleHistory
-	get /v1/blog/admin/articles/history (GetArticleHistoryRequest) returns (Response)
-
-	@handler ArticleRevision
-	get /v1/blog/admin/articles/revision (ArticleRevisionRequest) returns (Response)
+	get /articles/detail (PublicArticleRequest) returns (Response)
 
 	@handler RecordView
-	post /v1/blog/articles/view (RecordViewRequest) returns (Response)
+	post /articles/view (RecordViewRequest) returns (Response)
 
 	@handler SearchArticles
-	get /v1/blog/articles/search (SearchArticlesRequest) returns (Response)
+	get /articles/search (SearchArticlesRequest) returns (Response)
 
 	@handler HotArticles
-	get /v1/blog/articles/hot (HotArticlesRequest) returns (Response)
+	get /articles/hot (HotArticlesRequest) returns (Response)
 
 	@handler RecentArticles
-	get /v1/blog/articles/recent (RecentArticlesRequest) returns (Response)
+	get /articles/recent (RecentArticlesRequest) returns (Response)
+}
 
+@server (
+	group:  editor
+	prefix: /v1/blog/admin
+)
+service blog-api {
+	@handler AdminArticles
+	get /articles (AdminArticlesRequest) returns (Response)
+
+	@handler EditorArticle
+	get /articles/detail (EditorArticleRequest) returns (Response)
+
+	@handler GetArticleOptions
+	get /articles/options returns (Response)
+
+	@handler SaveDraft
+	post /articles/draft (SaveDraftRequest) returns (Response)
+
+	@handler ApplyArticleAction
+	post /articles/action (ApplyArticleActionRequest) returns (Response)
+
+	@handler GetArticleHistory
+	get /articles/history (GetArticleHistoryRequest) returns (Response)
+
+	@handler ArticleRevision
+	get /articles/revision (ArticleRevisionRequest) returns (Response)
+}
+
+@server (
+	group:  categories
+	prefix: /v1/blog
+)
+service blog-api {
 	@handler ListCategories
-	get /v1/blog/categories (ListCategoriesRequest) returns (Response)
+	get /categories (ListCategoriesRequest) returns (Response)
 
 	@handler GetCategory
-	get /v1/blog/categories/detail (GetCategoryRequest) returns (Response)
+	get /categories/detail (GetCategoryRequest) returns (Response)
 
 	@handler CreateCategory
-	post /v1/blog/categories/create (CreateCategoryRequest) returns (Response)
+	post /categories/create (CreateCategoryRequest) returns (Response)
 
 	@handler UpdateCategory
-	post /v1/blog/categories/update (UpdateCategoryRequest) returns (Response)
+	post /categories/update (UpdateCategoryRequest) returns (Response)
 
 	@handler DeleteCategory
-	post /v1/blog/categories/delete (DeleteCategoryRequest) returns (Response)
-
-	@handler ListTags
-	get /v1/blog/tags (ListTagsRequest) returns (Response)
-
-	@handler GetTag
-	get /v1/blog/tags/detail (GetTagRequest) returns (Response)
-
-	@handler CreateTag
-	post /v1/blog/tags/create (CreateTagRequest) returns (Response)
-
-	@handler UpdateTag
-	post /v1/blog/tags/update (UpdateTagRequest) returns (Response)
-
-	@handler DeleteTag
-	post /v1/blog/tags/delete (DeleteTagRequest) returns (Response)
+	post /categories/delete (DeleteCategoryRequest) returns (Response)
 
 	@handler CategoryTree
-	get /v1/blog/categories/tree returns (Response)
+	get /categories/tree returns (Response)
+}
 
+@server (
+	group:  tags
+	prefix: /v1/blog
+)
+service blog-api {
+	@handler ListTags
+	get /tags (ListTagsRequest) returns (Response)
+
+	@handler GetTag
+	get /tags/detail (GetTagRequest) returns (Response)
+
+	@handler CreateTag
+	post /tags/create (CreateTagRequest) returns (Response)
+
+	@handler UpdateTag
+	post /tags/update (UpdateTagRequest) returns (Response)
+
+	@handler DeleteTag
+	post /tags/delete (DeleteTagRequest) returns (Response)
+}
+
+@server (
+	group:  statistics
+	prefix: /v1/blog
+)
+service blog-api {
 	@handler Dashboard
-	get /v1/blog/statistics/dashboard returns (Response)
+	get /statistics/dashboard returns (Response)
 
 	@handler GetArticleStats
-	get /v1/blog/statistics/articlestats returns (Response)
+	get /statistics/articlestats returns (Response)
 
 	@handler ArticleTrend
-	get /v1/blog/statistics/articletrend (ArticleTrendRequest) returns (Response)
+	get /statistics/articletrend (ArticleTrendRequest) returns (Response)
 
 	@handler ViewTrend
-	get /v1/blog/statistics/viewtrend (ViewTrendRequest) returns (Response)
+	get /statistics/viewtrend (ViewTrendRequest) returns (Response)
 
 	@handler CategoryStats
-	get /v1/blog/statistics/categorystats (CategoryStatsRequest) returns (Response)
+	get /statistics/categorystats (CategoryStatsRequest) returns (Response)
 
 	@handler TagStats
-	get /v1/blog/statistics/tagstats (TagStatsRequest) returns (Response)
+	get /statistics/tagstats (TagStatsRequest) returns (Response)
 
 	@handler HotTags
-	get /v1/blog/statistics/hottags (HotTagsRequest) returns (Response)
+	get /statistics/hottags (HotTagsRequest) returns (Response)
 
 	@handler HotArticleStats
-	get /v1/blog/statistics/hotarticlestats (HotArticleStatsRequest) returns (Response)
+	get /statistics/hotarticlestats (HotArticleStatsRequest) returns (Response)
+}
 
+@server (
+	group:  storage
+	prefix: /v1/file
+)
+service blog-api {
 	@handler GetStorage
-	get /v1/file/settings returns (Response)
+	get /settings returns (Response)
 
 	@handler SaveStorage
-	post /v1/file/settings (SaveStorageRequest) returns (Response)
+	post /settings (StorageSettings) returns (Response)
+}
+
+@server (
+	group:    assets
+	prefix:   /v1/blog
+	timeout:  10m
+	maxBytes: 53477376
+)
+service blog-api {
+	// Multipart article upload, including up to 1 MiB of form overhead.
+	@handler UploadAsset
+	post /assets/upload returns (Response)
+
+	@handler ReadAsset
+	get /assets (FileIDRequest)
+
+	@handler HeadAsset
+	head /assets (FileIDRequest)
+}
+
+@server (
+	group:    files
+	prefix:   /v1/file
+	timeout:  10m
+	maxBytes: 2148532224
+)
+service blog-api {
+	// Multipart upload for images, attachments and releases.
+	@handler UploadFile
+	post /upload returns (Response)
+
+	@handler DownloadFile
+	get /download (FileIDRequest)
+
+	@handler HeadDownload
+	head /download (FileIDRequest)
+
+	@handler ReadLocalFile
+	get /local/:kind/:name (LocalFileRequest)
+
+	@handler HeadLocalFile
+	head /local/:kind/:name (LocalFileRequest)
+}
+
+@server (
+	group:  storage
+	prefix: /internal/blog
+)
+service blog-api {
+	@handler ReadInternalStorage
+	get /storage returns (StorageSettings)
+
+	@handler SaveInternalStorage
+	put /storage (StorageSettings)
+
+	@handler EnsureStorageDefaults
+	post /storage/defaults
+
+	@handler ValidateRelease
+	post /storage/validate (ValidateReleaseRequest)
+}
+
+@server (
+	group:  reader
+	prefix: /v1/blog
+)
+service blog-api {
+	@handler ArticleInteraction
+	get /articles/interaction (ArticleInteractionQuery) returns (Response)
+
+	@handler LikeArticle
+	post /articles/like (LikeArticleRequest) returns (Response)
+
+	@handler FavoriteArticle
+	post /articles/favorite (FavoriteArticleRequest) returns (Response)
+
+	@handler FavoriteFolders
+	get /favorites/folders returns (Response)
+
+	@handler CreateFavoriteFolder
+	post /favorites/folders (CreateFavoriteFolderRequest) returns (Response)
+
+	@handler FavoriteArticles
+	get /favorites/articles (FavoriteArticlesQuery) returns (Response)
 }
 

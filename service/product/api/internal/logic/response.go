@@ -6,7 +6,7 @@ import (
 	"sitehub/service/product/api/internal/types"
 )
 
-func copyManifest(source, destination any) error {
+func CopyManifest(source, destination any) error {
 	data, err := json.Marshal(source)
 	if err != nil {
 		return err
@@ -14,7 +14,7 @@ func copyManifest(source, destination any) error {
 	return json.Unmarshal(data, destination)
 }
 
-func response(data any, err error) (*types.Response, error) {
+func Response(data any, err error) (*types.Response, error) {
 	if err != nil {
 		return nil, classify(err)
 	}

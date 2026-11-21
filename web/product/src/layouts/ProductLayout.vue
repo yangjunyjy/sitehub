@@ -12,12 +12,12 @@ onMounted(() => loadWebsiteContent().catch(() => {}));
 </script>
 
 <template>
-  <div class="product-app" :class="{ 'site-docs': route.path.startsWith('/docs') }">
+  <div class="product-app" :class="{ 'site-docs': route.meta.page === 'docs' }">
     <SiteNavigationStatus />
     <a class="skip-link" href="#main-content">跳至主要内容</a>
     <Header />
     <main id="main-content" class="app-main" tabindex="-1"><router-view /></main>
-    <Footer v-if="!route.path.startsWith('/docs') || route.meta.notFound" />
+    <Footer v-if="route.meta.page !== 'docs' || route.meta.notFound" />
   </div>
 </template>
 

@@ -54,9 +54,9 @@ onBeforeUnmount(() => {
         <span class="verse-ink" aria-hidden="true">{{ ink }}</span>
       </h1>
       <nav class="hero-socials" aria-label="博客互动">
-        <router-link to="/about" title="关于博主" aria-label="关于博主"><BlogIcon name="feather" /></router-link>
-        <router-link to="/messages" title="留言板" aria-label="留言板"><BlogIcon name="mail" /></router-link>
-        <router-link to="/friends" title="友情链接" aria-label="友情链接"><BlogIcon name="link" /></router-link>
+        <router-link :to="{ name: 'about' }" title="关于博主" aria-label="关于博主"><BlogIcon name="feather" /></router-link>
+        <router-link :to="{ name: 'messages' }" title="留言板" aria-label="留言板"><BlogIcon name="mail" /></router-link>
+        <router-link :to="{ name: 'friends' }" title="友情链接" aria-label="友情链接"><BlogIcon name="link" /></router-link>
       </nav>
     </SkyHero>
     <a class="scroll-down" href="#articles">向下阅读 <BlogIcon name="arrow" :size="16" /></a>

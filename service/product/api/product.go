@@ -9,7 +9,7 @@ import (
 	"sitehub/common/rpcx"
 	"sitehub/service/product/api/internal/config"
 	"sitehub/service/product/api/internal/handler"
-	healthlogic "sitehub/service/product/api/internal/logic"
+	"sitehub/service/product/api/internal/logic/health"
 	"sitehub/service/product/api/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
@@ -34,10 +34,9 @@ func run(parent context.Context, c config.Config) error {
 	defer ctx.Close()
 	s.Use(ctx.ClientPolicy)
 	managed.SetReadiness(func(probeCtx context.Context) error {
-		_, err := healthlogic.NewHealthLogic(probeCtx, ctx).Health()
+		_, err := health.NewHealthLogic(probeCtx, ctx).Health()
 		return err
 	})
 	handler.RegisterHandlers(s, ctx)
-	handler.RegisterInternalHandlers(s, ctx)
 	return managed.Serve(parent, fmt.Sprintf("%s:%d", c.Host, c.Port), s.Start)
 }

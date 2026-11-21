@@ -23,6 +23,36 @@ func NewRbacServer(svcCtx *svc.ServiceContext) *RbacServer {
 	}
 }
 
+func (s *RbacServer) ListIcons(ctx context.Context, in *rbac.Empty) (*rbac.IconPage, error) {
+	l := logic.NewListIconsLogic(ctx, s.svcCtx)
+	return l.ListIcons(in)
+}
+
+func (s *RbacServer) IconContent(ctx context.Context, in *rbac.IconName) (*rbac.IconRecord, error) {
+	l := logic.NewIconContentLogic(ctx, s.svcCtx)
+	return l.IconContent(in)
+}
+
+func (s *RbacServer) ValidateIcon(ctx context.Context, in *rbac.IconRecord) (*rbac.IconRecord, error) {
+	l := logic.NewValidateIconLogic(ctx, s.svcCtx)
+	return l.ValidateIcon(in)
+}
+
+func (s *RbacServer) CreateIcon(ctx context.Context, in *rbac.IconRecord) (*rbac.IconRecord, error) {
+	l := logic.NewCreateIconLogic(ctx, s.svcCtx)
+	return l.CreateIcon(in)
+}
+
+func (s *RbacServer) UpdateIcon(ctx context.Context, in *rbac.IconRecord) (*rbac.IconRecord, error) {
+	l := logic.NewUpdateIconLogic(ctx, s.svcCtx)
+	return l.UpdateIcon(in)
+}
+
+func (s *RbacServer) DeleteIcon(ctx context.Context, in *rbac.IDRequest) (*rbac.Empty, error) {
+	l := logic.NewDeleteIconLogic(ctx, s.svcCtx)
+	return l.DeleteIcon(in)
+}
+
 func (s *RbacServer) CheckClient(ctx context.Context, in *rbac.Empty) (*rbac.Empty, error) {
 	l := logic.NewCheckClientLogic(ctx, s.svcCtx)
 	return l.CheckClient(in)

@@ -9,10 +9,10 @@
         class="save-state"
         role="status"
         aria-live="polite"
-        :class="{ failed: saveError, saving: busy }"
+        :class="{ failed: saveError, saving: busy || saving }"
       >
-        <el-icon :class="{ 'is-loading': busy }"
-          ><Loading v-if="busy" /><Warning v-else-if="saveError" /><CircleCheck v-else
+        <el-icon :class="{ 'is-loading': busy || saving }"
+          ><Loading v-if="busy || saving" /><Warning v-else-if="saveError" /><CircleCheck v-else
         /></el-icon>
         <span>{{ saveState }}</span>
       </div>
@@ -460,6 +460,7 @@ import {
 } from '@element-plus/icons-vue'
 import MarkdownContent from '@/components/content/MarkdownContent.vue'
 import MarkdownEditor from '@/components/content/MarkdownEditor.vue'
+import { initRequestInterceptors } from '@/utils/request'
 import { useRbacStore } from '@/store/rbac'
 import {
   getArticleDetail,
@@ -481,6 +482,7 @@ import {
 } from '@/utils/article-editor'
 import { articleError, articleFilename, saveBlob } from '@/utils/articles'
 import 'highlight.js/styles/github.css'
+defineOptions({ name: 'ArticleEditor', workspaceKey: 'article-studio' })
 const router = useRouter(),
   route = useRoute(),
   rbac = useRbacStore()
@@ -503,10 +505,13 @@ const empty = () => ({
 })
 const article = reactive(empty()),
   options = reactive({ categories: [], tags: [] })
+defineExpose({ workspaceId: computed(() => article.id) })
 const loadState = ref('loading'),
   loadError = ref(''),
   optionsError = ref(''),
   busy = ref(false),
+  saving = ref(false),
+  localOnly = ref(false),
   saveError = ref(''),
   conflict = ref(false),
   lastSaved = ref(''),
@@ -553,19 +558,14 @@ const charCount = computed(() => Array.from(article.content).length)
 const rendered = computed(() =>
   renderArticle(article.content, 'markdown'),
 )
-const saveState = computed(() =>
-  busy.value
-    ? '正在处理…'
-    : saveError.value
-      ? '保存失败，本地内容已保留'
-      : dirty.value
-        ? '尚有未保存修改'
-        : !article.id
-          ? '自动保存已开启'
-          : lastSaved.value
-            ? `已保存 ${lastSaved.value}`
-            : '所有更改已保存',
-)
+const saveState = computed(() => {
+  if (busy.value) return '正在处理…'
+  if (saving.value) return '正在保存草稿…'
+  if (saveError.value) return '保存失败，本地内容已保留'
+  if (dirty.value) return localOnly.value ? '草稿已备份到本机，保存到服务器时需验证身份' : '尚有未保存修改'
+  if (!article.id) return '自动保存已开启'
+  return lastSaved.value ? '已保存 ' + lastSaved.value : '所有更改已保存'
+})
 const saveShortcut = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘ S' : 'Ctrl S'
 function handleMoreCommand(command) {
   if (command === 'import') fileInput.value?.click()
@@ -596,7 +596,9 @@ const actionLabel = (value) =>
 const recoveryOwner =
   rbac.currentUser?.id || JSON.parse(sessionStorage.getItem('userInfo') || '{}').id || 'unknown'
 const recoveryKey = (id = article.id) => `article-draft:${recoveryOwner}:${id || 'new'}`
-let pending = null,
+let saveFlight = null,
+  leaving = false,
+  pending = null,
   pendingAction = null,
   timer,
   generation = 0,
@@ -619,13 +621,20 @@ function persist() {
     saveError.value = '本地备份空间不足，请下载本地稿并保存到服务器'
   }
 }
-function applyServer(value) {
+function applyServer(value, submitted) {
   if (value.content_format !== 'markdown') throw new Error('文章格式必须为 Markdown')
   applying = true
-  Object.assign(article, empty(), value, {
+  const latest = draftFields(article)
+  const server = { ...empty(), ...value,
     tag_ids: value.tag_ids || value.tags?.map((t) => t.id) || [],
-  })
-  savedFingerprint.value = draftFingerprint(article)
+  }
+  Object.assign(article, server)
+  savedFingerprint.value = draftFingerprint(server)
+  if (submitted) {
+    for (const field of Object.keys(latest)) {
+      if (JSON.stringify(latest[field]) !== JSON.stringify(submitted[field])) article[field] = latest[field]
+    }
+  }
   lastSaved.value = new Date().toLocaleTimeString()
   saveError.value = ''
   conflict.value = false
@@ -689,57 +698,94 @@ async function load() {
   }
   loadOptions()
 }
-async function save(automatic = false) {
-  if (!editable.value || busy.value) return false
-  editor.value?.flush()
-  if (!dirty.value && article.id) return true
-  if (charCount.value > MAX_ARTICLE_LENGTH) {
-    saveError.value = '正文最多 500,000 字符'
-    return false
-  }
-  if (automatic && !article.title.trim() && !article.content.trim()) return false
-  busy.value = true
+function scheduleSave() {
+  clearTimeout(timer)
+  if (dirty.value && !saveError.value && !busy.value && !leaving)
+    timer = setTimeout(() => save(true), 2500)
+}
+
+async function saveSnapshot(automatic) {
+  const seq = generation
   try {
-    // Preparing the request can fail before any HTTP request is sent.
-    // Keep it inside finally's scope so the editor always becomes usable again.
     saveError.value = ''
-    clearTimeout(timer)
-    const fields = draftFields(article),
-      oldKey = recoveryKey()
-    const payload = {
-      ...fields,
-      ...(article.id ? { id: article.id, version: article.version } : {}),
+    const needsVerification = automatic && await initRequestInterceptors()
+    if (seq !== generation || disposed) return false
+    if (needsVerification) {
+      localOnly.value = true
+      persist()
+      return false
     }
-    const signature = JSON.stringify(payload)
-    if (!pending || pending.signature !== signature)
-      pending = { signature, request_id: newRequestID() }
+    editor.value?.flush()
+    const fields = draftFields(article)
+    if (!pending) {
+      const payload = { ...fields, ...(article.id ? { id: article.id, version: article.version } : {}) }
+      pending = { signature: JSON.stringify(payload), request_id: newRequestID() }
+    }
+    // Reuse the original request id and payload if the previous response was lost.
+    const submitted = JSON.parse(pending.signature)
+    const oldKey = recoveryKey()
     persist()
-    const res = await (article.id ? updateArticle : createArticle)({
-      ...payload,
-      request_id: pending.request_id,
+    const res = await (submitted.id ? updateArticle : createArticle)({
+      ...submitted, request_id: pending.request_id,
     })
-    if (disposed) return false
-    applyServer(res.data)
-    localStorage.removeItem(oldKey)
-    localStorage.removeItem(recoveryKey())
-    if (!route.params.id) {
-      internalNavigation = true
-      try {
-        await router.replace(router.page('blog/articles/editor/index', { params: { id: article.id } }))
-      } finally {
-        internalNavigation = false
+    if (seq !== generation || disposed) return false
+    editor.value?.flush()
+    applyServer(res.data, draftFields(submitted))
+    if (dirty.value) persist()
+    else localStorage.removeItem(recoveryKey())
+    if (oldKey !== recoveryKey()) localStorage.removeItem(oldKey)
+    if (!route.params.id && !leaving && can('update')) {
+      const destination = router.page('blog/articles/editor/index', { params: { id: article.id } })
+      if (destination.name !== 'Forbidden') {
+        internalNavigation = true
+        try { await router.replace(destination) }
+        finally { internalNavigation = false }
       }
     }
-    if (!automatic) ElMessage.success('草稿已保存')
     return true
   } catch (e) {
-    conflict.value = e.response?.status === 409
+    if (seq !== generation || disposed) return false
+    const status = e.response?.status
+    conflict.value = status === 409
+    if (status >= 400 && status < 500 && status !== 408) pending = null
     saveError.value = articleError(e)
     persist()
     return false
-  } finally {
-    busy.value = false
   }
+}
+
+async function save(automatic = false) {
+  clearTimeout(timer)
+  if (!editable.value) return false
+  editor.value?.flush()
+  do {
+    if (!saveFlight) {
+      if (!dirty.value && !pending && article.id) return true
+      if (charCount.value > MAX_ARTICLE_LENGTH) {
+        saveError.value = '正文最多 500,000 字符'
+        return false
+      }
+      if (automatic && !article.title.trim() && !article.content.trim()) return false
+      saving.value = true
+      saveFlight = saveSnapshot(automatic).finally(() => {
+        saving.value = false
+        saveFlight = null
+      })
+    }
+    if (!(await saveFlight)) {
+      if (automatic || !localOnly.value || saveError.value) return false
+      localOnly.value = false
+      continue
+    }
+    if (disposed) return false
+    editor.value?.flush()
+    if (automatic) {
+      scheduleSave()
+      return true
+    }
+  } while (dirty.value && editable.value)
+  if (!busy.value) ElMessage.success('草稿已保存')
+  return !dirty.value
 }
 async function act(action, extra = {}) {
   if (busy.value) return
@@ -763,10 +809,12 @@ async function act(action, extra = {}) {
       return
     }
   }
-  if (action !== 'restore' && dirty.value && !(await save(false))) return
-  if (!article.id && !(await save(false))) return
+  if (busy.value) return
   busy.value = true
+  clearTimeout(timer)
   try {
+    if (saveFlight && !(await saveFlight) && !localOnly.value) return
+    if (action !== 'restore' && (dirty.value || !article.id) && !(await save(false))) return
     saveError.value = ''
     const payload = {
       id: article.id,
@@ -927,6 +975,11 @@ async function leave() {
     ElMessage.warning('操作进行中，请稍后离开')
     return false
   }
+  editor.value?.flush()
+  if (saveFlight) {
+    leaving = true
+    try { await saveFlight } finally { leaving = false }
+  }
   if (!dirty.value) return true
   persist()
   try {
@@ -949,29 +1002,20 @@ onBeforeRouteUpdate(async (to) => {
   return leave()
 })
 watch(
-  () => route.params.id,
-  (id) => {
-    if (ready.value && String(id || '') === String(article.id || '')) return
-    load()
-  },
-)
-watch(
   () => draftFingerprint(article),
   () => {
     if (applying || !ready.value) return
     clearTimeout(timer)
     if (dirty.value) {
       persist()
-      timer = setTimeout(() => {
-        if (!saveError.value) save(true)
-      }, 2500)
+      scheduleSave()
     }
   },
 )
 function beforeUnload(event) {
   // During the leave animation this editor remains in the DOM, but no longer owns navigation.
   if (studioHeader.value?.closest('[inert]')) return
-  if (dirty.value || busy.value) {
+  if (dirty.value || busy.value || saving.value) {
     persist()
     event.preventDefault()
     event.returnValue = ''
@@ -989,7 +1033,7 @@ function keydown(event) {
     immersive.value = false
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
     event.preventDefault()
-    save(false)
+    if (!busy.value) save(false)
   }
 }
 onMounted(() => {

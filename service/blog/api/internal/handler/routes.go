@@ -5,7 +5,21 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
+	articles "sitehub/service/blog/api/internal/handler/articles"
+	assets "sitehub/service/blog/api/internal/handler/assets"
+	categories "sitehub/service/blog/api/internal/handler/categories"
+	community "sitehub/service/blog/api/internal/handler/community"
+	editor "sitehub/service/blog/api/internal/handler/editor"
+	files "sitehub/service/blog/api/internal/handler/files"
+	health "sitehub/service/blog/api/internal/handler/health"
+	reader "sitehub/service/blog/api/internal/handler/reader"
+	review "sitehub/service/blog/api/internal/handler/review"
+	settings "sitehub/service/blog/api/internal/handler/settings"
+	statistics "sitehub/service/blog/api/internal/handler/statistics"
+	storage "sitehub/service/blog/api/internal/handler/storage"
+	tags "sitehub/service/blog/api/internal/handler/tags"
 	"sitehub/service/blog/api/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
@@ -14,209 +28,393 @@ import (
 func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
-			{Method: http.MethodGet, Path: "/v1/blog/admin/community", Handler: CommunityReviewQueueHandler(serverCtx)},
-			{Method: http.MethodPost, Path: "/v1/blog/admin/community", Handler: ReviewCommunityHandler(serverCtx)},
-			{Method: http.MethodPost, Path: "/v1/blog/home/settings", Handler: SaveHomeSettingsHandler(serverCtx)},
+			{
+				Method:  http.MethodGet,
+				Path:    "/articles",
+				Handler: articles.PublicArticlesHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/articles/detail",
+				Handler: articles.PublicArticleHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/articles/hot",
+				Handler: articles.HotArticlesHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/articles/recent",
+				Handler: articles.RecentArticlesHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/articles/search",
+				Handler: articles.SearchArticlesHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/articles/view",
+				Handler: articles.RecordViewHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/blog"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/assets",
+				Handler: assets.ReadAssetHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodHead,
+				Path:    "/assets",
+				Handler: assets.HeadAssetHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/assets/upload",
+				Handler: assets.UploadAssetHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/blog"),
+		rest.WithTimeout(600000*time.Millisecond),
+		rest.WithMaxBytes(53477376),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/categories",
+				Handler: categories.ListCategoriesHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/categories/create",
+				Handler: categories.CreateCategoryHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/categories/delete",
+				Handler: categories.DeleteCategoryHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/categories/detail",
+				Handler: categories.GetCategoryHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/categories/tree",
+				Handler: categories.CategoryTreeHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/categories/update",
+				Handler: categories.UpdateCategoryHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/blog"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/friends",
+				Handler: community.ListFriendsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/friends",
+				Handler: community.ApplyFriendHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/messages",
+				Handler: community.ListMessagesHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/messages",
+				Handler: community.SendMessageHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/blog"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/articles",
+				Handler: editor.AdminArticlesHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/articles/action",
+				Handler: editor.ApplyArticleActionHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/articles/detail",
+				Handler: editor.EditorArticleHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/articles/draft",
+				Handler: editor.SaveDraftHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/articles/history",
+				Handler: editor.GetArticleHistoryHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/articles/options",
+				Handler: editor.GetArticleOptionsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/articles/revision",
+				Handler: editor.ArticleRevisionHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/blog/admin"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/download",
+				Handler: files.DownloadFileHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodHead,
+				Path:    "/download",
+				Handler: files.HeadDownloadHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/local/:kind/:name",
+				Handler: files.ReadLocalFileHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodHead,
+				Path:    "/local/:kind/:name",
+				Handler: files.HeadLocalFileHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/upload",
+				Handler: files.UploadFileHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/file"),
+		rest.WithTimeout(600000*time.Millisecond),
+		rest.WithMaxBytes(2148532224),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
 			{
 				Method:  http.MethodGet,
 				Path:    "/health",
-				Handler: HealthHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/about",
-				Handler: GetAboutHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/admin/articles",
-				Handler: AdminArticlesHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/blog/admin/articles/action",
-				Handler: ApplyArticleActionHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/admin/articles/detail",
-				Handler: EditorArticleHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/blog/admin/articles/draft",
-				Handler: SaveDraftHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/admin/articles/history",
-				Handler: GetArticleHistoryHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/admin/articles/options",
-				Handler: GetArticleOptionsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/admin/articles/revision",
-				Handler: ArticleRevisionHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/articles",
-				Handler: PublicArticlesHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/articles/detail",
-				Handler: PublicArticleHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/articles/hot",
-				Handler: HotArticlesHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/articles/recent",
-				Handler: RecentArticlesHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/articles/search",
-				Handler: SearchArticlesHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/blog/articles/view",
-				Handler: RecordViewHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/categories",
-				Handler: ListCategoriesHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/blog/categories/create",
-				Handler: CreateCategoryHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/blog/categories/delete",
-				Handler: DeleteCategoryHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/categories/detail",
-				Handler: GetCategoryHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/categories/tree",
-				Handler: CategoryTreeHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/blog/categories/update",
-				Handler: UpdateCategoryHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/friends",
-				Handler: ListFriendsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/blog/friends",
-				Handler: ApplyFriendHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/messages",
-				Handler: ListMessagesHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/blog/messages",
-				Handler: SendMessageHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/statistics/articlestats",
-				Handler: GetArticleStatsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/statistics/articletrend",
-				Handler: ArticleTrendHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/statistics/categorystats",
-				Handler: CategoryStatsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/statistics/dashboard",
-				Handler: DashboardHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/statistics/hotarticlestats",
-				Handler: HotArticleStatsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/statistics/hottags",
-				Handler: HotTagsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/statistics/tagstats",
-				Handler: TagStatsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/statistics/viewtrend",
-				Handler: ViewTrendHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/tags",
-				Handler: ListTagsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/blog/tags/create",
-				Handler: CreateTagHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/blog/tags/delete",
-				Handler: DeleteTagHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/blog/tags/detail",
-				Handler: GetTagHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/blog/tags/update",
-				Handler: UpdateTagHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/file/settings",
-				Handler: GetStorageHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/file/settings",
-				Handler: SaveStorageHandler(serverCtx),
+				Handler: health.HealthHandler(serverCtx),
 			},
 		},
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodPost,
+				Path:    "/articles/favorite",
+				Handler: reader.FavoriteArticleHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/articles/interaction",
+				Handler: reader.ArticleInteractionHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/articles/like",
+				Handler: reader.LikeArticleHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/favorites/articles",
+				Handler: reader.FavoriteArticlesHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/favorites/folders",
+				Handler: reader.FavoriteFoldersHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/favorites/folders",
+				Handler: reader.CreateFavoriteFolderHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/blog"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/community",
+				Handler: review.CommunityReviewQueueHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/community",
+				Handler: review.ReviewCommunityHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/blog/admin"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/about",
+				Handler: settings.GetAboutHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/home/settings",
+				Handler: settings.SaveHomeSettingsHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/blog"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/statistics/articlestats",
+				Handler: statistics.GetArticleStatsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/statistics/articletrend",
+				Handler: statistics.ArticleTrendHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/statistics/categorystats",
+				Handler: statistics.CategoryStatsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/statistics/dashboard",
+				Handler: statistics.DashboardHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/statistics/hotarticlestats",
+				Handler: statistics.HotArticleStatsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/statistics/hottags",
+				Handler: statistics.HotTagsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/statistics/tagstats",
+				Handler: statistics.TagStatsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/statistics/viewtrend",
+				Handler: statistics.ViewTrendHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/blog"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/settings",
+				Handler: storage.GetStorageHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/settings",
+				Handler: storage.SaveStorageHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/file"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/storage",
+				Handler: storage.ReadInternalStorageHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPut,
+				Path:    "/storage",
+				Handler: storage.SaveInternalStorageHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/storage/defaults",
+				Handler: storage.EnsureStorageDefaultsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/storage/validate",
+				Handler: storage.ValidateReleaseHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/internal/blog"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/tags",
+				Handler: tags.ListTagsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/tags/create",
+				Handler: tags.CreateTagHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/tags/delete",
+				Handler: tags.DeleteTagHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/tags/detail",
+				Handler: tags.GetTagHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/tags/update",
+				Handler: tags.UpdateTagHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/blog"),
 	)
 }

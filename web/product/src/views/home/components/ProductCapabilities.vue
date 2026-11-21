@@ -1,5 +1,5 @@
 <script setup>
-import ProductIcon from "@/components/product/ProductIcon.vue";
+import ResourceIcon from '@shared/icons/ResourceIcon.vue'
 defineProps({ items: { type: Array, default: () => [] }, linked: Boolean });
 </script>
 <template>
@@ -11,7 +11,7 @@ defineProps({ items: { type: Array, default: () => [] }, linked: Boolean });
       :id="`capability-${item.key}`"
     >
       <div class="product-card__top">
-        <span class="product-card__icon"><ProductIcon :name="item.key" /></span
+        <span class="product-card__icon"><ResourceIcon :name="item.icon || item.key" :size="24" /></span
         ><span class="product-card__index">/ {{ item.index }}</span>
       </div>
       <div class="product-card__body">
@@ -20,7 +20,7 @@ defineProps({ items: { type: Array, default: () => [] }, linked: Boolean });
         <div class="tag-row">
           <span v-for="tag in item.tags" :key="tag">{{ tag }}</span>
         </div>
-        <router-link v-if="linked" class="capability-link" to="/docs"
+        <router-link v-if="linked" class="capability-link" :to="{ name: 'docs', params: { id: '' } }"
           >查看使用文档 <span aria-hidden="true">→</span></router-link
         >
       </div>

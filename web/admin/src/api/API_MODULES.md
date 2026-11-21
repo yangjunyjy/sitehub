@@ -4,8 +4,10 @@
 
 | 模块 | 业务前缀 |
 | --- | --- |
-| auth、permission、sliderCaptcha、settings | `/rbac/auth`、`/rbac/captcha`、`/rbac/settings` |
+| auth、sliderCaptcha、settings | `/rbac/auth`、`/rbac/captcha`、`/rbac/settings` |
 | user、role、menu | `/rbac/users`、`/rbac/roles`、`/rbac/menus` |
+| icons | `/rbac/system/icons` |
+| community | `/blog/admin/community` |
 | article | `/blog/admin/articles`、`/blog/assets/upload` |
 | category、tag、statistics | `/blog/categories`、`/blog/tags`、`/blog/statistics` |
 | documents | `/product/admin/docs`、`/product/docs` |

@@ -37,8 +37,11 @@ func TestV3GuestbookAndModeratedComments(t *testing.T) {
 	}
 	ctx := context.Background()
 	repo := blogmysql.NewCommunityRepository(db)
-	article := entity.Article{Title: "Article", Slug: "article", Content: "text"}
+	article := entity.Article{Title: "Article", Slug: "article", Content: "text", Status: 1}
 	if err := db.Create(&article).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&entity.ArticlePublication{ArticleID: article.ID, Title: "Article", Slug: "article", Content: "text", Payload: "{}"}).Error; err != nil {
 		t.Fatal(err)
 	}
 	comment := entity.GuestMessage{ArticleID: article.ID, Content: "article only", Status: "pending"}

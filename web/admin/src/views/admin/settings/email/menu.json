@@ -1,0 +1,6 @@
+{
+  "name": "邮件设置",
+  "permission": "system:email:manage",
+  "sort": 26,
+  "superAdmin": true
+}

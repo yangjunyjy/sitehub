@@ -1,0 +1,13 @@
+{
+  "menu": false,
+  "layout": false,
+  "routes": [
+    {
+      "path": "/login",
+      "name": "Login",
+      "meta": {
+        "title": "登录"
+      }
+    }
+  ]
+}

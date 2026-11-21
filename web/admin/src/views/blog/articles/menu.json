@@ -1,0 +1,5 @@
+{
+  "name": "文章管理",
+  "permission": "blog:article:list",
+  "sort": 5
+}

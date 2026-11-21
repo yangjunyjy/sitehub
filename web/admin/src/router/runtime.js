@@ -1,49 +1,34 @@
 import { createRouter } from "vue-router";
-import { isSuperAdmin, menuRoutes } from "./pages.js";
+import { isSuperAdmin, menuRoutes, navigationMenus } from "./pages.js";
 
 // Exercise the real navigation lifecycle with either web or memory history.
 export function createAdminRouter({
   history,
   modules,
+  settings = {},
   layout,
   store,
   storage = globalThis.sessionStorage,
   document = globalThis.document,
 }) {
-  const notFound = modules["../views/not-found/index.vue"];
+  const standalone = [], children = [];
+  for (const [file, options] of Object.entries(settings)) {
+    const component = modules[file.replace(/menu\.json$/, 'index.vue')];
+    for (const record of options.routes || []) {
+      (options.layout ? children : standalone).push({ ...record, component });
+    }
+  }
+  const notFound = children.find(record => record.name === 'NotFound')?.component;
   const router = createRouter({
     history,
     routes: [
-      { path: '/access-unavailable', name: 'AccessUnavailable', component: modules['../views/access-unavailable/index.vue'], meta: { title: '后台加载失败' } },
-      {
-        path: "/login",
-        name: "Login",
-        component: modules["../views/login/index.vue"],
-        meta: { title: "登录" },
-      },
+      ...standalone,
       { path: "/", redirect: "/dashboard" },
-      {
-        path: "/dashboard",
-        name: "dashboard",
-        component: layout,
-        children: [
-          {
-            path: "/403",
-            name: "Forbidden",
-            component: notFound,
-            props: { status: 403 },
-            meta: { title: "无权访问", hidden: true },
-          },
-          {
-            path: "/:pathMatch(.*)*",
-            name: "NotFound",
-            component: notFound,
-            meta: { title: "页面不存在", hidden: true },
-          },
-        ],
-      },
+      { path: "/dashboard", name: "dashboard", component: layout, children },
     ],
   });
+  const reservedPaths = router.getRoutes().map(record => record.path);
+  router.navigation = (menus, user) => navigationMenus(menus, isSuperAdmin(user), settings);
   let removers = [];
   let signature = null;
   let initialized = false;
@@ -55,7 +40,7 @@ export function createAdminRouter({
   };
   router.installMenus = (menus) => {
     router.resetMenus();
-    for (const route of menuRoutes(menus, modules, notFound))
+    for (const route of menuRoutes(menus, modules, notFound, settings, reservedPaths))
       removers.push(router.addRoute("dashboard", route));
     signature = JSON.stringify(menus || []);
     initialized = true;

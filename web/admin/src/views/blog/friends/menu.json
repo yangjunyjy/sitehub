@@ -1,0 +1,5 @@
+{
+  "name": "友链管理",
+  "permission": "blog:community:list",
+  "sort": 7
+}

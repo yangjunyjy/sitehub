@@ -1,4 +1,5 @@
 <script setup>
+import ResourceIcon from '@shared/icons/ResourceIcon.vue'
 defineProps({
   modes: { type: Array, default: () => [] },
   current: { type: Object, required: true },
@@ -16,7 +17,7 @@ defineProps({
       :aria-current="current.id === mode.id ? 'page' : undefined"
       :title="mode.description"
       :aria-description="mode.description"
-      ><strong>{{ mode.label }}</strong
+      ><ResourceIcon v-if="mode.icon" :name="mode.icon" :size="16" /><strong>{{ mode.label }}</strong
       ><small v-if="!mode.available">待推出</small></router-link
     >
   </nav>

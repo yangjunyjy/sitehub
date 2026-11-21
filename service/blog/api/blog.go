@@ -10,7 +10,7 @@ import (
 	"sitehub/common/runtimeconfig"
 	"sitehub/service/blog/api/internal/config"
 	"sitehub/service/blog/api/internal/handler"
-	healthlogic "sitehub/service/blog/api/internal/logic"
+	healthlogic "sitehub/service/blog/api/internal/logic/health"
 	"sitehub/service/blog/api/internal/svc"
 	"sitehub/service/blog/jobs"
 
@@ -48,14 +48,8 @@ func run(parent context.Context, c config.Config) error {
 		_, err := healthlogic.NewHealthLogic(probeCtx, ctx).Health()
 		return err
 	})
-	registerHandlers(s, ctx)
+	handler.RegisterHandlers(s, ctx)
 	return managed.Serve(parent, fmt.Sprintf("%s:%d", c.Host, c.Port), s.Start)
-}
-
-func registerHandlers(server *rest.Server, ctx *svc.ServiceContext) {
-	handler.RegisterHandlers(server, ctx)
-	handler.RegisterStreamHandlers(server, ctx)
-	handler.RegisterStorageHTTP(server, ctx)
 }
 
 type localJobs struct {

@@ -9,3 +9,8 @@ export const memberProfile = () =>
 export const logoutMember = async () => {
   await request.post("/rbac/members/logout", {});
 };
+
+export const sendMemberCode = (email) =>
+  request.post("/rbac/members/code", { email }).then((r) => r.data);
+export const registerMember = (values) =>
+  request.post("/rbac/members/register", values);

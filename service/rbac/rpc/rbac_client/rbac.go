@@ -34,6 +34,9 @@ type (
 	HealthRequest                = rbac.HealthRequest
 	HealthResponse               = rbac.HealthResponse
 	IDRequest                    = rbac.IDRequest
+	IconName                     = rbac.IconName
+	IconPage                     = rbac.IconPage
+	IconRecord                   = rbac.IconRecord
 	LoginMemberInput             = rbac.LoginMemberInput
 	MemberProfile                = rbac.MemberProfile
 	MemberSessionReply           = rbac.MemberSessionReply
@@ -67,6 +70,12 @@ type (
 	UserPage                     = rbac.UserPage
 
 	Rbac interface {
+		ListIcons(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*IconPage, error)
+		IconContent(ctx context.Context, in *IconName, opts ...grpc.CallOption) (*IconRecord, error)
+		ValidateIcon(ctx context.Context, in *IconRecord, opts ...grpc.CallOption) (*IconRecord, error)
+		CreateIcon(ctx context.Context, in *IconRecord, opts ...grpc.CallOption) (*IconRecord, error)
+		UpdateIcon(ctx context.Context, in *IconRecord, opts ...grpc.CallOption) (*IconRecord, error)
+		DeleteIcon(ctx context.Context, in *IDRequest, opts ...grpc.CallOption) (*Empty, error)
 		CheckClient(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 		ConsumeToken(ctx context.Context, in *ConsumeTokenRequest, opts ...grpc.CallOption) (*Empty, error)
 		Health(ctx context.Context, in *HealthRequest, opts ...grpc.CallOption) (*HealthResponse, error)
@@ -125,6 +134,36 @@ func NewRbac(cli zrpc.Client) Rbac {
 	return &defaultRbac{
 		cli: cli,
 	}
+}
+
+func (m *defaultRbac) ListIcons(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*IconPage, error) {
+	client := rbac.NewRbacClient(m.cli.Conn())
+	return client.ListIcons(ctx, in, opts...)
+}
+
+func (m *defaultRbac) IconContent(ctx context.Context, in *IconName, opts ...grpc.CallOption) (*IconRecord, error) {
+	client := rbac.NewRbacClient(m.cli.Conn())
+	return client.IconContent(ctx, in, opts...)
+}
+
+func (m *defaultRbac) ValidateIcon(ctx context.Context, in *IconRecord, opts ...grpc.CallOption) (*IconRecord, error) {
+	client := rbac.NewRbacClient(m.cli.Conn())
+	return client.ValidateIcon(ctx, in, opts...)
+}
+
+func (m *defaultRbac) CreateIcon(ctx context.Context, in *IconRecord, opts ...grpc.CallOption) (*IconRecord, error) {
+	client := rbac.NewRbacClient(m.cli.Conn())
+	return client.CreateIcon(ctx, in, opts...)
+}
+
+func (m *defaultRbac) UpdateIcon(ctx context.Context, in *IconRecord, opts ...grpc.CallOption) (*IconRecord, error) {
+	client := rbac.NewRbacClient(m.cli.Conn())
+	return client.UpdateIcon(ctx, in, opts...)
+}
+
+func (m *defaultRbac) DeleteIcon(ctx context.Context, in *IDRequest, opts ...grpc.CallOption) (*Empty, error) {
+	client := rbac.NewRbacClient(m.cli.Conn())
+	return client.DeleteIcon(ctx, in, opts...)
 }
 
 func (m *defaultRbac) CheckClient(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {

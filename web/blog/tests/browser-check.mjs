@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { createFrontendServer } from "../server/server.mjs";
 
-// Isolated empty API fixtures verify page behavior without touching live data.
+// Fixtures isolate full reader workflows from real member accounts and published content.
 const dist = fileURLToPath(new URL("../dist/", import.meta.url));
 const artifacts = fileURLToPath(new URL("../.artifacts/", import.meta.url));
 await mkdir(artifacts, { recursive: true });
@@ -19,9 +19,19 @@ const errors = [];
 const context = await browser.newContext({
   viewport: { width: 1440, height: 1000 },
 });
+let signedIn = false;
+let registeredEmail = "";
+let customPaths = false;
+let codeAttempts = 0;
+let liked = false;
+let savedIn = null;
+const reader = {id:"99", email:"reader@example.test"};
+const folders = [{id:"0", name:"默认收藏夹"}];
+const interaction = () => ({liked, likes:Number(liked), favorited:savedIn!==null,
+  favorites:Number(savedIn!==null), folderId:savedIn ?? "0"});
 await context.route("**/v1/**", async (route) => {
   const path = new URL(route.request().url()).pathname;
-  if (path.endsWith("/members/me"))
+  if (path.endsWith("/members/me") && !signedIn)
     return route.fulfill({
       status: 401,
       json: { code: 401, message: "请先登录" },
@@ -29,17 +39,15 @@ await context.route("**/v1/**", async (route) => {
   let data = { items: [], total: 0 };
   if (path.endsWith("/menus/public"))
     data.items = [
-      "home",
-      "categories",
-      "tags",
-      "archives",
-      "friends",
-      "about",
-      "messages",
-    ].map((name, index) => ({
-      menuName: ["首页", "分类", "标签", "归档", "友链", "关于", "留言"][index],
-      component: name + "/index",
-    }));
+      { name: '首页', component: 'home/index', path: '/' },
+      { name: '内容', path: '/explore', children: [
+        {name: '分类', component: 'categories/index', path: '/categories'},
+        {name: '标签', component: 'tags/index', path: '/tags'},
+        {name: '归档', component: 'archives/index', path: '/archives'}]},
+      { name: '友链', component: 'friends/index', path: '/friends' },
+      { name: '关于', component: 'about/index', path: '/about' },
+      { name: '留言', component: 'messages/index', path: '/messages' },
+    ];
   if (path.endsWith("/about")) data = { name: '云间小记', bio: '记录生活的光与热', homeVerse: '在文字的星河里，记录生活的光与热', homeAnimation: true };
   if (path.endsWith('/friends')) data.items = [
     ['夏末的猫', '记录开发日常和窗边的小事。'], ['工具小记', '分享每天用到的小工具。'],
@@ -61,8 +69,45 @@ await context.route("**/v1/**", async (route) => {
         "# Reader heading\n\n" + 'A paragraph.\n\n'.repeat(65) + "<script>window.untrustedArticle=true</script>",
       tags: [],
     };
-  if (route.request().method() === "POST")
-    data = { id: "1", status: "pending" };
+  const post = route.request().method() === "POST";
+  const values = post ? route.request().postDataJSON() : {};
+  if(path.endsWith("/members/me")) data=reader;
+  if(path.endsWith("/members/code")) {
+    if (++codeAttempts === 1) return route.fulfill({status:503,json:{code:503}});
+    data={};
+  }
+  if (path.endsWith("/menus/public") && customPaths) {
+    for (const [component,path] of [["login","/signin"],["register","/join"],["account","/library"],["article","/read"]])
+      data.items.push({name:component,path,component:component+"/index"});
+  }
+  if(path.endsWith("/members/register")) registeredEmail=values.email;
+  if(path.endsWith("/members/login")){
+    assert.equal(registeredEmail,values.email);
+    signedIn=true;
+    data={user:reader};
+  }
+  if(path.endsWith("/articles/like")) {assert(signedIn); liked=values.liked;}
+  if(path.endsWith("/articles/favorite")) {assert(signedIn); savedIn=values.favorited?String(values.folderId):null;}
+  if(/\/articles\/(interaction|favorite|like)$/.test(path)) data=interaction();
+  if(path.endsWith("/favorites/folders")) {
+    assert(signedIn);
+    if(post) {
+      data={id:String(folders.length),name:values.name,count:0};
+      folders.push(data);
+    } else data={items:folders.map(folder=>({...folder,count:Number(savedIn===folder.id)}))};
+  }
+  if(path.endsWith("/favorites/articles")){
+    assert(signedIn);
+    const selected=new URL(route.request().url()).searchParams.get("folderId");
+    const items=selected===savedIn?[{id:"1",title:"Isolated article fixture",savedAt:"2026-01-01T12:00:00Z"}]:[];
+    data={items,total:items.length};
+  }
+  if(path.endsWith("/messages") && !post && new URL(route.request().url()).searchParams.has("articleId"))
+    data={items:[{id:"24",nickname:"晴川",content:"谢谢分享👏"}],total:1};
+  if(post && (path.endsWith("/messages") || path.endsWith("/friends"))) {
+    assert(signedIn);
+    data={id:"1",status:"pending"};
+  }
   return route.fulfill({ json: { code: 0, message: "ok", data } });
 });
 const page = await context.newPage();
@@ -135,6 +180,7 @@ try {
     "/messages",
     "/search?q=cloud",
     "/login",
+    "/register",
     "/article/1",
     "/missing-page",
   ]) {
@@ -167,9 +213,9 @@ try {
     );
     if (path === "/") {
       await checkHomeMotion();
-      assert.equal(await page.getByRole('link', { name: '站外手记' }).getAttribute('href'), 'https://example.org/notes');
-      const content = page.getByRole("button", { name: "内容" });
-      const tag = page.getByRole("link", { name: "标签 按标签发现文章" });
+      assert.equal(await page.getByRole('navigation', { name: '主要导航', exact: true }).getByRole('link', { name: '站外手记' }).getAttribute('href'), 'https://example.org/notes');
+      const content = page.getByRole("navigation", {name: "主要导航", exact: true}).getByRole("button", { name: "内容" });
+      const tag = page.getByRole("navigation", { name: "主要导航", exact: true }).getByRole("link", { name: "标签", exact: true });
       await content.hover();
       await tag.waitFor();
       await tag.hover();
@@ -194,6 +240,53 @@ try {
         fullPage: true,
       });
   }
+  await page.goto(origin + "/friends#apply", { waitUntil: "networkidle" });
+  await page.getByRole("link", {name:/登录后申请友链/}).waitFor();
+  assert.equal(await page.getByPlaceholder("你的站点叫什么名字？").count(), 0);
+  await page.goto(origin + "/messages", { waitUntil: "networkidle" });
+  await page.getByRole("link", {name:/登录后写留言/}).waitFor();
+  await page.goto(origin + "/article/1", { waitUntil: "networkidle" });
+  await page.getByRole("link", {name:/登录后写评论/}).waitFor();
+  await page.getByRole("img", {name:"👏"}).waitFor();
+  await page.getByRole("button", {name:/^收藏/}).click();
+  await page.getByRole("heading", {name:"登录读者账号"}).waitFor();
+  await page.getByRole("link", {name:/注册账号/}).click();
+  await page.locator('input[type="email"]').fill(reader.email);
+  await page.getByRole("button", {name:"获取验证码"}).click();
+  await page.getByRole("alert").getByText("服务暂时不可用，请稍后重试").waitFor();
+  assert.equal(await page.locator('input[type="email"]').inputValue(),reader.email);
+  await page.getByRole("button", {name:"获取验证码"}).click();
+  await page.getByRole("status").getByText("验证码已发送，请查看邮箱。").waitFor();
+  await page.getByPlaceholder("6 位验证码").fill("123456");
+  await page.locator('[autocomplete="new-password"]').fill("Reader123!");
+  await page.screenshot({path:artifacts+"/register-desktop.png"});
+  await page.getByRole("button", {name:"注册并登录"}).click();
+  await page.waitForURL("**/article/1");
+  await page.getByRole("button", {name:/^点赞/}).click();
+  await page.getByRole("button", {name:"已点赞 1"}).waitFor();
+  await page.getByRole("button", {name:/^收藏/}).click();
+  const dialog=page.getByRole("dialog");
+  assert(await dialog.getByRole("radio", {name:/默认收藏夹/}).isChecked());
+  await dialog.getByRole("button", {name:"保存收藏"}).click();
+  await page.getByRole("button", {name:/^已收藏/}).click();
+  await dialog.getByRole("button", {name:/新建收藏夹/}).click();
+  await dialog.getByLabel("新收藏夹名称").fill("技术笔记");
+  await dialog.getByRole("button", {name:"创建收藏夹"}).click();
+  await dialog.getByRole("radio", {name:/技术笔记/}).waitFor();
+  assert(await dialog.getByRole("radio", {name:/技术笔记/}).isChecked());
+  await dialog.getByRole("button", {name:"保存收藏"}).click();
+  await dialog.waitFor({state:"hidden"});
+  assert.equal(savedIn,"1");
+  await page.goto(origin+"/account", {waitUntil:"networkidle"});
+  await page.getByText("这个收藏夹还没有文章").waitFor();
+  await page.getByRole("button", {name:/技术笔记/}).click();
+  await page.getByRole("link", {name:/Isolated article fixture/}).waitFor();
+  await page.screenshot({path:artifacts+"/account-desktop.png"});
+  await page.getByRole("link", {name:/Isolated article fixture/}).click();
+  await page.getByRole("button", {name:/^已收藏/}).click();
+  await dialog.getByRole("button", {name:"取消收藏"}).click();
+  await dialog.waitFor({state:"hidden"});
+  assert.equal(savedIn,null);
   await page.goto(origin + "/friends", { waitUntil: "networkidle" });
   await page.getByRole('button', { name: '列表', exact: true }).click();
   await page.locator('.friend-list').getByText('夏末的猫').waitFor();
@@ -236,7 +329,7 @@ try {
     .fill("Isolated browser test");
   await page.getByRole("button", { name: "发送留言", exact: true }).click();
   await page
-    .getByText("你的星光已送达，审核通过后会出现在这片星空。", { exact: true })
+    .getByText("留言已提交，审核通过后公开显示。", { exact: true })
     .waitFor();
   await page.goto(origin + "/article/1", { waitUntil: "networkidle" });
   const progress = page.getByRole('progressbar', { name: '文章阅读进度' });
@@ -245,10 +338,16 @@ try {
   await page.waitForFunction(() => document.querySelector('[role="progressbar"]').getAttribute('aria-valuenow') === '100');
   await page.getByRole('button', { name: '写评论' }).click();
   await page.getByLabel('评论内容').fill('文章下的评论');
+  await page.getByRole("button", {name:"选择表情"}).click();
+  const palette=page.getByRole("group",{name:"表情包"});
+  assert.equal(await palette.locator("img").count(),12);
+  await page.screenshot({path:artifacts+"/article-comments-desktop.png"});
+  await palette.getByRole("button", {name:"鼓掌"}).click();
+  assert.equal(await page.getByLabel("评论内容").inputValue(),"文章下的评论👏");
   const comment = page.waitForRequest(req => req.method() === 'POST' && req.url().endsWith('/blog/messages'));
   await page.getByRole('button', { name: '发送评论' }).click();
   assert.equal((await comment).postDataJSON().articleId, 1);
-  await page.getByText('评论已提交，审核通过后会显示在本文下方。').waitFor();
+  await page.getByText('评论已提交，审核通过后公开显示。').waitFor();
   await page
     .getByRole("heading", { name: "Reader heading", exact: true })
     .waitFor();
@@ -281,7 +380,7 @@ try {
   );
   assert.equal(
     await page
-      .getByText("你的星光已送达，审核通过后会出现在这片星空。", {
+      .getByText("留言已提交，审核通过后公开显示。", {
         exact: true,
       })
       .count(),
@@ -294,6 +393,9 @@ try {
     "/friends",
     "/messages",
     "/login",
+    "/register",
+    "/account",
+    "/article/1",
     "/missing-page",
   ]) {
     await page.goto(origin + path, { waitUntil: "networkidle" });
@@ -317,6 +419,7 @@ try {
       "Mobile form controls are clipped: " + path,
     );
     await page.getByRole("button", { name: "切换导航", exact: true }).click();
+    await page.getByRole("navigation", {name: "移动导航", exact:true}).getByRole("button", {name:"内容"}).click();
     await page
       .getByRole("navigation", { name: "移动导航", exact: true })
       .getByText("分类", { exact: true })
@@ -333,6 +436,7 @@ try {
     } else {
       await page.getByRole("button", { name: "切换导航", exact: true }).click();
     }
+    if (["/register","/article/1","/account"].includes(path)) await page.screenshot({path:artifacts+"/"+path.slice(1).replace("/","-")+"-mobile.png"});
     if (["/", "/messages"].includes(path))
       await page.screenshot({
         path: `${artifacts}/${path === "/" ? "home" : "messages"}-mobile.png`,
@@ -349,8 +453,32 @@ try {
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
   await page.getByRole('heading', { name: '切回博客后继续播放' }).waitFor();
   await checkMeteorFlight();
+  customPaths=true;
+  signedIn=false;
+  await page.goto(origin+"/read/1",{waitUntil:"networkidle"});
+  await page.getByRole("button",{name:/^收藏/}).click();
+  await page.waitForURL("**/signin?**");
+  await page.getByRole("link",{name:/注册账号/}).click();
+  await page.waitForURL("**/join?**");
+  await page.getByRole("link",{name:/登录 →/}).click();
+  await page.locator('input[type="email"]').fill(reader.email);
+  await page.locator('[autocomplete="current-password"]').fill("Reader123!");
+  await page.getByRole("button",{name:"登录",exact:true}).click();
+  await page.waitForURL("**/read/1");
+  signedIn=false;
+  await page.goto(origin+"/join",{waitUntil:"networkidle"});
+  await page.locator('input[type="email"]').fill(reader.email);
+  await page.getByPlaceholder("6 位验证码").fill("123456");
+  await page.locator('[autocomplete="new-password"]').fill("Reader123!");
+  await page.getByRole("button",{name:"注册并登录"}).click();
+  await page.waitForURL("**/library");
+  savedIn="0";
+  await page.reload({waitUntil:"networkidle"});
+  await page.getByRole("link",{name:/Isolated article fixture/}).click();
+  await page.waitForURL("**/read/1");
+  assert.deepEqual(errors, []);
   console.log(
-    "Blog browser checks passed: directory routes, dynamic navigation, empty content, pending forms and responsive layouts",
+    "Blog browser checks passed: dynamic page paths, registration and login, folder creation and saved articles, emoji, moderated submissions and responsive layouts",
   );
 } finally {
   await browser.close();

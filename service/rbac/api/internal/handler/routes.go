@@ -6,6 +6,17 @@ package handler
 import (
 	"net/http"
 
+	auth "sitehub/service/rbac/api/internal/handler/auth"
+	blacklist "sitehub/service/rbac/api/internal/handler/blacklist"
+	captcha "sitehub/service/rbac/api/internal/handler/captcha"
+	health "sitehub/service/rbac/api/internal/handler/health"
+	icons "sitehub/service/rbac/api/internal/handler/icons"
+	members "sitehub/service/rbac/api/internal/handler/members"
+	menus "sitehub/service/rbac/api/internal/handler/menus"
+	roles "sitehub/service/rbac/api/internal/handler/roles"
+	settings "sitehub/service/rbac/api/internal/handler/settings"
+	systems "sitehub/service/rbac/api/internal/handler/systems"
+	users "sitehub/service/rbac/api/internal/handler/users"
 	"sitehub/service/rbac/api/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
@@ -15,235 +26,325 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
-				Method:  http.MethodGet,
-				Path:    "/health",
-				Handler: HealthHandler(serverCtx),
+				Method:  http.MethodPost,
+				Path:    "/auth/code",
+				Handler: auth.SendAdminCodeHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodPost,
-				Path:    "/v1/rbac/auth/code",
-				Handler: SendAdminCodeHandler(serverCtx),
+				Path:    "/auth/login",
+				Handler: auth.LoginHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodPost,
-				Path:    "/v1/rbac/auth/login",
-				Handler: LoginHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/auth/logout",
-				Handler: LogoutHandler(serverCtx),
+				Path:    "/auth/logout",
+				Handler: auth.LogoutHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodGet,
-				Path:    "/v1/rbac/auth/me",
-				Handler: CurrentUserHandler(serverCtx),
+				Path:    "/auth/me",
+				Handler: auth.CurrentUserHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodGet,
-				Path:    "/v1/rbac/auth/menus",
-				Handler: CurrentMenusHandler(serverCtx),
+				Path:    "/auth/menus",
+				Handler: auth.CurrentMenusHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodPost,
-				Path:    "/v1/rbac/auth/once-token",
-				Handler: OnceTokenHandler(serverCtx),
+				Path:    "/auth/once-token",
+				Handler: auth.OnceTokenHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodPost,
-				Path:    "/v1/rbac/auth/once-token/consume",
-				Handler: ConsumeTokenHandler(serverCtx),
+				Path:    "/auth/once-token/consume",
+				Handler: auth.ConsumeTokenHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodPost,
-				Path:    "/v1/rbac/auth/password",
-				Handler: ChangePasswordHandler(serverCtx),
+				Path:    "/auth/password",
+				Handler: auth.ChangePasswordHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodGet,
-				Path:    "/v1/rbac/auth/permissions",
-				Handler: CurrentPermissionsHandler(serverCtx),
+				Path:    "/auth/permissions",
+				Handler: auth.CurrentPermissionsHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodGet,
-				Path:    "/v1/rbac/auth/totp",
-				Handler: TOTPStatusHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/rbac/blacklist",
-				Handler: BlacklistHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/blacklist/add",
-				Handler: BlockIPHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/blacklist/delete",
-				Handler: UnblockIPHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/rbac/captcha",
-				Handler: CaptchaHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/captcha/verify",
-				Handler: VerifyCaptchaHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/members/code",
-				Handler: SendMemberCodeHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/members/login",
-				Handler: LoginMemberHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/members/logout",
-				Handler: LogoutMemberHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/rbac/members/me",
-				Handler: CurrentMemberHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/members/register",
-				Handler: RegisterMemberHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/rbac/menus",
-				Handler: MenuListHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/menus/create",
-				Handler: CreateMenuHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/menus/delete",
-				Handler: DeleteMenuHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/rbac/menus/detail",
-				Handler: GetMenuHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/rbac/menus/public",
-				Handler: PublicMenusHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/rbac/menus/tree",
-				Handler: MenuTreeHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/menus/update",
-				Handler: UpdateMenuHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/rbac/roles",
-				Handler: ListRolesHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/roles/create",
-				Handler: CreateRoleHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/roles/delete",
-				Handler: DeleteRoleHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/rbac/roles/detail",
-				Handler: GetRoleHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/roles/menus",
-				Handler: AssignMenusHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/rbac/roles/menus",
-				Handler: RoleMenusHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/roles/update",
-				Handler: UpdateRoleHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/rbac/settings/email",
-				Handler: GetEmailSettingsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/settings/email",
-				Handler: SaveEmailSettingsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/rbac/systems",
-				Handler: ListSystemsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/systems/delete",
-				Handler: DeleteSystemHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/systems/save",
-				Handler: SaveSystemHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/rbac/users",
-				Handler: ListUsersHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/users/create",
-				Handler: CreateUserHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/users/delete",
-				Handler: DeleteUserHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/rbac/users/detail",
-				Handler: GetUserHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/users/roles",
-				Handler: AssignRolesHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/rbac/users/update",
-				Handler: UpdateUserHandler(serverCtx),
+				Path:    "/auth/totp",
+				Handler: auth.TOTPStatusHandler(serverCtx),
 			},
 		},
+		rest.WithPrefix("/v1/rbac"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/blacklist",
+				Handler: blacklist.BlacklistHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/blacklist/add",
+				Handler: blacklist.BlockIPHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/blacklist/delete",
+				Handler: blacklist.UnblockIPHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/rbac"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/captcha",
+				Handler: captcha.CaptchaHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/captcha/verify",
+				Handler: captcha.VerifyCaptchaHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/rbac"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/health",
+				Handler: health.HealthHandler(serverCtx),
+			},
+		},
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/system/icons",
+				Handler: icons.ListIconsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/system/icons/content",
+				Handler: icons.IconContentHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/system/icons/create",
+				Handler: icons.CreateIconHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/system/icons/delete",
+				Handler: icons.DeleteIconHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/system/icons/update",
+				Handler: icons.UpdateIconHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/system/icons/validate",
+				Handler: icons.ValidateIconHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/rbac"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodPost,
+				Path:    "/members/code",
+				Handler: members.SendMemberCodeHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/members/login",
+				Handler: members.LoginMemberHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/members/logout",
+				Handler: members.LogoutMemberHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/members/me",
+				Handler: members.CurrentMemberHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/members/register",
+				Handler: members.RegisterMemberHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/rbac"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/menus",
+				Handler: menus.MenuListHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/menus/create",
+				Handler: menus.CreateMenuHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/menus/delete",
+				Handler: menus.DeleteMenuHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/menus/detail",
+				Handler: menus.GetMenuHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/menus/public",
+				Handler: menus.PublicMenusHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/menus/tree",
+				Handler: menus.MenuTreeHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/menus/update",
+				Handler: menus.UpdateMenuHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/rbac"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/roles",
+				Handler: roles.ListRolesHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/roles/create",
+				Handler: roles.CreateRoleHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/roles/delete",
+				Handler: roles.DeleteRoleHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/roles/detail",
+				Handler: roles.GetRoleHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/roles/menus",
+				Handler: roles.AssignMenusHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/roles/menus",
+				Handler: roles.RoleMenusHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/roles/update",
+				Handler: roles.UpdateRoleHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/rbac"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/settings/email",
+				Handler: settings.GetEmailSettingsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/settings/email",
+				Handler: settings.SaveEmailSettingsHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/rbac"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/systems",
+				Handler: systems.ListSystemsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/systems/delete",
+				Handler: systems.DeleteSystemHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/systems/save",
+				Handler: systems.SaveSystemHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/rbac"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/users",
+				Handler: users.ListUsersHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/users/create",
+				Handler: users.CreateUserHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/users/delete",
+				Handler: users.DeleteUserHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/users/detail",
+				Handler: users.GetUserHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/users/roles",
+				Handler: users.AssignRolesHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/users/update",
+				Handler: users.UpdateUserHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/rbac"),
 	)
 }

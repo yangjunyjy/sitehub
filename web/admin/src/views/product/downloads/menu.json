@@ -1,0 +1,5 @@
+{
+  "name": "下载管理",
+  "permission": "product:download:list",
+  "sort": 16
+}

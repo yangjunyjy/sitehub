@@ -30,8 +30,9 @@
             <keep-alive :include="workspace.cachedNames" :max="12">
               <component
                 :is="Component"
+                ref="activeView"
                 :key="
-                  workspacePath(currentRoute) +
+                  (Component?.type?.workspaceKey ? Component.type.workspaceKey + viewInstance : workspacePath(currentRoute)) +
                   ':' +
                   (workspace.revisions[workspacePath(currentRoute)] || 0)
                 "
@@ -45,7 +46,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onBeforeUnmount } from 'vue'
+import { ref, shallowRef, watch, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Sidebar from './components/Sidebar.vue'
 import Navbar from './components/Navbar.vue'
@@ -88,6 +89,8 @@ watch(
   { deep: true },
 )
 const content = ref()
+const activeView = shallowRef()
+const viewInstance = ref(0)
 const isCollapse = ref(false)
 const mobileMenu = ref(false)
 const media = window.matchMedia('(max-width: 720px)')
@@ -111,11 +114,21 @@ function toggleCollapse() {
   else isCollapse.value = !isCollapse.value
 }
 watch(
-  () => route.fullPath,
-  () => {
+  () => ({
+    fullPath: route.fullPath, path: workspacePath(route), id: route.params.id,
+    view: route.matched.at(-1)?.components?.default,
+  }),
+  (current, previous) => {
+    // Only the just-created document keeps its editor instance while acquiring its permanent URL.
+    const sameDraft = current.view?.workspaceKey && current.view === previous?.view &&
+      !previous.id && current.id && String(activeView.value?.workspaceId) === String(current.id)
+    if (sameDraft) workspace.remove(previous.path)
+    else {
+      if (current.view?.workspaceKey && current.path !== previous?.path) viewInstance.value++
+      content.value?.scrollTo({ top: 0 })
+    }
     workspace.visit(route)
     mobileMenu.value = false
-    content.value?.scrollTo({ top: 0 })
   },
   { immediate: true },
 )

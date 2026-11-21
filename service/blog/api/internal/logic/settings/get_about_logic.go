@@ -1,0 +1,41 @@
+package settings
+
+import (
+	"context"
+	"github.com/zeromicro/go-zero/core/logx"
+	logicshared "sitehub/service/blog/api/internal/logic"
+	"sitehub/service/blog/api/internal/svc"
+	"sitehub/service/blog/api/internal/types"
+	"sitehub/service/blog/model/entity"
+)
+
+type GetAboutLogic struct {
+	logx.Logger
+	ctx    context.Context
+	svcCtx *svc.ServiceContext
+}
+
+func NewGetAboutLogic(ctx context.Context, svcCtx *svc.ServiceContext) *GetAboutLogic {
+	return &GetAboutLogic{
+		Logger: logx.WithContext(ctx),
+		ctx:    ctx,
+		svcCtx: svcCtx,
+	}
+}
+
+func (l *GetAboutLogic) GetAbout() (*types.Response, error) {
+	profile, err := l.svcCtx.Core.Community.Profile(l.ctx)
+	if err != nil {
+		return nil, err
+	}
+	if profile.Skills == nil {
+		profile.Skills = []string{}
+	}
+	if profile.Socials == nil {
+		profile.Socials = []entity.SocialLink{}
+	}
+	if profile.HomeVerse == "" {
+		profile.HomeVerse = "在文字的星河里，记录生活的光与热"
+	}
+	return logicshared.Reply(map[string]any{"name": profile.Name, "title": profile.Title, "bio": profile.Bio, "content": profile.Content, "avatar": profile.Avatar, "location": profile.Location, "email": profile.Email, "skills": profile.Skills, "socials": profile.Socials, "homeVerse": profile.HomeVerse, "homeAnimation": profile.HomeAnimation == nil || *profile.HomeAnimation}, nil)
+}

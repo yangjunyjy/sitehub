@@ -118,7 +118,7 @@ func (s *MemberService) SendRegistrationCode(ctx context.Context, email, ip stri
 		return err
 	}
 	// SMTP 在数据库事务外执行。失败时只撤销本次验证码，不能删掉后来的重发。
-	err = s.send(email, "Deploy 官网 · 邮箱注册验证码", fmt.Sprintf("<!DOCTYPE html><html><body><p>你正在注册 Deploy 官网账号。</p><p>验证码：<strong>%s</strong></p><p>10 分钟内有效。请勿向他人透露验证码；如非本人操作，请忽略本邮件。</p></body></html>", code))
+	err = s.send(email, "会员账号 · 邮箱注册验证码", fmt.Sprintf("<!DOCTYPE html><html><body><p>你正在注册会员账号，注册后可以登录博客和产品站。</p><p>验证码：<strong>%s</strong></p><p>10 分钟内有效。请勿向他人透露验证码；如非本人操作，请忽略本邮件。</p></body></html>", code))
 	if err != nil {
 		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()

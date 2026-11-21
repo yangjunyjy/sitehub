@@ -1,12 +1,15 @@
 <script setup>
 import { reactive, ref } from "vue";
+import { useRoute } from 'vue-router';
+import { useMember } from '@/composables/useMember';
 import { applyFriend } from "@/api";
+const {member, expired}=useMember(), route=useRoute();
 const form = reactive({ name: "", url: "", description: "", avatar: "" }),
   submitting = ref(false),
   error = ref(""),
   success = ref("");
 async function submit() {
-  if (submitting.value) return;
+  if (submitting.value || !member.user) return;
   error.value = "";
   success.value = "";
   submitting.value = true;
@@ -21,6 +24,7 @@ async function submit() {
     success.value = "申请已提交，正在等待博主审核。感谢你的相遇！";
     Object.assign(form, { name: "", url: "", description: "", avatar: "" });
   } catch (failure) {
+    if (failure.status === 401) expired();
     error.value = failure.message;
   } finally {
     submitting.value = false;
@@ -30,10 +34,11 @@ async function submit() {
 <template>
   <section id="apply" class="friend-application">
     <div class="friend-application__heading">
-      <h2>交换一份相遇</h2>
+      <h2>申请友链</h2>
       <p>如果你也在认真记录生活，欢迎交换友链。提交后将由博主审核。</p>
     </div>
-    <form class="form-grid" @submit.prevent="submit">
+    <router-link v-if="!member.user" class="button" :to="{name:'login',query:{redirect: route.path+'#apply'}}">登录后申请友链 →</router-link>
+    <form v-else class="form-grid" @submit.prevent="submit">
       <label class="field"
         >网站名称<input
           v-model="form.name"

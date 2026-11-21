@@ -18,7 +18,7 @@ func TestArticleActionKeepsIDTimeAndOptionalFalse(t *testing.T) {
 	flag := false
 	input := types.ApplyArticleActionRequest{ID: math.MaxUint64, Version: math.MaxUint64 - 1, RequestID: "operation", Action: "top", IsTop: &flag, ScheduledAt: &at}
 	var action domain.ArticleAction
-	if err := decodeRequest(input, &action); err != nil {
+	if err := DecodeRequest(input, &action); err != nil {
 		t.Fatal(err)
 	}
 	if action.ID != input.ID || action.Version != input.Version || action.IsTop == nil || *action.IsTop || action.ScheduledAt == nil || action.ScheduledAt.Format(time.RFC3339Nano) != at {

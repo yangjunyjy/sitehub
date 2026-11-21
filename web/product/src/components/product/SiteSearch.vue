@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { getDocsNavigation } from '@/api';
+import { readCatalog } from '@/api/documents';
 import ProductIcon from './ProductIcon.vue';
 
 const emit = defineEmits(['open', 'close']);
@@ -13,7 +13,7 @@ const results = computed(() => {
   const value = keyword.value.trim().toLocaleLowerCase();
   return documents.value.filter(item => !value || `${item.title} ${item.summary || ''}`.toLocaleLowerCase().includes(value));
 });
-const location = item => ({ path: `/docs/${encodeURIComponent(item.slug || item.id)}`,
+const location = item => ({ name: 'docs', params: { id: item.slug || item.id },
   query: { version: item.versionId, mode: item.modeId } });
 async function load() {
   const current = ++revision;
@@ -22,13 +22,13 @@ async function load() {
   loading.value = true;
   error.value = '';
   try {
-    const response = await getDocsNavigation({ signal: controller.signal,
-      version: route.path.startsWith('/docs') ? route.query.version : undefined,
-      mode: route.path.startsWith('/docs') ? route.query.mode : undefined });
+    const catalog = await readCatalog({ signal: controller.signal,
+      version: route.meta.page === 'docs' ? route.query.version : undefined,
+      mode: route.meta.page === 'docs' ? route.query.mode : undefined });
     if (current !== revision || !open.value) return;
     const seen = new Set();
-    documents.value = response.data.groups.flatMap(group => (group.items || []).map(item => ({ ...item,
-      group: group.title, versionId: response.data.versionId, modeId: response.data.modeId })))
+    documents.value = (catalog.navigation?.groups || []).flatMap(group => (group.items || []).map(item => ({ ...item,
+      group: group.title, versionId: catalog.navigation.versionId, modeId: catalog.modeId })))
       .filter(item => item.id != null && item.title && !seen.has(String(item.id)) && seen.add(String(item.id)));
   } catch {
     if (current === revision && open.value) error.value = '暂时无法加载文档，请重试。';

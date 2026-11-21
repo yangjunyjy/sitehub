@@ -1,4 +1,5 @@
 <script setup>
+import ResourceIcon from '@shared/icons/ResourceIcon.vue'
 import { computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { categories, tags } from "@/api";
@@ -39,7 +40,7 @@ onMounted(load);
         :aria-pressed="current === String(item.id)" :class="{ active: current === String(item.id) }"
         @click="choose(item.id)"
       >
-        <span v-if="kind === 'tags'"># </span>{{ item.name }}
+        <span v-if="kind === 'tags'"># </span><ResourceIcon v-else-if="item.icon" :name="item.icon" /> {{ item.name }}
         <small class="topic-count">{{ item.articleCount ?? item.article_count ?? 0 }}</small>
       </button>
     </div>

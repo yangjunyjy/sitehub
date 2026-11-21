@@ -1,0 +1,7 @@
+{
+  "name": "编辑文章",
+  "permission": "blog:article:update",
+  "sort": 11,
+  "hidden": true,
+  "path": "/dashboard/blog/articles/editor/:id"
+}

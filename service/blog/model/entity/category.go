@@ -9,7 +9,7 @@ type Category struct {
 	Name         string    `gorm:"size:50;not null" json:"name" validate:"required"`                   // 分类名称，必填
 	Slug         string    `gorm:"size:100;not null;uniqueIndex" json:"slug" validate:"required,slug"` // 分类URL别名，用于生成友好的URL，全局唯一
 	Description  string    `gorm:"size:200" json:"description"`                                        // 分类描述说明
-	Icon         string    `gorm:"size:50" json:"icon"`                                                // 分类图标标识
+	Icon         string    `gorm:"size:100" json:"icon"`                                               // 分类图标标识
 	SortOrder    int       `gorm:"not null;default:0" json:"sort_order"`                               // 分类排序字段，数值越小越靠前
 	Status       uint8     `gorm:"not null;default:1" json:"status"`                                   // 分类状态：0-禁用，1-启用
 	ArticleCount int64     `gorm:"-" json:"article_count"`                                             // 该分类下的文章数量统计，不从数据库加载，运行时计算

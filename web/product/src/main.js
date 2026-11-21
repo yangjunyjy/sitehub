@@ -1,21 +1,14 @@
 import { createApp } from 'vue';
 import App from './App.vue';
 import { createProductRouter } from './router';
-import { getPublicMenus } from './api';
-import { publicNavigation } from './router/pages';
+import { getPublicMenus } from './api/site';
+import { loadPublicSite } from '@shared/navigation/public-site.mjs';
 import './styles/global.scss';
 
 async function start() {
-  let menus = null;
-  try {
-    const { data } = await getPublicMenus();
-    menus = publicNavigation(data.items || []);
-  } catch {
-    // Keep the product pages available while the menu service is offline.
-  }
-  createApp(App)
-    .provide('productMenus', menus)
-    .use(createProductRouter(menus || []))
-    .mount('#app');
+  const pages = import.meta.glob('./views/**/index.vue');
+  const settings = import.meta.glob('./views/**/menu.json', { eager: true, import: 'default' });
+  const site = await loadPublicSite(getPublicMenus, pages, settings);
+  createApp(App).provide('navigation', site).use(createProductRouter(site.routes)).mount('#app');
 }
 start();

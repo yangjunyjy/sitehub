@@ -38,33 +38,14 @@
         ></template> </AdminDataTable
     ></template>
     <template #dialogs
-      ><el-dialog
+      ><AdminFormDialog :loading="submitting" confirm-text="确定" @submit="handleSubmit"
         v-model="dialogVisible"
         :title="dialogTitle"
         width="500px"
         @closed="handleDialogClosed"
       >
         <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
-          <el-form-item label="标签名称" prop="name" required>
-            <el-input
-              v-model="form.name"
-              placeholder="请输入标签名称"
-              maxlength="50"
-              show-word-limit
-            />
-          </el-form-item>
-
-          <el-form-item label="友好URL" prop="slug" required>
-            <el-input
-              v-model="form.slug"
-              placeholder="请输入友好URL后缀"
-              maxlength="50"
-              show-word-limit
-            >
-              <template #prepend>tag/</template>
-            </el-input>
-            <div class="form-tips">将显示为: example.com/tag/{{ form.slug || 'your-slug' }}</div>
-          </el-form-item>
+          <TaxonomyFields v-model:name="form.name" v-model:slug="form.slug" kind="tags" />
 
           <el-form-item label="标签描述" prop="description">
             <el-input
@@ -77,49 +58,19 @@
             />
           </el-form-item>
         </el-form>
-        <template #footer>
-          <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleSubmit" :loading="submitting">确定</el-button>
-        </template>
-      </el-dialog>
+      </AdminFormDialog>
     </template>
   </AdminListPage>
 </template>
 <script setup>
+import TaxonomyFields from '@/components/blog/TaxonomyFields.vue'
+import AdminFormDialog from '@/components/admin/AdminFormDialog.vue'
 import { useAdminList } from '@/composables/useAdminList'
 import AdminRowAction from '@/components/admin/AdminRowAction.vue'
 import AdminRowActions from '@/components/admin/AdminRowActions.vue'
 import AdminListPage from '@/components/admin/AdminListPage.vue'
 import AdminDataTable from '@/components/admin/AdminDataTable.vue'
-const columns = [
-  {
-    key: 'name',
-    prop: 'name',
-    label: '标签名',
-    minWidth: '150',
-  },
-  {
-    key: 'article_count',
-    prop: 'article_count',
-    label: '文章量',
-    width: '100',
-    align: 'center',
-  },
-  {
-    key: 'created_at',
-    label: '创建日期',
-    width: '160',
-    align: 'center',
-  },
-  {
-    key: 'actions',
-    label: '操作',
-    width: '132',
-    align: 'center',
-    fixed: 'right',
-    utility: true,
-  },
-]
+import { columns } from './columns'
 
 defineOptions({
   name: 'TagList',
@@ -387,12 +338,7 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.form-tips {
-  margin-top: 6px;
-  color: #606266;
-  font-size: 12px;
-  line-height: 1.6;
-}
+
 .time-cell,
 .action-btns {
   display: flex;

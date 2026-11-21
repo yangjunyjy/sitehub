@@ -1,10 +1,10 @@
 <script setup>
 import SkyHero from "@/components/SkyHero.vue";
 import ArticleFeed from "@/components/ArticleFeed.vue";
-import CategorySelector from "./components/CategorySelector.vue";
+import TopicSelector from "@/components/TopicSelector.vue";
 </script>
 <template>
   <SkyHero
     title="分类"
-  /><CategorySelector /><ArticleFeed heading="分类文章" />
+  /><TopicSelector kind="categories" /><ArticleFeed heading="分类文章" />
 </template>

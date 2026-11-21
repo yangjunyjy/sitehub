@@ -1,0 +1,5 @@
+{
+  "name": "用户管理",
+  "permission": "system:user:list",
+  "sort": 2
+}

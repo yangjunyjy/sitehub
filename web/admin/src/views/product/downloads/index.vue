@@ -97,9 +97,7 @@
       >
         <template #product="{ row }"
           ><div class="product-cell">
-            <span class="product-icon"
-              ><el-icon><Box /></el-icon
-            ></span>
+            <span class="product-icon"><ResourceIcon :name="row.icon || 'PKG'" /></span>
             <div>
               <b>{{ row.product }}</b
               ><small :title="row.fileName || row.description">{{
@@ -188,70 +186,7 @@
           class="load-error"
         />
         <el-form label-position="top" :disabled="saving || uploading">
-          <div class="field-grid">
-            <el-form-item label="产品名称 *"
-              ><el-input v-model="draft.product" placeholder="Deploy" /></el-form-item
-            ><el-form-item label="版本号 *"
-              ><el-input v-model="draft.version" placeholder="v1.0.0"
-            /></el-form-item>
-          </div>
-          <div class="field-grid">
-            <el-form-item label="下载分组"
-              ><el-select v-model="draft.groupId" clearable placeholder="未分组"
-                ><el-option
-                  v-for="group in downloads.groups"
-                  :key="group.id"
-                  :label="group.name"
-                  :value="group.id"
-              /></el-select>
-              <p class="field-note">分组名称和顺序可在“下载页设置”维护。</p></el-form-item
-            >
-            <el-form-item label="版本类型"
-              ><el-select
-                v-model="draft.edition"
-                filterable
-                allow-create
-                default-first-option
-                clearable
-                placeholder="选择或输入，例如单节点 API 版"
-                ><el-option
-                  v-for="edition in editionOptions"
-                  :key="edition"
-                  :label="edition"
-                  :value="edition" /></el-select
-            ></el-form-item>
-          </div>
-          <div class="field-grid">
-            <el-form-item label="展示顺序"
-              ><el-input-number v-model="draft.sortOrder" :min="0" :max="99999" :precision="0" />
-              <p class="field-note">数值越小越靠前，相同数值保留原顺序。</p></el-form-item
-            >
-          </div>
-          <div class="field-grid">
-            <el-form-item label="平台 / 系统 *"
-              ><el-select
-                v-model="draft.platform"
-                filterable
-                allow-create
-                default-first-option
-                placeholder="选择或输入平台"
-                ><el-option
-                  v-for="name in [
-                    'Windows',
-                    'macOS',
-                    'Linux',
-                    'Android',
-                    'iOS',
-                    '跨平台',
-                    '离线部署包',
-                  ]"
-                  :key="name"
-                  :value="name"
-                  :label="name" /></el-select></el-form-item
-            ><el-form-item label="处理器架构"
-              ><el-input v-model="draft.arch" placeholder="x64 / ARM64 / 通用"
-            /></el-form-item>
-          </div>
+          <PackageMetadataFields v-model="draft" :groups="downloads.groups" :edition-options="editionOptions" />
           <el-form-item label="上传文件"
             ><el-upload
               drag
@@ -355,50 +290,13 @@
   </AdminListPage>
 </template>
 <script setup>
+import PackageMetadataFields from './components/PackageMetadataFields.vue'
+import ResourceIcon from '@shared/icons/ResourceIcon.vue'
 import AdminRowAction from '@/components/admin/AdminRowAction.vue'
 import AdminRowActions from '@/components/admin/AdminRowActions.vue'
 import AdminListPage from '@/components/admin/AdminListPage.vue'
 import AdminDataTable from '@/components/admin/AdminDataTable.vue'
-const columns = [
-  {
-    key: 'product',
-    label: '产品名称',
-    minWidth: '225',
-  },
-  { key: 'groupId', label: '分组 / 版本类型', minWidth: '180' },
-  {
-    key: 'version',
-    label: '版本号',
-    width: '115',
-  },
-  {
-    key: 'platform',
-    label: '平台 / 系统',
-    minWidth: '155',
-  },
-  {
-    key: 'size',
-    label: '文件大小',
-    width: '110',
-  },
-  {
-    key: 'releaseDate',
-    label: '发布日期',
-    width: '120',
-  },
-  {
-    key: 'status',
-    label: '状态',
-    width: '108',
-  },
-  {
-    key: 'actions',
-    label: '操作',
-    width: '184',
-    fixed: 'right',
-    utility: true,
-  },
-]
+import { columns } from './columns'
 
 import { computed, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -546,8 +444,8 @@ const persist = async (value) => {
   saving.value = true
   try {
     const clean = { ...value, packages: value.packages.map((item) => normalizePackage(item)) }
-    const result = await updateWebsiteDownloads(clean)
-    applyDownloads(result.data || clean)
+    await updateWebsiteDownloads(clean)
+    applyDownloads(clean)
     return true
   } finally {
     saving.value = false
@@ -750,230 +648,4 @@ const preview = () => window.open(websiteURL('/download'), '_blank', 'noopener,n
 load()
 </script>
 
-<style lang="scss" scoped>
-.field-note {
-  margin: 7px 0 0;
-  color: #606266;
-  font-size: 12px;
-  line-height: 1.7;
-}
-.location-help {
-  width: 100%;
-}
-.location-help .el-button {
-  margin-top: 4px;
-}
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-  margin-bottom: 22px;
-}
-.stat-card {
-  display: flex;
-  align-items: center;
-  gap: 17px;
-  padding: 23px 20px;
-  border: 1px solid #ebeef5;
-  border-radius: 4px;
-  background: #fff;
-}
-.stat-icon {
-  display: grid;
-  place-items: center;
-  width: 50px;
-  height: 50px;
-  flex-shrink: 0;
-  border-radius: 15px;
-  font-size: 24px;
-}
-.blue {
-  color: #409eff;
-  background: #f5f7fa;
-}
-.green {
-  color: #13a477;
-  background: #f5f7fa;
-}
-.amber {
-  color: #d79832;
-  background: #fff7e9;
-}
-.stat-card span,
-.stat-card small {
-  display: block;
-  color: #606266;
-  font-size: 12px;
-}
-.stat-card small {
-  font-size: 11px;
-  color: #909399;
-  margin-top: 6px;
-}
-.stat-card strong {
-  display: block;
-  margin: 6px 0 0;
-  font-size: 28px;
-  line-height: 1;
-  color: #303133;
-  font-weight: 650;
-  font-variant-numeric: tabular-nums;
-}
-
-.list-toolbar .el-button {
-  font-size: 12px;
-  color: #606266;
-}
-
-.product-cell {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  min-width: 0;
-}
-.product-cell > div {
-  min-width: 0;
-}
-.product-cell b,
-.product-cell small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.product-cell b {
-  font-size: 13px;
-  font-weight: 600;
-  color: #303133;
-}
-.product-cell small,
-.cell-secondary {
-  margin-top: 5px;
-  color: #909399;
-  font-size: 11px;
-}
-.cell-secondary {
-  display: block;
-}
-.product-icon {
-  display: grid;
-  place-items: center;
-  width: 35px;
-  height: 35px;
-  flex-shrink: 0;
-  border-radius: 4px;
-  color: #409eff;
-  background: #f5f7fa;
-  font-size: 20px;
-}
-.version {
-  font:
-    12px ui-monospace,
-    monospace;
-}
-.release-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 5px;
-  padding: 4px 7px;
-  color: #606266;
-  background: #f5f7fa;
-  font-size: 11px;
-  white-space: nowrap;
-}
-.release-status i {
-  width: 5px;
-  height: 5px;
-  background: currentColor;
-  border-radius: 50%;
-}
-.release-status.published {
-  color: #0b9871;
-  background: #f5f7fa;
-}
-.release-status.archived {
-  color: #ba873b;
-  background: #fcf5e9;
-}
-.page-note {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  margin-top: 14px;
-  color: #909399;
-  font-size: 11px;
-}
-.field-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
-}
-.field-grid :deep(.el-select),
-.field-grid :deep(.el-date-editor) {
-  width: 100%;
-}
-.package-upload {
-  width: 100%;
-}
-.package-upload b,
-.package-upload small {
-  display: block;
-}
-.package-upload b {
-  color: #303133;
-  font-size: 13px;
-}
-.package-upload small {
-  color: #909399;
-  font-size: 11px;
-  margin-top: 7px;
-  word-break: break-all;
-}
-.upload-symbol {
-  font-size: 30px;
-  color: #409eff;
-  margin-bottom: 10px;
-}
-.load-error {
-  margin-bottom: 18px;
-}
-@media (max-width: 1200px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-@media (max-width: 700px) {
-  .download-page {
-    padding: 18px 12px;
-  }
-
-  .stats-grid {
-    gap: 9px;
-  }
-  .stat-card {
-    padding: 16px 12px;
-    gap: 10px;
-  }
-  .stat-icon {
-    width: 35px;
-    height: 35px;
-    font-size: 19px;
-  }
-  .stat-card small {
-    font-size: 10px;
-  }
-  .stat-card strong {
-    font-size: 23px;
-  }
-
-  .field-grid {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
-  .page-note {
-    align-items: flex-start;
-    line-height: 1.7;
-  }
-}
-</style>
+<style lang="scss" scoped src="./downloads.scss"></style>

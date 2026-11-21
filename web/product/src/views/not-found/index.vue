@@ -4,7 +4,7 @@
       <p class="site-kicker">404 / Page not found</p>
       <h1>这个页面<br />不在交付路径上</h1>
       <p>你访问的地址不存在，可能已被迁移或移除。</p>
-      <router-link class="site-button site-button--primary" to="/"
+      <router-link class="site-button site-button--primary" :to="{ name: 'home' }"
         >返回首页</router-link
       >
     </div>

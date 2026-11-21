@@ -14,25 +14,25 @@ type ResolveDownloadRequest {
 	ID string `form:"id,optional"`
 }
 
+type DocCatalogRequest {
+	Version string `form:"version,optional"`
+	Mode    string `form:"mode,optional"`
+}
+
 type DocsNavigationRequest {
-	ID        string `form:"id,optional"`
-	Version   string `form:"version,optional"`
-	Mode      string `form:"mode,optional"`
-	HistoryID uint64 `form:"historyId,optional"`
+	Version string `form:"version,optional"`
+	Mode    string `form:"mode,optional"`
 }
 
 type DocumentRequest {
-	ID        string `form:"id,optional"`
-	Version   string `form:"version,optional"`
-	Mode      string `form:"mode,optional"`
-	HistoryID uint64 `form:"historyId,optional"`
+	ID      string `form:"id,optional"`
+	Version string `form:"version,optional"`
+	Mode    string `form:"mode,optional"`
 }
 
 type AdminDocumentRequest {
-	ID        string `form:"id,optional"`
-	Version   string `form:"version,optional"`
-	Mode      string `form:"mode,optional"`
-	HistoryID uint64 `form:"historyId,optional"`
+	ID      string `form:"id,optional"`
+	Version string `form:"version,optional"`
 }
 
 type SaveContentRequest {
@@ -150,6 +150,7 @@ type WebsiteBrand {
 }
 
 type WebsiteCapability {
+	Icon        string   `json:"icon,optional"`
 	Key         string   `json:"key,optional"`
 	Index       string   `json:"index,optional"`
 	Title       string   `json:"title,optional"`
@@ -260,62 +261,106 @@ type WebsiteSecurityItem {
 	Description string `json:"description,optional"`
 }
 
+type PublishedDownload {
+	URL      string `json:"url"`
+	FileName string `json:"fileName"`
+}
+
+@server (
+	group: health
+)
 service product-api {
 	@handler Health
 	get /health returns (Response)
+}
 
+@server (
+	group:  content
+	prefix: /v1/product
+)
+service product-api {
 	@handler Content
-	get /v1/product/content returns (Response)
-
-	@handler Downloads
-	get /v1/product/downloads returns (Response)
-
-	@handler AdminDownloads
-	get /v1/product/admin/downloads returns (Response)
-
-	@handler Docs
-	get /v1/product/admin/docs returns (Response)
-
-	@handler DocModes
-	get /v1/product/docs/modes returns (Response)
-
-	@handler ResolveDownload
-	get /v1/product/downloads/resolve (ResolveDownloadRequest) returns (Response)
-
-	@handler DocsNavigation
-	get /v1/product/docs/navigation (DocsNavigationRequest) returns (Response)
-
-	@handler Document
-	get /v1/product/docs/document (DocumentRequest) returns (Response)
-
-	@handler AdminDocument
-	get /v1/product/admin/docs/document (AdminDocumentRequest) returns (Response)
+	get /content returns (Response)
 
 	@handler SaveContent
-	post /v1/product/content (SaveContentRequest) returns (Response)
+	post /content (SaveContentRequest) returns (Response)
+}
+
+@server (
+	group:  downloads
+	prefix: /v1/product
+)
+service product-api {
+	@handler Downloads
+	get /downloads returns (Response)
+
+	@handler AdminDownloads
+	get /admin/downloads returns (Response)
+
+	@handler ResolveDownload
+	get /downloads/resolve (ResolveDownloadRequest) returns (Response)
 
 	@handler SaveDownloads
-	post /v1/product/downloads (SaveDownloadsRequest) returns (Response)
+	post /downloads (SaveDownloadsRequest) returns (Response)
+}
 
-	@handler SaveDocSettings
-	post /v1/product/docs/settings (SaveDocSettingsRequest) returns (Response)
+@server (
+	group:  documents
+	prefix: /v1/product
+)
+service product-api {
+	@handler Docs
+	get /admin/docs returns (Response)
 
-	@handler ChangeDocMode
-	post /v1/product/docs/modes (ChangeDocModeRequest) returns (Response)
+	@handler DocCatalog
+	get /docs/catalog (DocCatalogRequest) returns (Response)
 
-	@handler ChangeDocVersion
-	post /v1/product/docs/versions (ChangeDocVersionRequest) returns (Response)
+	@handler DocModes
+	get /docs/modes returns (Response)
 
-	@handler ChangeDocGroup
-	post /v1/product/docs/groups (ChangeDocGroupRequest) returns (Response)
+	@handler DocsNavigation
+	get /docs/navigation (DocsNavigationRequest) returns (Response)
+
+	@handler Document
+	get /docs/document (DocumentRequest) returns (Response)
+
+	@handler AdminDocument
+	get /admin/docs/document (AdminDocumentRequest) returns (Response)
 
 	@handler DeleteDocument
-	post /v1/product/docs/delete (DeleteDocumentRequest) returns (Response)
+	post /docs/delete (DeleteDocumentRequest) returns (Response)
 
 	@handler SaveDocument
-	post /v1/product/docs/save (SaveDocumentRequest) returns (Response)
+	post /docs/save (SaveDocumentRequest) returns (Response)
 
 	@handler DocumentHistory
-	get /v1/product/admin/docs/history (DocumentHistoryRequest) returns (Response)
+	get /admin/docs/history (DocumentHistoryRequest) returns (Response)
+}
+
+@server (
+	group:  docsettings
+	prefix: /v1/product
+)
+service product-api {
+	@handler SaveDocSettings
+	post /docs/settings (SaveDocSettingsRequest) returns (Response)
+
+	@handler ChangeDocMode
+	post /docs/modes (ChangeDocModeRequest) returns (Response)
+
+	@handler ChangeDocVersion
+	post /docs/versions (ChangeDocVersionRequest) returns (Response)
+
+	@handler ChangeDocGroup
+	post /docs/groups (ChangeDocGroupRequest) returns (Response)
+}
+
+@server (
+	group:  downloads
+	prefix: /internal/product
+)
+service product-api {
+	@handler InternalDownload
+	get /download (ResolveDownloadRequest) returns (PublishedDownload)
 }
 

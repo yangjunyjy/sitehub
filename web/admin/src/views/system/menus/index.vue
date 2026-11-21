@@ -58,9 +58,7 @@
         scrollbar-always-on
       >
         <template #icon="{ row }">
-          <el-icon v-if="row.icon">
-            <component :is="row.icon" />
-          </el-icon>
+          <ResourceIcon v-if="row.icon" :name="row.icon" />
         </template>
         <template #menuType="{ row }">
           <el-tag :type="getTypeTagType(row.menu_type)" size="small">
@@ -88,118 +86,16 @@
         ></template> </AdminDataTable
     ></template>
     <template #dialogs
-      ><el-dialog
-        v-model="dialogVisible"
-        :title="dialogTitle"
-        class="menu-editor-dialog"
-        width="min(760px, calc(100vw - 32px))"
-        top="6vh"
-      >
-        <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
-          <el-form-item label="所属系统" prop="systemCode"
-            ><el-select v-model="form.systemCode" @change="changeFormSystem"
-              ><el-option
-                v-for="system in systems"
-                :key="system.code"
-                :value="system.code"
-                :label="system.name" /></el-select
-          ></el-form-item>
-          <el-form-item label="菜单类型" prop="type">
-            <el-radio-group v-model="form.type">
-              <el-radio :value="1">目录</el-radio>
-              <el-radio :value="2">菜单</el-radio>
-              <el-radio :value="3">按钮</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item label="上级菜单" prop="parent_id">
-            <el-tree-select
-              v-model="form.parent_id"
-              :data="menuTreeSelectData"
-              :props="{ label: 'menu_name', value: 'id' }"
-              clearable
-              placeholder="请选择上级菜单"
-              check-strictly
-            />
-          </el-form-item>
-          <el-form-item label="菜单名称" prop="name">
-            <el-input v-model="form.name" placeholder="请输入菜单名称" />
-          </el-form-item>
-          <el-form-item label="图标" prop="icon" v-if="form.type !== 3">
-            <el-input v-model="form.icon" placeholder="请输入图标名称" />
-          </el-form-item>
-          <el-form-item v-if="form.type === 2" label="页面类型">
-            <el-radio-group v-model="form.pageType">
-              <el-radio value="internal">内部页面</el-radio><el-radio value="external">外链页面</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item v-if="isExternal" label="链接地址" prop="externalUrl" required>
-            <el-input v-model.trim="form.externalUrl" maxlength="2048" placeholder="https://example.com" />
-          </el-form-item>
-          <el-form-item label="路径" prop="path" v-if="form.type !== 3 && !isExternal">
-            <el-input v-model="form.path" placeholder="请输入路由地址" />
-          </el-form-item>
-          <el-form-item
-            label="组件路径"
-            prop="component"
-            v-if="form.type === 2 && !isExternal"
-          >
-            <el-input
-              v-model="form.component"
-              placeholder="例如 system/users/index（相对 views）"
-            />
-          </el-form-item>
-          <el-form-item label="是否隐藏" prop="isVisible">
-            <el-radio-group v-model="form.isVisible">
-              <el-radio :value="true">否</el-radio>
-              <el-radio :value="false">是</el-radio>
-            </el-radio-group>
-          </el-form-item>
-          <el-form-item label="菜单编码" prop="code">
-            <el-input
-              v-model="form.code"
-              placeholder="菜单唯一编码，例如 admin-system-users"
-            />
-          </el-form-item>
-          <el-form-item
-            label="权限标识"
-            prop="permission"
-            v-if="form.type !== 1"
-            :required="form.type === 3"
-          >
-            <el-input
-              v-model="form.permission"
-              placeholder="例如 system:user:list；页面可留空"
-            />
-          </el-form-item>
-          <el-form-item label="菜单描述" prop="description">
-            <el-input
-              v-model="form.description"
-              placeholder="请输入描述信息"
-              type="textarea"
-              :rows="3"
-            />
-          </el-form-item>
-          <el-form-item label="排序" prop="sort">
-            <el-input-number v-model="form.sort" :min="0" :max="999" />
-          </el-form-item>
-          <el-form-item label="状态" prop="status">
-            <el-radio-group v-model="form.status">
-              <el-radio :value="1">启用</el-radio>
-              <el-radio :value="0">禁用</el-radio>
-            </el-radio-group>
-          </el-form-item>
-        </el-form>
-        <template #footer>
-          <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleSubmit" :loading="submitting"
-            >确定</el-button
-          >
-        </template>
-      </el-dialog>
+      ><MenuEditor ref="formRef" v-model="dialogVisible" :dialog-title="dialogTitle" :submitting="submitting"
+        :form="form" :rules="rules" :systems="systems" :menu-tree-select-data="menuTreeSelectData"
+        :is-external="isExternal" @system-change="changeFormSystem" @submit="handleSubmit" />
     </template>
   </AdminListPage>
 </template>
 <script setup>
+import { buildMenuTree, matchTree, getTypeLabel, getTypeTagType } from './menu-tree'
+import MenuEditor from './components/MenuEditor.vue'
+import ResourceIcon from '@shared/icons/ResourceIcon.vue'
 import { externalAddress } from '@/utils/external-address.mjs';
 import AdminRowAction from "@/components/admin/AdminRowAction.vue";
 import AdminRowActions from "@/components/admin/AdminRowActions.vue";
@@ -410,98 +306,9 @@ const rules = {
   ],
 };
 
-// 构建菜单树选择数据（排除按钮，用于上级菜单选择器）
-const menuTreeSelectData = computed(() => {
-  const buildTree = (parentId) => {
-    if (!Array.isArray(parentMenus.value)) {
-      return [];
-    }
-    return parentMenus.value
-      .filter((m) => {
-        // 后端 menu_type 是数字: 1=目录 2=菜单 3=按钮
-        const isNotButton = m.menu_type !== 3;
-        const isEnabled = m.status === 1;
-        const isChild = String(m.parent_id) === String(parentId);
-        return isChild && isNotButton && isEnabled;
-      })
-      .sort((a, b) => a.sort - b.sort)
-      .map((m) => {
-        const children = buildTree(m.id);
-        return {
-          ...m,
-          children,
-        };
-      });
-  };
-  return buildTree(0);
-});
-
-// 通用构建菜单树函数（用于表格展示）
-const buildMenuTree = (parentId, list) => {
-  if (!list || !Array.isArray(list)) {
-    return [];
-  }
-  return list
-    .filter((m) => String(m.parent_id) === String(parentId))
-    .sort((a, b) => a.sort - b.sort)
-    .map((m) => {
-      const children = buildMenuTree(m.id, list);
-      return {
-        ...m,
-        hasChildren: children.length > 0,
-        children,
-      };
-    });
-};
-
-// 递归搜索树：检查节点及其子节点是否匹配搜索条件
-const matchTree = (node, searchTitle, searchType) => {
-  const matchTitle =
-    !searchTitle || (node.menu_name && node.menu_name.includes(searchTitle));
-  const matchType = !searchType || node.menu_type === searchType;
-  const isMatch = matchTitle && matchType;
-
-  if (node.children && node.children.length > 0) {
-    // 递归过滤子节点
-    const matchedChildren = node.children
-      .map((child) => matchTree(child, searchTitle, searchType))
-      .filter(Boolean);
-    if (matchedChildren.length > 0) {
-      return { ...node, children: matchedChildren, hasChildren: true };
-    }
-  }
-  return isMatch
-    ? {
-        ...node,
-        children: node.children || [],
-        hasChildren: node.children && node.children.length > 0,
-      }
-    : null;
-};
-
-const getTypeLabel = (type) => {
-  const map = {
-    directory: "目录",
-    menu: "菜单",
-    button: "按钮",
-    1: "目录",
-    2: "菜单",
-    3: "按钮",
-  };
-  return map[type] || type;
-};
-
-const getTypeTagType = (type) => {
-  const map = {
-    directory: "warning",
-    menu: "primary",
-    button: "success",
-    1: "warning",
-    2: "primary",
-    3: "success",
-  };
-  return map[type] || "info";
-};
+const menuTreeSelectData = computed(() => buildMenuTree(0, parentMenus.value.filter(
+  node => node.menu_type !== 3 && node.status === 1
+)));
 
 const menuRequest = createLatestRequest();
 const loadList = () =>

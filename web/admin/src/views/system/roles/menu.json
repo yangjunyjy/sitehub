@@ -1,0 +1,5 @@
+{
+  "name": "角色管理",
+  "permission": "system:role:list",
+  "sort": 3
+}

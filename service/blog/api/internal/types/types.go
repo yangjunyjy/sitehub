@@ -35,6 +35,10 @@ type ArticleInput struct {
 	TagIDs        []uint64 `json:"tag_ids,optional"`
 }
 
+type ArticleInteractionQuery struct {
+	ArticleID uint64 `form:"articleId"`
+}
+
 type ArticleRevisionRequest struct {
 	ID         uint64 `form:"id,optional"`
 	RevisionID uint64 `form:"revisionId,optional"`
@@ -64,6 +68,10 @@ type CreateCategoryRequest struct {
 	SortOrder   int64   `json:"sortOrder,optional"`
 }
 
+type CreateFavoriteFolderRequest struct {
+	Name string `json:"name"`
+}
+
 type CreateTagRequest struct {
 	Name        string  `json:"name,optional"`
 	Slug        string  `json:"slug,optional"`
@@ -82,16 +90,27 @@ type EditorArticleRequest struct {
 	ID uint64 `form:"id,optional"`
 }
 
+type FavoriteArticleRequest struct {
+	ArticleID uint64 `json:"articleId"`
+	Favorited bool   `json:"favorited"`
+	FolderID  uint64 `json:"folderId,optional"`
+}
+
+type FavoriteArticlesQuery struct {
+	FolderID uint64 `form:"folderId,optional"`
+	Page     int    `form:"page,default=1"`
+	PageSize int    `form:"pageSize,default=20"`
+}
+
+type FileIDRequest struct {
+	ID string `form:"id"`
+}
+
 type FriendApplication struct {
 	Name        string `json:"name"`
 	URL         string `json:"url"`
 	Description string `json:"description"`
 	Avatar      string `json:"avatar,optional"`
-}
-
-type HomeSettingsRequest struct {
-	HomeAnimation bool   `json:"homeAnimation"`
-	HomeVerse     string `json:"homeVerse"`
 }
 
 type GetArticleHistoryRequest struct {
@@ -112,6 +131,11 @@ type GuestPost struct {
 	Content   string `json:"content"`
 }
 
+type HomeSettingsRequest struct {
+	HomeAnimation bool   `json:"homeAnimation"`
+	HomeVerse     string `json:"homeVerse"`
+}
+
 type HotArticleStatsRequest struct {
 	Limit int64 `form:"limit,optional"`
 }
@@ -124,6 +148,11 @@ type HotTagsRequest struct {
 	Limit int64 `form:"limit,optional"`
 }
 
+type LikeArticleRequest struct {
+	ArticleID uint64 `json:"articleId"`
+	Liked     bool   `json:"liked"`
+}
+
 type ListCategoriesRequest struct {
 	Page     int64  `form:"page,optional"`
 	PageSize int64  `form:"pageSize,optional"`
@@ -134,6 +163,11 @@ type ListTagsRequest struct {
 	Page     int64  `form:"page,optional"`
 	PageSize int64  `form:"pageSize,optional"`
 	Name     string `form:"name,optional"`
+}
+
+type LocalFileRequest struct {
+	Kind string `path:"kind"`
+	Name string `path:"name"`
 }
 
 type PublicArticleRequest struct {
@@ -165,11 +199,10 @@ type Response struct {
 	Data    interface{} `json:"data"`
 }
 
-type SaveDraftRequest struct {
-	ID        uint64       `json:"id,optional"`
-	Version   uint64       `json:"version,optional"`
-	RequestID string       `json:"requestID,optional"`
-	Input     ArticleInput `json:"input,optional"`
+type ReviewDecision struct {
+	Kind   string `json:"kind"`
+	Status string `json:"status"`
+	ID     uint64 `json:"id"`
 }
 
 type ReviewQueue struct {
@@ -178,13 +211,20 @@ type ReviewQueue struct {
 	Page   int    `form:"page,optional"`
 }
 
-type ReviewDecision struct {
-	Kind   string `json:"kind"`
-	Status string `json:"status"`
-	ID     uint64 `json:"id"`
+type SaveDraftRequest struct {
+	ID        uint64       `json:"id,optional"`
+	Version   uint64       `json:"version,optional"`
+	RequestID string       `json:"requestID,optional"`
+	Input     ArticleInput `json:"input,optional"`
 }
 
-type SaveStorageRequest struct {
+type SearchArticlesRequest struct {
+	Keyword  string `form:"keyword,optional"`
+	Page     int64  `form:"page,optional"`
+	PageSize int64  `form:"pageSize,optional"`
+}
+
+type StorageSettings struct {
 	Provider    string   `json:"provider,optional"`
 	LocalPath   string   `json:"localPath,optional"`
 	URLPrefix   string   `json:"urlPrefix,optional"`
@@ -197,12 +237,6 @@ type SaveStorageRequest struct {
 	PathStyle   bool     `json:"pathStyle,optional"`
 	AllowedExts []string `json:"allowedExts,optional"`
 	MaxSize     int64    `json:"maxSize,optional"`
-}
-
-type SearchArticlesRequest struct {
-	Keyword  string `form:"keyword,optional"`
-	Page     int64  `form:"page,optional"`
-	PageSize int64  `form:"pageSize,optional"`
 }
 
 type TagStatsRequest struct {
@@ -224,6 +258,10 @@ type UpdateTagRequest struct {
 	Name        string  `json:"name,optional"`
 	Slug        string  `json:"slug,optional"`
 	Description *string `json:"description,optional"`
+}
+
+type ValidateReleaseRequest struct {
+	Location string `json:"location"`
 }
 
 type ViewTrendRequest struct {

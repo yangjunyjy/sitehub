@@ -75,7 +75,7 @@ onBeforeUnmount(() => {
           <router-link
             v-for="article in month.items"
             :key="article.id"
-            :to="'/article/' + article.id"
+            :to="{ name: 'article', params: { id: article.id } }"
             class="timeline-entry"
             ><time>{{
               article.date ? article.date.slice(5).replace("-", " / ") : "—"

@@ -1,22 +1,18 @@
 <script setup>
+import MenuBranch from '@shared/navigation/MenuBranch.vue'
 import ThemeToggle from "@/components/product/ThemeToggle.vue";
 import BrandMark from "@/components/product/BrandMark.vue";
 import SiteSearch from "@/components/product/SiteSearch.vue";
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { inject, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 import { useWebsiteContent } from "@/composables/useWebsiteContent";
 import { useMember } from "@/composables/useMember";
-import { getPublicMenus } from '@/api';
-import { externalAddress } from '@/utils/external-address.mjs';
 
 const { member, restoreMember } = useMember();
 
 const route = useRoute();
-const router = useRouter();
-const menuItems = ref(null);
-function visibleMenu(items) {
-  return items.flatMap(item => item.isVisible === false || item.isVisible === 0 ? [] : [item, ...visibleMenu(item.children || [])]);
-}
+const navigation = inject('navigation');
+const reload = () => window.location.reload();
 const menuOpen = ref(false);
 const menuButton = ref(null);
 const header = ref(null);
@@ -88,7 +84,6 @@ const resetDesktop = () => {
   if (desktop.matches) menuOpen.value = false;
 };
 onMounted(() => {
-  getPublicMenus().then(response => { menuItems.value = response.data?.items || []; }).catch(() => {});
   restoreMember().catch(() => {});
   resetScroll();
   window.addEventListener("scroll", onScroll, { passive: true });
@@ -105,24 +100,6 @@ onBeforeUnmount(() => {
   desktop.removeEventListener("change", resetDesktop);
 });
 const { website } = useWebsiteContent();
-const navigation = computed(() => {
-  const fromCatalog = menuItems.value !== null;
-  const source = fromCatalog ? visibleMenu(menuItems.value) : website.content.navigation;
-  const items = source
-    .map(item => fromCatalog && item.pageType === 'external' ? { ...item, path: externalAddress(item.externalUrl), external: true } : { ...item, external: false })
-    .filter(item => item.external ? !!item.path : typeof item.path === 'string' && /^\/(?!\/)/.test(item.path) && !item.path.includes('\\'))
-    .filter(item => fromCatalog || !router.resolve(item.path).meta.notFound)
-    .map((item) => ({
-      label: item.title || item.name || item.label,
-      to: item.path,
-      external: item.external,
-    })).filter((item, index, values) => values.findIndex(value => value.to === item.to) === index);
-  return items;
-});
-const isActive = (to) => {
-  if (to === "/") return route.path === "/";
-  return route.path === to || route.path.startsWith(`${to}/`);
-};
 watch(
   () => route.fullPath,
   () => {
@@ -146,32 +123,26 @@ onBeforeUnmount(() => document.documentElement.classList.remove("menu-open"));
     class="product-header"
     :class="{
       'is-hidden': headerHidden,
-      'is-docs': route.path.startsWith('/docs'),
+      'is-docs': route.meta.page === 'docs',
     }"
     @focusin="revealHeader"
   >
     <div class="site-shell product-header__inner">
       <router-link
         class="brand"
-        to="/"
+        :to="{ name: 'home' }"
         :aria-label="`${website.content.brand.name} 首页`"
       >
         <BrandMark />
         <strong>{{ website.content.brand.name }}</strong
-        ><span class="brand-badge">文档与工具</span>
+        >
       </router-link>
       <div class="header-search">
         <SiteSearch @open="openSearch" @close="searchOpen = false" />
       </div>
       <nav class="desktop-nav" aria-label="主导航">
-        <component :is="item.external ? 'a' : 'router-link'"
-          v-for="item in navigation"
-          :key="item.to"
-          v-bind="item.external ? { href: item.to, target: '_blank', rel: 'noopener noreferrer' } : { to: item.to }"
-          :class="{ active: isActive(item.to) }"
-          :aria-current="isActive(item.to) ? 'page' : undefined"
-          >{{ item.label }}</component
-        >
+        <button v-if="navigation.failed" type="button" @click="reload">导航暂不可用 · 重试</button>
+        <MenuBranch v-for="item in navigation.links" :key="item.id" :item="item" />
       </nav>
       <div class="header-actions">
         <ThemeToggle />
@@ -203,13 +174,8 @@ onBeforeUnmount(() => document.documentElement.classList.remove("menu-open"));
       :inert="!menuOpen"
     >
       <nav class="site-shell">
-        <component :is="item.external ? 'a' : 'router-link'"
-          v-for="item in navigation"
-          :key="item.to"
-          v-bind="item.external ? { href: item.to, target: '_blank', rel: 'noopener noreferrer' } : { to: item.to }"
-          @click="menuOpen = false"
-          >{{ item.label }} </component
-        ><a
+        <button v-if="navigation.failed" type="button" @click="reload">导航暂不可用 · 重试</button>
+        <MenuBranch v-for="item in navigation.links" :key="item.id" :item="item" mobile /><a
           v-if="website.content.brand.contactEmail"
           :href="`mailto:${website.content.brand.contactEmail}?subject=Deploy 企业版咨询`"
           >企业咨询 </a
@@ -218,7 +184,7 @@ onBeforeUnmount(() => document.documentElement.classList.remove("menu-open"));
         </router-link>
         <router-link
           class="site-button site-button--primary"
-          :to="member.user ? '/download' : '/register'"
+          :to="{ name: member.user ? 'download' : 'register' }"
           >{{ member.user ? "立即下载" : "注册账号" }}</router-link
         >
       </nav>
@@ -266,14 +232,6 @@ onBeforeUnmount(() => document.documentElement.classList.remove("menu-open"));
 .brand strong {
   font-size: 16px;
   font-weight: 650;
-}
-.brand-badge {
-  padding: 2px 7px;
-  border-radius: 12px;
-  color: var(--deploy-primary);
-  background: var(--deploy-soft);
-  font-size: 10px;
-  white-space: nowrap;
 }
 .header-search {
   margin-right: auto;
@@ -394,9 +352,6 @@ onBeforeUnmount(() => document.documentElement.classList.remove("menu-open"));
   .product-header__inner {
     padding: 0 20px;
     gap: 14px;
-  }
-  .brand-badge {
-    display: none;
   }
   .brand {
     gap: 6px;

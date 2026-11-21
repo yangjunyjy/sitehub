@@ -1,4 +1,7 @@
 <script setup>
+import { inject } from 'vue';
+import MenuBranch from '@shared/navigation/MenuBranch.vue';
+const navigation = inject('navigation');
 import BrandMark from "@/components/product/BrandMark.vue";
 import { useWebsiteContent } from "@/composables/useWebsiteContent";
 const year = new Date().getFullYear();
@@ -9,7 +12,7 @@ const { website } = useWebsiteContent();
   <footer class="product-footer">
     <div class="site-shell product-footer__top">
       <div class="footer-brand">
-        <router-link class="footer-logo" to="/"
+        <router-link class="footer-logo" :to="{ name: 'home' }"
           ><BrandMark /><strong>{{
             website.content.brand.name
           }}</strong></router-link
@@ -21,22 +24,10 @@ const { website } = useWebsiteContent();
         </p>
       </div>
       <div class="footer-links">
-        <div>
-          <strong>开始使用</strong><router-link to="/docs">快速开始</router-link
-          ><router-link to="/download">下载中心</router-link
-          ><router-link to="/#capabilities">功能概览</router-link>
-        </div>
-        <div>
-          <strong>资源</strong><router-link to="/docs">产品文档</router-link>
-        </div>
-        <div>
-          <strong>支持</strong><router-link to="/docs">使用文档</router-link
-          ><a
-            v-if="website.content.brand.contactEmail"
-            :href="`mailto:${website.content.brand.contactEmail}`"
-            >联系我们</a
-          ><router-link v-else to="/docs">部署指南</router-link>
-        </div>
+        <nav aria-label="页脚导航">
+          <MenuBranch v-for="item in navigation.links" :key="item.id" :item="item" mobile />
+        </nav>
+        <a v-if="website.content.brand.contactEmail" :href="'mailto:' + website.content.brand.contactEmail">联系我们</a>
       </div>
     </div>
     <div class="site-shell product-footer__bottom">

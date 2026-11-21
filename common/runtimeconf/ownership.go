@@ -9,10 +9,10 @@ import (
 
 func SchemaVersion(service string) int {
 	if service == "blog" {
-		return 4
+		return 6
 	}
 	if service == "rbac" {
-		return 3
+		return 4
 	}
 	return 1
 }

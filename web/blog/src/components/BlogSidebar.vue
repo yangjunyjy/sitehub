@@ -1,4 +1,5 @@
 <script setup>
+import ResourceIcon from '@shared/icons/ResourceIcon.vue'
 import { onMounted } from "vue";
 import { useResource } from "@/composables/useResource";
 import { about, categories, tags } from "@/api";
@@ -26,7 +27,7 @@ onMounted(() => {
       <h3>{{ profile.data.value?.name || "云间小记" }}</h3>
       <p v-if="profile.data.value?.title">{{ profile.data.value.title }}</p>
       <div class="profile-card__line"></div>
-      <router-link to="/about">关于这里 <span>↗</span></router-link>
+      <router-link :to="{ name: 'about' }">关于这里 <span>↗</span></router-link>
     </section>
     <section class="sidebar-section glass-panel">
       <h3>
@@ -47,8 +48,8 @@ onMounted(() => {
         v-for="category in (categoryData.data.value || []).slice(0, 8)"
         :key="category.id"
         class="category-link"
-        :to="{ path: '/categories', query: { category: String(category.id) } }"
-        ><span>{{ category.name }}</span
+        :to="{ name: 'categories', query: { category: String(category.id) } }"
+        ><span><ResourceIcon v-if="category.icon" :name="category.icon" :size="15" /> {{ category.name }}</span
         ><span>{{ category.articleCount ?? category.article_count ?? 0 }}</span></router-link
       >
     </section>
@@ -61,7 +62,7 @@ onMounted(() => {
         <router-link
           v-for="tag in (tagData.data.value || []).slice(0, 18)"
           :key="tag.id"
-          :to="{ path: '/tags', query: { tags: String(tag.id) } }"
+          :to="{ name: 'tags', query: { tags: String(tag.id) } }"
           >{{ tag.name }} · {{ tag.articleCount ?? tag.article_count ?? 0 }}</router-link
         >
       </div>

@@ -19,6 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	Rbac_ListIcons_FullMethodName          = "/rbac.Rbac/ListIcons"
+	Rbac_IconContent_FullMethodName        = "/rbac.Rbac/IconContent"
+	Rbac_ValidateIcon_FullMethodName       = "/rbac.Rbac/ValidateIcon"
+	Rbac_CreateIcon_FullMethodName         = "/rbac.Rbac/CreateIcon"
+	Rbac_UpdateIcon_FullMethodName         = "/rbac.Rbac/UpdateIcon"
+	Rbac_DeleteIcon_FullMethodName         = "/rbac.Rbac/DeleteIcon"
 	Rbac_CheckClient_FullMethodName        = "/rbac.Rbac/CheckClient"
 	Rbac_ConsumeToken_FullMethodName       = "/rbac.Rbac/ConsumeToken"
 	Rbac_Health_FullMethodName             = "/rbac.Rbac/Health"
@@ -72,6 +78,12 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type RbacClient interface {
+	ListIcons(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*IconPage, error)
+	IconContent(ctx context.Context, in *IconName, opts ...grpc.CallOption) (*IconRecord, error)
+	ValidateIcon(ctx context.Context, in *IconRecord, opts ...grpc.CallOption) (*IconRecord, error)
+	CreateIcon(ctx context.Context, in *IconRecord, opts ...grpc.CallOption) (*IconRecord, error)
+	UpdateIcon(ctx context.Context, in *IconRecord, opts ...grpc.CallOption) (*IconRecord, error)
+	DeleteIcon(ctx context.Context, in *IDRequest, opts ...grpc.CallOption) (*Empty, error)
 	CheckClient(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 	ConsumeToken(ctx context.Context, in *ConsumeTokenRequest, opts ...grpc.CallOption) (*Empty, error)
 	Health(ctx context.Context, in *HealthRequest, opts ...grpc.CallOption) (*HealthResponse, error)
@@ -127,6 +139,66 @@ type rbacClient struct {
 
 func NewRbacClient(cc grpc.ClientConnInterface) RbacClient {
 	return &rbacClient{cc}
+}
+
+func (c *rbacClient) ListIcons(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*IconPage, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IconPage)
+	err := c.cc.Invoke(ctx, Rbac_ListIcons_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rbacClient) IconContent(ctx context.Context, in *IconName, opts ...grpc.CallOption) (*IconRecord, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IconRecord)
+	err := c.cc.Invoke(ctx, Rbac_IconContent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rbacClient) ValidateIcon(ctx context.Context, in *IconRecord, opts ...grpc.CallOption) (*IconRecord, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IconRecord)
+	err := c.cc.Invoke(ctx, Rbac_ValidateIcon_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rbacClient) CreateIcon(ctx context.Context, in *IconRecord, opts ...grpc.CallOption) (*IconRecord, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IconRecord)
+	err := c.cc.Invoke(ctx, Rbac_CreateIcon_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rbacClient) UpdateIcon(ctx context.Context, in *IconRecord, opts ...grpc.CallOption) (*IconRecord, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IconRecord)
+	err := c.cc.Invoke(ctx, Rbac_UpdateIcon_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rbacClient) DeleteIcon(ctx context.Context, in *IDRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, Rbac_DeleteIcon_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *rbacClient) CheckClient(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
@@ -603,6 +675,12 @@ func (c *rbacClient) UnblockIP(ctx context.Context, in *BlacklistInput, opts ...
 // All implementations must embed UnimplementedRbacServer
 // for forward compatibility.
 type RbacServer interface {
+	ListIcons(context.Context, *Empty) (*IconPage, error)
+	IconContent(context.Context, *IconName) (*IconRecord, error)
+	ValidateIcon(context.Context, *IconRecord) (*IconRecord, error)
+	CreateIcon(context.Context, *IconRecord) (*IconRecord, error)
+	UpdateIcon(context.Context, *IconRecord) (*IconRecord, error)
+	DeleteIcon(context.Context, *IDRequest) (*Empty, error)
 	CheckClient(context.Context, *Empty) (*Empty, error)
 	ConsumeToken(context.Context, *ConsumeTokenRequest) (*Empty, error)
 	Health(context.Context, *HealthRequest) (*HealthResponse, error)
@@ -660,6 +738,24 @@ type RbacServer interface {
 // pointer dereference when methods are called.
 type UnimplementedRbacServer struct{}
 
+func (UnimplementedRbacServer) ListIcons(context.Context, *Empty) (*IconPage, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListIcons not implemented")
+}
+func (UnimplementedRbacServer) IconContent(context.Context, *IconName) (*IconRecord, error) {
+	return nil, status.Error(codes.Unimplemented, "method IconContent not implemented")
+}
+func (UnimplementedRbacServer) ValidateIcon(context.Context, *IconRecord) (*IconRecord, error) {
+	return nil, status.Error(codes.Unimplemented, "method ValidateIcon not implemented")
+}
+func (UnimplementedRbacServer) CreateIcon(context.Context, *IconRecord) (*IconRecord, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateIcon not implemented")
+}
+func (UnimplementedRbacServer) UpdateIcon(context.Context, *IconRecord) (*IconRecord, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateIcon not implemented")
+}
+func (UnimplementedRbacServer) DeleteIcon(context.Context, *IDRequest) (*Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeleteIcon not implemented")
+}
 func (UnimplementedRbacServer) CheckClient(context.Context, *Empty) (*Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method CheckClient not implemented")
 }
@@ -820,6 +916,114 @@ func RegisterRbacServer(s grpc.ServiceRegistrar, srv RbacServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&Rbac_ServiceDesc, srv)
+}
+
+func _Rbac_ListIcons_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RbacServer).ListIcons(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rbac_ListIcons_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RbacServer).ListIcons(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rbac_IconContent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IconName)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RbacServer).IconContent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rbac_IconContent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RbacServer).IconContent(ctx, req.(*IconName))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rbac_ValidateIcon_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IconRecord)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RbacServer).ValidateIcon(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rbac_ValidateIcon_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RbacServer).ValidateIcon(ctx, req.(*IconRecord))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rbac_CreateIcon_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IconRecord)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RbacServer).CreateIcon(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rbac_CreateIcon_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RbacServer).CreateIcon(ctx, req.(*IconRecord))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rbac_UpdateIcon_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IconRecord)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RbacServer).UpdateIcon(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rbac_UpdateIcon_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RbacServer).UpdateIcon(ctx, req.(*IconRecord))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rbac_DeleteIcon_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IDRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RbacServer).DeleteIcon(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rbac_DeleteIcon_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RbacServer).DeleteIcon(ctx, req.(*IDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Rbac_CheckClient_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -1675,6 +1879,30 @@ var Rbac_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "rbac.Rbac",
 	HandlerType: (*RbacServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListIcons",
+			Handler:    _Rbac_ListIcons_Handler,
+		},
+		{
+			MethodName: "IconContent",
+			Handler:    _Rbac_IconContent_Handler,
+		},
+		{
+			MethodName: "ValidateIcon",
+			Handler:    _Rbac_ValidateIcon_Handler,
+		},
+		{
+			MethodName: "CreateIcon",
+			Handler:    _Rbac_CreateIcon_Handler,
+		},
+		{
+			MethodName: "UpdateIcon",
+			Handler:    _Rbac_UpdateIcon_Handler,
+		},
+		{
+			MethodName: "DeleteIcon",
+			Handler:    _Rbac_DeleteIcon_Handler,
+		},
 		{
 			MethodName: "CheckClient",
 			Handler:    _Rbac_CheckClient_Handler,

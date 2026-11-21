@@ -1,6 +1,8 @@
 <script setup>
 defineProps({ name: String, size: { type: [String, Number], default: 20 } });
 const paths = {
+  bookmark: "M6 3h12v18l-6-4-6 4z",
+  smile: "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0ZM7.5 14a5 5 0 0 0 9 0M8.5 9h.1m6.9 0h.1",
   pause: "M8 5v14m8-14v14",
   play: "m7 4 13 8-13 8Z",
   home: "m2 11 10-9 10 9M5 9v12h14V9M10 21v-7h4v7",

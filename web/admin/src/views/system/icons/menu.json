@@ -1,0 +1,5 @@
+{
+  "name": "图标管理",
+  "permission": "system:icon:list",
+  "sort": 6
+}

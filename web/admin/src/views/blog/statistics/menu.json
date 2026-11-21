@@ -1,0 +1,5 @@
+{
+  "name": "访问统计",
+  "permission": "blog:statistics:list",
+  "sort": 14
+}

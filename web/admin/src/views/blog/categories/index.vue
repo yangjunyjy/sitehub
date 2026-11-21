@@ -24,6 +24,7 @@
     >
     <template #default="{ tableHeight, tableProps }"
       ><AdminDataTable v-bind="tableProps" :max-height="tableHeight" :data="categoryList">
+        <template #name="{row}"><ResourceIcon :name="row.icon" /> {{ row.name }}</template>
         <template #created_at="{ row }">
           <div class="time-cell">
             <el-icon><Clock /></el-icon>
@@ -44,70 +45,31 @@
         ></template> </AdminDataTable
     ></template>
     <template #dialogs
-      ><el-dialog v-model="dialogVisible" :title="dialogTitle" width="500px">
+      ><AdminFormDialog :loading="submitting" confirm-text="确定" @submit="handleSubmit" v-model="dialogVisible" :title="dialogTitle" width="500px">
         <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
-          <el-form-item label="分类名称" prop="name">
-            <el-input v-model="form.name" placeholder="请输入分类名称" />
-          </el-form-item>
-          <el-form-item label="分类标识" prop="slug">
-            <el-input v-model="form.slug" placeholder="请输入分类标识（英文）" />
-          </el-form-item>
+          <TaxonomyFields v-model:name="form.name" v-model:slug="form.slug" kind="categories" />
           <el-form-item label="分类图标" prop="icon">
-            <el-input v-model="form.icon" placeholder="请输入图标（emoji）" />
+            <IconPicker v-model="form.icon" />
           </el-form-item>
           <el-form-item label="排序" prop="sort_order">
             <el-input-number v-model="form.sort_order" :min="0" placeholder="请输入排序" />
           </el-form-item>
         </el-form>
-        <template #footer>
-          <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleSubmit" :loading="submitting">确定</el-button>
-        </template>
-      </el-dialog>
+      </AdminFormDialog>
     </template>
   </AdminListPage>
 </template>
 <script setup>
+import TaxonomyFields from '@/components/blog/TaxonomyFields.vue'
+import AdminFormDialog from '@/components/admin/AdminFormDialog.vue'
+import IconPicker from '@/components/icons/IconPicker.vue'
+import ResourceIcon from '@shared/icons/ResourceIcon.vue'
 import { useAdminList } from '@/composables/useAdminList'
 import AdminRowAction from '@/components/admin/AdminRowAction.vue'
 import AdminRowActions from '@/components/admin/AdminRowActions.vue'
 import AdminListPage from '@/components/admin/AdminListPage.vue'
 import AdminDataTable from '@/components/admin/AdminDataTable.vue'
-const columns = [
-  {
-    key: 'name',
-    prop: 'name',
-    label: '分类名',
-    minWidth: '150',
-  },
-  {
-    key: 'article_count',
-    prop: 'article_count',
-    label: '文章量',
-    width: '100',
-    align: 'center',
-  },
-  {
-    key: 'created_at',
-    label: '创建日期',
-    width: '160',
-    align: 'center',
-  },
-  {
-    key: 'updated_at',
-    label: '更新日期',
-    width: '160',
-    align: 'center',
-  },
-  {
-    key: 'actions',
-    label: '操作',
-    width: '132',
-    align: 'center',
-    fixed: 'right',
-    utility: true,
-  },
-]
+import { columns } from './columns'
 
 defineOptions({
   name: 'CategoryList',
@@ -139,7 +101,7 @@ const form = reactive({
   id: null,
   name: '',
   slug: '',
-  icon: '💻',
+  icon: 'data/folder',
   sort_order: 0,
 })
 
@@ -184,7 +146,7 @@ const handleCreate = () => {
     id: null,
     name: '',
     slug: '',
-    icon: '💻',
+    icon: 'data/folder',
     sort_order: 0,
   })
   dialogVisible.value = true
@@ -196,7 +158,7 @@ const handleEdit = (row) => {
     id: row.id,
     name: row.name,
     slug: row.slug,
-    icon: row.icon || '💻',
+    icon: row.icon || '',
     sort_order: row.sort_order || 0,
   })
   dialogVisible.value = true

@@ -1,38 +1,33 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { navigationLinks } from "../src/utils/navigation.mjs";
+import { publicSite } from '../../shared/navigation/public-site.mjs';
 
-test('external navigation requires a public web address and no local component', () => {
-  const node = { name: '友站', pageType: 'external', externalUrl: 'https://example.org/notes' };
-  assert.deepEqual(navigationLinks([node, { ...node, externalUrl: 'javascript:alert(1)' }], []), [
-    { label: node.name, path: node.externalUrl, external: true },
-  ]);
+test('configured directories preserve order, links, icons and visibility', () => {
+  const pages = { './views/tags/index.vue': {} };
+  const menus = [{ name: '探索', path: '/explore', children: [
+    { name: '话题', component: 'tags/index', path: 'topics', icon: 'custom:leaf' },
+    { name: '重复', component: 'tags/index', path: 'topics' },
+    { name: '友站', pageType: 'external', externalUrl: 'https://example.org/notes' },
+    { name: '隐藏目录', isVisible: false, children: [{ name: '隐藏', component:'tags/index', path:'/hidden' }] },
+    { name: '未知', component:'absent/index', path:'/absent' },
+    { name: '无效外链', pageType: 'external', externalUrl: 'javascript:alert(1)' }
+  ]}];
+  const { routes, links } = publicSite(pages, {}, menus);
+  assert.deepEqual(routes.map(r => r.path), ['/explore/topics']);
+  assert.equal(links[0].label, '探索');
+  assert.deepEqual(links[0].children.map(i => [i.label, i.path]), [
+    ['话题','/explore/topics'], ['友站','https://example.org/notes']]);
+  assert.equal(links[0].children[0].icon, 'custom:leaf');
 });
 
-test("public navigation uses real local page components and removes unavailable or hidden pages", () => {
-  const pages = [
-    { name: "home/index", path: "/" },
-    { name: "categories/index", path: "/categories" },
-    { name: "article/index", path: "/article/:id" },
+test('menu URL changes apply together even when two pages exchange paths', () => {
+  const pages = Object.fromEntries(['about','friends','login'].map(page => ['./views/' + page + '/index.vue', {}]));
+  const menus = [
+    { name: '友链', component: 'friends/index', path: '/about' },
+    { name: '关于', component: 'about/index', path: '/friends' },
+    { name: '占用登录', component: 'friends/index', path: '/login' },
   ];
-  assert.deepEqual(
-    navigationLinks(
-      [
-        { menuName: "首页", component: "home/index" },
-        {
-          menuName: "目录",
-          children: [{ menuName: "分类", component: "categories/index" }],
-        },
-        { menuName: "重复", component: "home/index" },
-        { menuName: "隐藏", component: "categories/index", isVisible: false },
-        { menuName: "未知", component: "missing/index" },
-        { menuName: "文章", component: "article/index" },
-      ],
-      pages,
-    ),
-    [
-      { path: "/", label: "首页" },
-      { path: "/categories", label: "分类" },
-    ],
-  );
+  const { routes, links } = publicSite(pages, {}, menus);
+  assert.deepEqual(routes.map(r => [r.name, r.path]), [['about','/friends'],['friends','/about'],['login','/login']]);
+  assert.deepEqual(links.map(link => link.path), ['/about','/friends']);
 });

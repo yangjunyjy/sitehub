@@ -1,0 +1,5 @@
+{
+  "name": "基础设置",
+  "permission": "system:settings:list",
+  "sort": 24
+}

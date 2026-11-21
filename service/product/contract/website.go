@@ -49,6 +49,7 @@ type WebsiteHomeContent struct {
 }
 
 type WebsiteCapability struct {
+	Icon        string   `json:"icon,omitempty"`
 	Key         string   `json:"key"`
 	Index       string   `json:"index"`
 	Title       string   `json:"title"`
@@ -229,7 +230,14 @@ type WebsiteDocDocument struct {
 	Content   string    `json:"content,omitempty"`
 }
 
+type WebsiteDocCatalog struct {
+	WebsiteDocModes
+	ModeID     string                 `json:"modeId"`
+	Navigation *WebsiteDocsNavigation `json:"navigation"`
+}
+
 type WebsiteDocsNavigation struct {
+	ModeID         string                      `json:"modeId"`
 	VersionID      string                      `json:"versionId"`
 	DefaultVersion string                      `json:"defaultVersion"`
 	Versions       []WebsiteDocVersionSummary  `json:"versions"`

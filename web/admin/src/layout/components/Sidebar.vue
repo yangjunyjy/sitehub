@@ -32,19 +32,18 @@
 import BrandLogo from '@/components/AdminBrand.vue'
 import SidebarItem from './SidebarItem.vue'
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { navigationMenus } from '@/router/pages'
-import { isSuperAdmin } from '@/router/pages'
+import { useRoute, useRouter } from 'vue-router'
 import { useRbacStore } from '@/store/rbac'
 import { DArrowLeft, DArrowRight } from '@element-plus/icons-vue'
 
 defineProps({ isCollapse: { type: Boolean, default: false } })
 defineEmits(['toggle-collapse'])
+const router = useRouter()
 const route = useRoute()
 const rbacStore = useRbacStore()
 const activeMenu = computed(() => route.meta.activeMenu || route.path)
 const menus = computed(() =>
-  navigationMenus(rbacStore.currentMenus, isSuperAdmin(rbacStore.currentUser)),
+  router.navigation(rbacStore.currentMenus, rbacStore.currentUser),
 )
 </script>
 

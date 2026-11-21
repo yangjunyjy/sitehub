@@ -14,6 +14,7 @@
     "test:menus": "node --test tests/menu-pages.test.js",
     "test:downloads": "node --test tests/downloads.test.js",
     "test:documents": "node --test tests/documents.test.js",
+    "test:editor-browser": "node tests/editor-browser.mjs",
     "test:articles": "node --test tests/articles.test.js tests/uuid.test.js",
     "predev": "node scripts/editor-assets.mjs",
     "prebuild": "node scripts/editor-assets.mjs",

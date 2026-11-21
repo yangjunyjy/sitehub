@@ -13,7 +13,7 @@ export function normalizePackage(item, defaults = {}) {
     format: item.format || '',
     url: normalizeDownloadURL(item.url || ''),
     checksum: item.checksum || '',
-    icon: item.icon || 'PKG',
+    icon: item.icon || 'operations/package',
     description: item.description || '',
     fileName: item.fileName || '',
     size: Number(item.size) || 0,

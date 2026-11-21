@@ -94,32 +94,7 @@ import AdminRowAction from '@/components/admin/AdminRowAction.vue'
 import AdminRowActions from '@/components/admin/AdminRowActions.vue'
 import AdminListPage from '@/components/admin/AdminListPage.vue'
 import AdminDataTable from '@/components/admin/AdminDataTable.vue'
-const columns = [
-  {
-    key: 'title',
-    label: '文档标题',
-    minWidth: '300',
-  },
-  {
-    key: 'groupTitle',
-    prop: 'groupTitle',
-    label: '所属分组',
-    minWidth: '150',
-  },
-  {
-    key: 'slug',
-    prop: 'slug',
-    label: '访问标识',
-    minWidth: '170',
-  },
-  {
-    key: 'actions',
-    label: '操作',
-    width: '184',
-    fixed: 'right',
-    utility: true,
-  },
-]
+import { columns } from './columns'
 
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'

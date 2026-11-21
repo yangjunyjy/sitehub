@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"testing/fstest"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"gorm.io/driver/mysql"
@@ -18,7 +19,7 @@ func TestCatalogReferencesActualAdminPagesAndSeparatesPublicMenus(t *testing.T) 
 	web := filepath.Join(filepath.Dir(source), "..", "..", "..", "..", "web")
 	codes, paths := map[string]bool{}, map[string]bool{}
 	roots := map[string]bool{}
-	for _, seed := range MenuCatalog() {
+	for _, seed := range catalogForTest(t) {
 		if codes[seed.Code] {
 			t.Fatalf("duplicate stable code %s", seed.Code)
 		}
@@ -79,7 +80,7 @@ func TestCatalogSeedingIsIdempotentAndDoesNotOverwriteCustomizations(t *testing.
 		for _, column := range []string{"component", "menu_code", "component"} {
 			mock.ExpectExec("UPDATE `sys_menu` SET `" + column + "`=").WillReturnResult(sqlmock.NewResult(0, 0))
 		}
-		for index, seed := range MenuCatalog() {
+		for index, seed := range catalogForTest(t) {
 			rows := sqlmock.NewRows([]string{"id", "menu_code", "menu_name", "path"})
 			if pass == 1 {
 				rows.AddRow(index+1, "builtin:"+seed.Code, "Customized title", fmt.Sprintf("/custom/%d", index))
@@ -99,5 +100,32 @@ func TestCatalogSeedingIsIdempotentAndDoesNotOverwriteCustomizations(t *testing.
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func catalogForTest(t *testing.T) []MenuSeed {
+	t.Helper()
+	seeds, err := MenuCatalog()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return seeds
+}
+
+func TestDiscoverNewDirectoriesAndPagesWithoutCatalogEntries(t *testing.T) {
+	files := fstest.MapFS{
+		"guides/intro/index.vue":                 {},
+		"guides/intro/details/index.vue":         {},
+		"guides/intro/components/card/index.vue": {},
+		"guides/private/menu.json":               {Data: []byte("{\"menu\":false}")},
+		"guides/private/index.vue":               {},
+	}
+	seeds, err := viewChildren(files, "blog", ".", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(seeds) != 3 || seeds[0].Type != 1 || seeds[1].Parent != seeds[0].Code ||
+		seeds[2].Parent != seeds[1].Code || seeds[2].Component != "guides/intro/details/index" {
+		t.Fatalf("unexpected directory tree: %+v", seeds)
 	}
 }

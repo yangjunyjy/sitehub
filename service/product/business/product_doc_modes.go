@@ -1,12 +1,15 @@
 package services
 
 import (
+	"regexp"
 	"strings"
 
 	productcontract "sitehub/service/product/contract"
 	productdomain "sitehub/service/product/domain"
 	productrepository "sitehub/service/product/model"
 )
+
+var docIconName = regexp.MustCompile(`^([a-zA-Z][a-zA-Z0-9-]*(/[a-zA-Z0-9-]+)?|custom:[a-z][a-z0-9-]{0,62})$`)
 
 func modeView(m productdomain.DocMode) productcontract.WebsiteDocMode {
 	return productcontract.WebsiteDocMode{ID: m.ID, Label: m.Label, Description: m.Description, Icon: m.Icon,
@@ -34,37 +37,44 @@ func defaultMode(versions []productdomain.DocVersion, version string) string {
 	return ""
 }
 
-func (s *websiteContentService) GetDocModes() (result productcontract.WebsiteDocModes, err error) {
-	err = s.docs.Transaction(func(r productrepository.ProductDocsRepository) error {
-		site, e := r.Site(false)
-		if e != nil {
-			return e
+func readDocModes(r productrepository.ProductDocsRepository) (productcontract.WebsiteDocModes, []productdomain.DocVersion, error) {
+	var result productcontract.WebsiteDocModes
+	site, err := r.Site(false)
+	if err != nil {
+		return result, nil, err
+	}
+	modes, err := r.Modes()
+	if err != nil {
+		return result, nil, err
+	}
+	versions, err := r.Versions()
+	if err != nil {
+		return result, nil, err
+	}
+	result = productcontract.WebsiteDocModes{Title: site.Title, Description: site.Description,
+		DefaultMode: defaultMode(versions, site.DefaultVersion), Modes: []productcontract.WebsiteDocMode{}}
+	for _, m := range modes {
+		if m.Status == "hidden" {
+			continue
 		}
-		modes, e := r.Modes()
-		if e != nil {
-			return e
-		}
-		versions, e := r.Versions()
-		if e != nil {
-			return e
-		}
-		result = productcontract.WebsiteDocModes{Title: site.Title, Description: site.Description,
-			DefaultMode: defaultMode(versions, site.DefaultVersion), Modes: []productcontract.WebsiteDocMode{}}
-		for _, m := range modes {
-			if m.Status != "hidden" {
-				entry := modeView(m)
-				// Expose only published versions owned by this available mode.
-				if entry.Available {
-					for _, v := range versions {
-						if v.ModeID == m.ID && v.Status == "published" {
-							entry.VersionIDs = append(entry.VersionIDs, v.ID)
-						}
-					}
+		entry := modeView(m)
+		if entry.Available {
+			for _, v := range versions {
+				if v.ModeID == m.ID && v.Status == "published" {
+					entry.VersionIDs = append(entry.VersionIDs, v.ID)
 				}
-				result.Modes = append(result.Modes, entry)
 			}
 		}
-		return nil
+		result.Modes = append(result.Modes, entry)
+	}
+	return result, versions, nil
+}
+
+func (s *websiteContentService) GetDocModes() (result productcontract.WebsiteDocModes, err error) {
+	err = s.docs.Transaction(func(r productrepository.ProductDocsRepository) error {
+		modes, _, err := readDocModes(r)
+		result = modes
+		return err
 	})
 	return
 }
@@ -125,9 +135,7 @@ func (s *websiteContentService) ChangeDocMode(in productdomain.DocModeInput) err
 		if in.Status != "published" && in.Status != "upcoming" && in.Status != "hidden" {
 			return invalidDoc("模式状态无效")
 		}
-		switch in.Icon {
-		case "terminal", "assets", "pipeline", "playbook", "artifact", "shield":
-		default:
+		if len(in.Icon) > 100 || !docIconName.MatchString(in.Icon) {
 			return invalidDoc("模式图标无效")
 		}
 		for _, m := range modes {
@@ -171,34 +179,35 @@ func (s *websiteContentService) ChangeDocMode(in productdomain.DocModeInput) err
 }
 
 // 即使绕过前台直接请求正文，也不能跨模式读取或读取隐藏/待推出模式。
-func publicDocVersion(r productrepository.ProductDocsRepository, site productdomain.DocSite, version, mode string) (productdomain.DocVersion, error) {
-	if mode == "" {
-		target := version
-		if target == "" {
-			target = site.DefaultVersion
-		}
-		v, err := findVersion(r, target)
+func publicDocVersion(r productrepository.ProductDocsRepository, version, mode string) (productdomain.DocVersion, error) {
+	// An explicit mode may choose its own published default.
+	if mode != "" {
+		m, err := findMode(r, mode)
 		if err != nil {
-			return v, err
+			return productdomain.DocVersion{}, err
 		}
-		mode = v.ModeID
-	}
-	m, err := findMode(r, mode)
-	if err != nil {
-		return productdomain.DocVersion{}, err
-	}
-	if m.Status != "published" {
-		return productdomain.DocVersion{}, ErrWebsiteDocumentNotFound
-	}
-	if version == "" {
-		version = m.DefaultVersion
+		if m.Status != "published" {
+			return productdomain.DocVersion{}, ErrWebsiteDocumentNotFound
+		}
+		if version == "" {
+			version = m.DefaultVersion
+		}
 	}
 	v, err := findVersion(r, version)
 	if err != nil {
 		return v, err
 	}
-	if v.ModeID != m.ID || v.Status != "published" {
+	if v.Status != "published" || (mode != "" && v.ModeID != mode) {
 		return productdomain.DocVersion{}, ErrWebsiteDocumentNotFound
+	}
+	if mode == "" {
+		m, err := findMode(r, v.ModeID)
+		if err != nil {
+			return productdomain.DocVersion{}, err
+		}
+		if m.Status != "published" {
+			return productdomain.DocVersion{}, ErrWebsiteDocumentNotFound
+		}
 	}
 	return v, nil
 }

@@ -1,0 +1,5 @@
+{
+  "name": "存储设置",
+  "permission": "file:storage:list",
+  "sort": 25
+}

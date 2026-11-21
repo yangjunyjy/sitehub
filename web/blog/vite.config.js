@@ -5,7 +5,7 @@ import { gatewayProxy } from "./server/dev-proxy.mjs";
 
 export default defineConfig(({ mode }) => ({
   plugins: [vue()],
-  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
+  resolve: { alias: { "@shared": fileURLToPath(new URL("../shared", import.meta.url)), "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   server: {
     host: "127.0.0.1",
     port: 4312,

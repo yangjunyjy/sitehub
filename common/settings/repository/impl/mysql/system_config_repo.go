@@ -166,7 +166,7 @@ func (r *systemConfigRepository) BatchUpdate(kvs map[string]string) error {
 		}
 
 		sql := fmt.Sprintf(
-			"UPDATE system_configs SET value = CASE config_key %s END, updated_at = NOW() WHERE config_key IN (?)",
+			"UPDATE system_configs SET value = CASE config_key %s END, updated_at = CURRENT_TIMESTAMP WHERE config_key IN (?)",
 			strings.Join(whens, " "),
 		)
 

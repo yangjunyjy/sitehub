@@ -1,0 +1,5 @@
+{
+  "name": "评论管理",
+  "permission": "blog:community:list",
+  "sort": 9
+}

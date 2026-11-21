@@ -8,4 +8,3 @@ export const loginMember = async values => {
 }
 export const getMemberProfile = () => request.get('/rbac/members/me').then(r => r.data)
 export const logoutMember = async () => { await request.post('/rbac/members/logout', {}); sessionStorage.removeItem('memberToken') }
-export const checkMemberDownload = id => request.get('/product/downloads/resolve', { params: { id } }).then(r => r.data)

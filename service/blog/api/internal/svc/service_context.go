@@ -135,6 +135,21 @@ func (s *ServiceContext) Require(ctx context.Context, permission, audience strin
 	return s.Rbac.Authorize(outgoing, request)
 }
 
+// Member resolves the site session before any blog transaction starts.
+func (s *ServiceContext) Member(ctx context.Context) (*rbacpb.Principal, error) {
+	if rpcx.HTTPValue(ctx, "authorization") == "" {
+		return nil, status.Error(codes.Unauthenticated, "请先登录")
+	}
+	principal, err := s.Require(ctx, "", "member", false)
+	if err != nil {
+		return nil, err
+	}
+	if !principal.GetMember() || principal.GetId() == 0 {
+		return nil, status.Error(codes.Unauthenticated, "请重新登录")
+	}
+	return principal, nil
+}
+
 func (s *ServiceContext) CheckClient(ctx context.Context) error {
 	if rpcx.HTTPValue(ctx, "x-client-ip") == "" {
 		return nil

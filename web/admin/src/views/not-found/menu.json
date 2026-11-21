@@ -1,0 +1,25 @@
+{
+  "menu": false,
+  "layout": true,
+  "routes": [
+    {
+      "path": "/403",
+      "name": "Forbidden",
+      "props": {
+        "status": 403
+      },
+      "meta": {
+        "title": "无权访问",
+        "hidden": true
+      }
+    },
+    {
+      "path": "/:pathMatch(.*)*",
+      "name": "NotFound",
+      "meta": {
+        "title": "页面不存在",
+        "hidden": true
+      }
+    }
+  ]
+}

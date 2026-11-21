@@ -7,34 +7,20 @@ import {
   watch,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { getDocsNavigation, getDocument, getDocumentModes } from "@/api";
+import { readCatalog, readDocument } from "@/api/documents";
 import { renderMarkdown } from "@/utils/markdown";
-
-import { getDocumentMode } from "@/config/documentModes";
 
 // Own the complete request/navigation lifecycle; the page renders this state only.
 export function useDocumentReader() {
   const route = useRoute(),
     router = useRouter();
-  const documentModes = ref([]),
-    defaultMode = ref(""),
-    modesReady = ref(false),
-    modesError = ref("");
-  const currentMode = computed(() =>
-    getDocumentMode(
-      documentModes.value,
-      route.query.mode,
-      defaultMode.value,
-      route.query.version,
-    ),
-  );
-  const readableMode = computed(
-    () =>
-      documentModes.value.find(
-        (mode) => mode.id === defaultMode.value && mode.available,
-      ) || documentModes.value.find((mode) => mode.available),
-  );
-  const modeLocation = (mode) => ({ path: "/docs", query: { mode: mode.id } });
+  const documentModes = ref([]);
+  const selectedMode = ref("");
+  const modesReady = ref(false), modesError = ref("");
+  const currentMode = computed(() => documentModes.value.find(mode => mode.id === selectedMode.value)
+    || { id: "", label: "", available: false });
+  const readableMode = computed(() => documentModes.value.find(mode => mode.available));
+  const modeLocation = (mode) => ({ name: "docs", params: { id: "" }, query: { mode: mode.id } });
   const navigation = ref({
     title: "Deploy 文档",
     description: "",
@@ -60,13 +46,11 @@ export function useDocumentReader() {
     copyTimer;
   let switchTarget = null;
   let documentController,
-    navigationController,
-    modesController,
-    modesID = 0;
+    navigationController;
   const versionNotice = ref("");
   const documentAddress = (item) => item.slug || item.id;
   const docLocation = (id) => ({
-    path: id ? `/docs/${encodeURIComponent(id)}` : "/docs",
+    name: "docs", params: { id: id || "" },
     query: {
       mode: currentMode.value.id,
       version: navigation.value.versionId || route.query.version,
@@ -133,7 +117,7 @@ export function useDocumentReader() {
   const keydown = (event) => {
     if (event.key === "Escape" && sidebarOpen.value) closeMenu(true);
   };
-  const desktop = window.matchMedia("(min-width:901px)");
+  const desktop = window.matchMedia("(min-width:761px)");
   const resize = () => {
     if (desktop.matches) closeMenu();
   };
@@ -158,17 +142,12 @@ export function useDocumentReader() {
     clearContent();
     let phase = "request";
     try {
-      const response = await getDocument(
-        id,
-        navigation.value.versionId || route.query.version,
-        currentMode.value.id,
-        { signal: documentController.signal },
-      );
+      const data = await readDocument({
+        id, version: navigation.value.versionId, mode: currentMode.value.id, signal: documentController.signal,
+      });
       if (disposed || current !== requestID) return;
-      if (!response.data || typeof response.data.content !== "string")
-        throw new Error("Invalid document response");
       phase = "render";
-      const rendered = renderMarkdown(response.data.content);
+      const rendered = renderMarkdown(data.content);
       const leadingTitle = /^\s*<h1\b[^>]*>[\s\S]*?<\/h1>\s*/.exec(
         rendered.html,
       );
@@ -179,7 +158,7 @@ export function useDocumentReader() {
         ? rendered.html.slice(leadingTitle[0].length)
         : rendered.html;
       toc.value = rendered.headings.filter((item) => item.level <= 3);
-      document.value = { ...response.data, id: response.data.id ?? id };
+      document.value = { ...data, id: data.id ?? id };
       globalThis.document.title = `${document.value.title}｜${currentMode.value.label}｜${navigation.value.title}`;
       loading.value = false;
       await nextTick();
@@ -228,6 +207,7 @@ export function useDocumentReader() {
       : flatDocuments.value[0];
     if (!target) {
       requestID++;
+      documentController?.abort();
       loadingID = "";
       loading.value = false;
       clearContent();
@@ -237,7 +217,7 @@ export function useDocumentReader() {
         : "文档发布后会展示在这里，你可以先了解产品能力。";
       return;
     }
-    if (loadingID === String(target.id)) return;
+    if (loadingID === String(target.id) || (!error.value && String(document.value?.id) === String(target.id))) return;
     const pending = loadDocument(target.id);
     if (
       String(requested || "") !== String(documentAddress(target)) ||
@@ -263,28 +243,18 @@ export function useDocumentReader() {
     errorKind.value = "";
     clearContent();
     navigationLoaded = false;
-    if (!currentMode.value.available) {
-      navigation.value = {
-        ...navigation.value,
-        groups: [],
-        versions: [],
-        version: "",
-        versionId: "",
-      };
-      loading.value = false;
-      globalThis.document.title = `${currentMode.value.label}文档｜Deploy`;
-      return;
-    }
+    modesError.value = "";
     try {
-      const response = await getDocsNavigation({
-        version: route.query.version,
-        mode: currentMode.value.id,
-        signal: navigationController.signal,
-      });
+      const catalog = await readCatalog({ version: route.query.version, mode: route.query.mode, signal: navigationController.signal });
       if (disposed || current !== navigationID) return;
-      if (!Array.isArray(response.data?.groups))
-        throw new Error("Invalid navigation response");
-      navigation.value = response.data;
+      documentModes.value = catalog.modes;
+      selectedMode.value = catalog.modeId;
+      modesReady.value = true;
+      navigation.value = catalog.navigation || {title: catalog.title, description: catalog.description, versions: [], groups: []};
+      if (!catalog.navigation) {
+        loading.value = false;
+        return;
+      }
       navigationLoaded = true;
       if (switchTarget && switchTarget.version === route.query.version) {
         const target =
@@ -312,39 +282,8 @@ export function useDocumentReader() {
         failure.response?.status === 404
           ? "此文档版本不存在或尚未发布，请返回默认版本。"
           : "暂时无法获取文档目录，请检查连接后重试。";
-      loading.value = false;
-    }
-  };
-  const loadModes = async () => {
-    const current = ++modesID;
-    modesController?.abort();
-    navigationController?.abort();
-    documentController?.abort();
-    modesController = new AbortController();
-    modesReady.value = false;
-    modesError.value = "";
-    loading.value = true;
-    navigationID++;
-    requestID++;
-    navigationLoaded = false;
-    clearContent();
-    try {
-      const response = await getDocumentModes({
-        signal: modesController.signal,
-      });
-      if (disposed || current !== modesID) return;
-      documentModes.value = response.data.modes;
-      defaultMode.value = response.data.defaultMode;
-      navigation.value.title = response.data.title;
-      navigation.value.description = response.data.description;
-      // Flush the mode watcher while navigation is gated to avoid duplicate requests.
-      await nextTick();
-      if (disposed || current !== modesID) return;
-      modesReady.value = true;
-      await loadNavigation();
-    } catch {
-      if (disposed || current !== modesID) return;
-      modesError.value = "暂时无法获取文档模式，请稍后重试。";
+      modesReady.value = false;
+      modesError.value = error.value;
       loading.value = false;
     }
   };
@@ -352,12 +291,6 @@ export function useDocumentReader() {
     ["navigation", "missing", "empty"].includes(errorKind.value)
       ? loadNavigation()
       : syncDocument();
-  const selectDocument = (item) => {
-    closeMenu();
-    if (String(route.params.id) === String(documentAddress(item))) {
-      if (error.value) loadDocument(item.id);
-    } else router.push(docLocation(documentAddress(item)));
-  };
   const copyMarkdown = async () => {
     const current = requestID;
     try {
@@ -373,10 +306,10 @@ export function useDocumentReader() {
     }, 2400);
   };
   watch(
-    () => [route.params.id, route.query.version, currentMode.value.id],
+    () => [route.params.id, route.query.version, route.query.mode],
     (current, previous) => {
-      if (!modesReady.value) return;
-      if (current[2] !== previous[2]) {
+      if (!modesReady.value) { loadNavigation(); return; }
+      if (current[2] !== previous[2] && current[2] !== selectedMode.value) {
         switchTarget = null;
         versionNotice.value = "";
         search.value = "";
@@ -393,7 +326,7 @@ export function useDocumentReader() {
     },
   );
   onMounted(() => {
-    loadModes();
+    loadNavigation();
     window.addEventListener("keydown", keydown);
     desktop.addEventListener("change", resize);
   });
@@ -401,10 +334,8 @@ export function useDocumentReader() {
     disposed = true;
     requestID++;
     navigationID++;
-    modesID++;
     documentController?.abort();
     navigationController?.abort();
-    modesController?.abort();
     clearTimeout(copyTimer);
     window.removeEventListener("keydown", keydown);
     desktop.removeEventListener("change", resize);
@@ -439,9 +370,8 @@ export function useDocumentReader() {
     nextDocument,
     hasToc,
     closeMenu,
-    loadModes,
+    loadNavigation,
     retry,
-    selectDocument,
     copyMarkdown,
   };
 }

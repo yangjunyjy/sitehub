@@ -12,6 +12,7 @@ import (
 
 type Module struct {
 	Community       *mysql.CommunityRepository
+	Reader          *mysql.ReaderRepository
 	Articles        blogservice.ArticleService
 	Categories      blogservice.CategoryService
 	Tags            blogservice.TagService
@@ -33,6 +34,7 @@ func New(db *gorm.DB, uploadConfig coreconfig.UploadConfig, settingsStore settin
 	articles := mysql.NewArticleRepositoryImpl(db)
 	return &Module{
 		Community:       mysql.NewCommunityRepository(db),
+		Reader:          mysql.NewReaderRepository(db),
 		Articles:        blogservice.NewArticleService(articles),
 		Categories:      blogservice.NewCategoryService(mysql.NewCategoryRepositoryImpl(db)),
 		Tags:            blogservice.NewTagService(mysql.NewTagRepositoryImpl(db)),

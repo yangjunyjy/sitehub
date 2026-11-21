@@ -412,7 +412,23 @@ message UserPage {
 
 message ConsumeTokenRequest { string token = 1; }
 
+message IconRecord {
+  uint64 id = 1;
+  string name = 2;
+  string label = 3;
+  string category = 4;
+  string svg = 5;
+}
+message IconName { string name = 1; }
+message IconPage { repeated IconRecord items = 1; }
+
 service Rbac {
+  rpc ListIcons(Empty) returns (IconPage);
+  rpc IconContent(IconName) returns (IconRecord);
+  rpc ValidateIcon(IconRecord) returns (IconRecord);
+  rpc CreateIcon(IconRecord) returns (IconRecord);
+  rpc UpdateIcon(IconRecord) returns (IconRecord);
+  rpc DeleteIcon(IDRequest) returns (Empty);
   rpc CheckClient(Empty) returns (Empty);
   rpc ConsumeToken(ConsumeTokenRequest) returns (Empty);
   rpc Health(HealthRequest) returns (HealthResponse);

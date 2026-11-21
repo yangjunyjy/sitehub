@@ -1,0 +1,5 @@
+{
+  "name": "文档分组",
+  "permission": "product:doc:list",
+  "sort": 20
+}

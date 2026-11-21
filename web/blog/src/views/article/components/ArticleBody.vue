@@ -55,13 +55,9 @@ async function copyCode(event) {
       </div>
       <div class="markdown-body" v-html="rendered.html"></div>
       <p v-if="notice" role="status" class="copy-notice">{{ notice }}</p>
-      <div class="article-end">
-        <span>✧</span>
-        <p>文字走到这里，思考仍在继续。</p>
-      </div>
     </article>
     <aside v-if="rendered.headings.length" class="article-toc">
-      <h3>文章目录 <small>CONTENTS</small></h3>
+      <h3>文章目录</h3>
       <a
         v-for="heading in rendered.headings"
         :key="heading.slug"
@@ -74,11 +70,11 @@ async function copyCode(event) {
 </template>
 <style lang="scss">
 .reading-progress { position: fixed; z-index: 2000; inset: 0 0 auto; height: 4px; pointer-events: none; background: #a299b84a; }
-.reading-progress span { display: block; height: 100%; transform-origin: left; background: linear-gradient(90deg, #a883d2, #f4b4b8, #ffc886); }
+.reading-progress span { display: block; height: 100%; transform-origin: left; background: #508260; }
 .article-reading {
   display: flex;
   gap: 65px;
-  padding-top: 55px;
+  padding-top: 28px;
   padding-bottom: 65px;
 }
 .article-body {
@@ -92,7 +88,7 @@ async function copyCode(event) {
   border-left: 2px solid #c8b7da;
   font-size: 13px;
   line-height: 2.2;
-  color: #95829f;
+  color: #4e5e51;
 }
 .article-toc {
   position: sticky;
@@ -121,20 +117,20 @@ async function copyCode(event) {
     display: block;
     line-height: 1.8;
     padding: 6px 0;
-    color: #a297aa;
+    color: #546257;
     &:hover {
       color: var(--accent);
     }
     &.is-nested {
       padding-left: 12px;
-      font-size: 10px;
+      font-size: 12px;
     }
   }
 }
 .markdown-body {
-  font-size: 14px;
-  color: #706878;
-  line-height: 2.3;
+  font-size: clamp(16px, 1.5vw, 18px);
+  color: #303931;
+  line-height: 1.95;
   overflow-wrap: anywhere;
   h1,
   h2,
@@ -165,7 +161,7 @@ async function copyCode(event) {
     margin: 18px 0;
   }
   a {
-    color: #a087b8;
+    color: #315b40;
     border-bottom: 1px solid #d7c9e2;
   }
   img {
@@ -180,7 +176,7 @@ async function copyCode(event) {
     margin: 24px 0;
     background: #f9f7fb;
     border-left: 3px solid #d8c9e2;
-    color: #9c8aa6;
+    color: #4b5a50;
   }
   ul,
   ol {
@@ -193,7 +189,7 @@ async function copyCode(event) {
     padding: 3px 6px;
     background: #f5f0f8;
     border-radius: 3px;
-    color: #aa7b9f;
+    color: #814b65;
     font-size: 0.88em;
   }
   pre {
@@ -205,7 +201,7 @@ async function copyCode(event) {
     code {
       padding: 0;
       background: none;
-      color: #767087;
+      color: #46574b;
       font-size: 12px;
     }
   }
@@ -222,10 +218,10 @@ async function copyCode(event) {
     padding: 8px 15px;
     background: #f1edf5;
     font-size: 10px;
-    color: #a28dac;
+    color: #5c7563;
     button {
       font-size: 10px;
-      color: #a28dac;
+      color: #5c7563;
       border: 0;
       background: none;
       padding: 4px 7px;
@@ -254,18 +250,6 @@ async function copyCode(event) {
     margin: 35px 0;
   }
 }
-.article-end {
-  text-align: center;
-  padding: 45px 0 10px;
-  color: #baa9c6;
-  span {
-    font-size: 25px;
-  }
-  p {
-    font-size: 10px;
-    letter-spacing: 2px;
-  }
-}
 .copy-notice {
   font-size: 11px;
   color: #b48e9e;
@@ -278,7 +262,7 @@ async function copyCode(event) {
     padding-top: 35px;
   }
   .markdown-body {
-    font-size: 13px;
+    font-size: 16px;
     h2 {
       font-size: 21px;
     }

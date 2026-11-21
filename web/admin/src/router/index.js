@@ -6,6 +6,7 @@ const modules = import.meta.glob("../views/**/index.vue");
 const router = createAdminRouter({
   history: createWebHistory(),
   modules,
+  settings: import.meta.glob("../views/**/menu.json", { eager: true, import: "default" }),
   layout: () => import("../layout/Layout.vue"),
   store: useRbacStore,
 });

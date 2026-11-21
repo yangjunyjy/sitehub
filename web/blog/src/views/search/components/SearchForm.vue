@@ -14,7 +14,7 @@ watch(
 );
 const submit = () =>
   router.push({
-    path: "/search",
+    name: route.name,
     query: { q: keyword.value.trim().slice(0, 200) || undefined },
   });
 </script>

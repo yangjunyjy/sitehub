@@ -9,7 +9,7 @@ import (
 	"sitehub/common/rpcx"
 	"sitehub/service/rbac/api/internal/config"
 	"sitehub/service/rbac/api/internal/handler"
-	healthlogic "sitehub/service/rbac/api/internal/logic"
+	"sitehub/service/rbac/api/internal/logic/health"
 	"sitehub/service/rbac/api/internal/session"
 	"sitehub/service/rbac/api/internal/svc"
 
@@ -38,7 +38,7 @@ func run(parent context.Context, c config.Config) error {
 	apiresponse.Install()
 	ctx := svc.NewServiceContext(c)
 	managed.SetReadiness(func(probeCtx context.Context) error {
-		_, err := healthlogic.NewHealthLogic(probeCtx, ctx).Health()
+		_, err := health.Health(probeCtx, ctx)
 		return err
 	})
 

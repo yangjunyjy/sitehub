@@ -63,6 +63,10 @@ type CreateUserRequest struct {
 	Gender   uint64 `json:"gender,optional"`
 }
 
+type DeleteIconRequest struct {
+	ID uint64 `json:"id"`
+}
+
 type DeleteMenuRequest struct {
 	ID uint64 `json:"id,optional"`
 }
@@ -89,6 +93,17 @@ type GetRoleRequest struct {
 
 type GetUserRequest struct {
 	ID uint64 `form:"id,optional"`
+}
+
+type IconContentRequest struct {
+	Name string `form:"name"`
+}
+
+type IconInput struct {
+	Name     string `json:"name"`
+	Label    string `json:"label,optional"`
+	Category string `json:"category,optional"`
+	SVG      string `json:"svg"`
 }
 
 type ListRolesRequest struct {
@@ -172,6 +187,11 @@ type UnblockIPRequest struct {
 	ID     uint64 `json:"id,optional"`
 	IP     string `json:"ip,optional"`
 	Reason string `json:"reason,optional"`
+}
+
+type UpdateIconRequest struct {
+	ID uint64 `json:"id"`
+	IconInput
 }
 
 type UpdateMenuRequest struct {

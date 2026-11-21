@@ -9,8 +9,6 @@ defineProps({
     <div class="site-shell">
       <header class="flow-heading">
         <div>
-          <span class="site-index">02</span>
-          <p class="site-kicker">Delivery flow</p>
           <h2 class="site-heading">{{ home.flowTitle }}</h2>
         </div>
         <p>{{ home.flowIntro }}</p>
@@ -28,8 +26,7 @@ defineProps({
       </div>
       <div class="flow-proof">
         <div>
-          <p class="site-kicker">Policy in the loop</p>
-          <h3>效率和安全，不必二选一</h3>
+          <h3>生产发布审批</h3>
           <p>
             审批、权限与审计成为交付流程的默认规则，在不打断协作的前提下，为生产环境建立清晰边界。
           </p>
@@ -61,7 +58,7 @@ defineProps({
                 <dd>3 commits</dd>
               </div>
             </dl>
-            <router-link class="approval-action" to="/docs"
+            <router-link class="approval-action" :to="{ name: 'docs', params: { id: '' } }"
               >了解审批流程
             </router-link>
           </div>

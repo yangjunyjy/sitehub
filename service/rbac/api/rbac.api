@@ -136,8 +136,8 @@ type GetMenuRequest {
 }
 
 type CreateMenuRequest {
-	PageType string `json:"pageType,optional"`
-	ExternalURL string `json:"externalUrl,optional"`
+	PageType    string  `json:"pageType,optional"`
+	ExternalURL string  `json:"externalUrl,optional"`
 	SystemCode  string  `json:"systemCode,optional"`
 	Permission  string  `json:"permission,optional"`
 	Name        string  `json:"name,optional"`
@@ -154,8 +154,8 @@ type CreateMenuRequest {
 }
 
 type UpdateMenuRequest {
-	PageType string `json:"pageType,optional"`
-	ExternalURL string `json:"externalUrl,optional"`
+	PageType    string  `json:"pageType,optional"`
+	ExternalURL string  `json:"externalUrl,optional"`
 	SystemCode  string  `json:"systemCode,optional"`
 	Permission  string  `json:"permission,optional"`
 	ID          uint64  `json:"id,optional"`
@@ -219,143 +219,244 @@ type ConsumeTokenRequest {
 	Token string `json:"token"`
 }
 
+type IconContentRequest {
+	Name string `form:"name"`
+}
+
+type IconInput {
+	Name     string `json:"name"`
+	Label    string `json:"label,optional"`
+	Category string `json:"category,optional"`
+	SVG      string `json:"svg"`
+}
+
+type UpdateIconRequest {
+	ID uint64 `json:"id"`
+	IconInput
+}
+
+type DeleteIconRequest {
+	ID uint64 `json:"id"`
+}
+
+@server (
+	group:  icons
+	prefix: /v1/rbac
+)
+service rbac-api {
+	@handler ListIcons
+	get /system/icons returns (Response)
+
+	@handler IconContent
+	get /system/icons/content (IconContentRequest)
+
+	@handler ValidateIcon
+	post /system/icons/validate (IconInput) returns (Response)
+
+	@handler CreateIcon
+	post /system/icons/create (IconInput) returns (Response)
+
+	@handler UpdateIcon
+	post /system/icons/update (UpdateIconRequest) returns (Response)
+
+	@handler DeleteIcon
+	post /system/icons/delete (DeleteIconRequest) returns (Response)
+}
+
+@server (
+	group:  auth
+	prefix: /v1/rbac
+)
 service rbac-api {
 	@handler ConsumeToken
-	post /v1/rbac/auth/once-token/consume (ConsumeTokenRequest) returns (Response)
-
-	@handler Health
-	get /health returns (Response)
-
-	@handler Captcha
-	get /v1/rbac/captcha returns (Response)
-
-	@handler VerifyCaptcha
-	post /v1/rbac/captcha/verify (VerifyCaptchaRequest) returns (Response)
+	post /auth/once-token/consume (ConsumeTokenRequest) returns (Response)
 
 	@handler SendAdminCode
-	post /v1/rbac/auth/code (SendAdminCodeRequest) returns (Response)
+	post /auth/code (SendAdminCodeRequest) returns (Response)
 
 	@handler Login
-	post /v1/rbac/auth/login (LoginRequest) returns (Response)
+	post /auth/login (LoginRequest) returns (Response)
 
 	@handler Logout
-	post /v1/rbac/auth/logout returns (Response)
+	post /auth/logout returns (Response)
 
 	@handler CurrentUser
-	get /v1/rbac/auth/me returns (Response)
+	get /auth/me returns (Response)
 
 	@handler CurrentPermissions
-	get /v1/rbac/auth/permissions returns (Response)
+	get /auth/permissions returns (Response)
 
 	@handler CurrentMenus
-	get /v1/rbac/auth/menus returns (Response)
+	get /auth/menus returns (Response)
 
 	@handler OnceToken
-	post /v1/rbac/auth/once-token returns (Response)
+	post /auth/once-token returns (Response)
 
 	@handler TOTPStatus
-	get /v1/rbac/auth/totp returns (Response)
+	get /auth/totp returns (Response)
 
 	@handler ChangePassword
-	post /v1/rbac/auth/password (ChangePasswordRequest) returns (Response)
+	post /auth/password (ChangePasswordRequest) returns (Response)
+}
 
+@server (
+	group: health
+)
+service rbac-api {
+	@handler Health
+	get /health returns (Response)
+}
+
+@server (
+	group:  captcha
+	prefix: /v1/rbac
+)
+service rbac-api {
+	@handler Captcha
+	get /captcha returns (Response)
+
+	@handler VerifyCaptcha
+	post /captcha/verify (VerifyCaptchaRequest) returns (Response)
+}
+
+@server (
+	group:  members
+	prefix: /v1/rbac
+)
+service rbac-api {
 	@handler SendMemberCode
-	post /v1/rbac/members/code (SendMemberCodeRequest) returns (Response)
+	post /members/code (SendMemberCodeRequest) returns (Response)
 
 	@handler RegisterMember
-	post /v1/rbac/members/register (RegisterMemberRequest) returns (Response)
+	post /members/register (RegisterMemberRequest) returns (Response)
 
 	@handler LoginMember
-	post /v1/rbac/members/login (LoginMemberRequest) returns (Response)
+	post /members/login (LoginMemberRequest) returns (Response)
 
 	@handler CurrentMember
-	get /v1/rbac/members/me returns (Response)
+	get /members/me returns (Response)
 
 	@handler LogoutMember
-	post /v1/rbac/members/logout returns (Response)
+	post /members/logout returns (Response)
+}
 
+@server (
+	group:  users
+	prefix: /v1/rbac
+)
+service rbac-api {
 	@handler ListUsers
-	get /v1/rbac/users (ListUsersRequest) returns (Response)
+	get /users (ListUsersRequest) returns (Response)
 
 	@handler GetUser
-	get /v1/rbac/users/detail (GetUserRequest) returns (Response)
+	get /users/detail (GetUserRequest) returns (Response)
 
 	@handler CreateUser
-	post /v1/rbac/users/create (CreateUserRequest) returns (Response)
+	post /users/create (CreateUserRequest) returns (Response)
 
 	@handler UpdateUser
-	post /v1/rbac/users/update (UpdateUserRequest) returns (Response)
+	post /users/update (UpdateUserRequest) returns (Response)
 
 	@handler DeleteUser
-	post /v1/rbac/users/delete (DeleteUserRequest) returns (Response)
+	post /users/delete (DeleteUserRequest) returns (Response)
 
 	@handler AssignRoles
-	post /v1/rbac/users/roles (AssignRolesRequest) returns (Response)
+	post /users/roles (AssignRolesRequest) returns (Response)
+}
 
+@server (
+	group:  roles
+	prefix: /v1/rbac
+)
+service rbac-api {
 	@handler ListRoles
-	get /v1/rbac/roles (ListRolesRequest) returns (Response)
+	get /roles (ListRolesRequest) returns (Response)
 
 	@handler GetRole
-	get /v1/rbac/roles/detail (GetRoleRequest) returns (Response)
+	get /roles/detail (GetRoleRequest) returns (Response)
 
 	@handler CreateRole
-	post /v1/rbac/roles/create (CreateRoleRequest) returns (Response)
+	post /roles/create (CreateRoleRequest) returns (Response)
 
 	@handler UpdateRole
-	post /v1/rbac/roles/update (UpdateRoleRequest) returns (Response)
+	post /roles/update (UpdateRoleRequest) returns (Response)
 
 	@handler DeleteRole
-	post /v1/rbac/roles/delete (DeleteRoleRequest) returns (Response)
+	post /roles/delete (DeleteRoleRequest) returns (Response)
 
 	@handler AssignMenus
-	post /v1/rbac/roles/menus (AssignMenusRequest) returns (Response)
+	post /roles/menus (AssignMenusRequest) returns (Response)
 
 	@handler RoleMenus
-	get /v1/rbac/roles/menus (RoleMenusRequest) returns (Response)
+	get /roles/menus (RoleMenusRequest) returns (Response)
+}
 
+@server (
+	group:  menus
+	prefix: /v1/rbac
+)
+service rbac-api {
 	@handler MenuList
-	get /v1/rbac/menus (SystemRequest) returns (Response)
+	get /menus (SystemRequest) returns (Response)
 
 	@handler MenuTree
-	get /v1/rbac/menus/tree (SystemRequest) returns (Response)
+	get /menus/tree (SystemRequest) returns (Response)
 
 	@handler PublicMenus
-	get /v1/rbac/menus/public (SystemRequest) returns (Response)
-
-	@handler ListSystems
-	get /v1/rbac/systems returns (Response)
-
-	@handler SaveSystem
-	post /v1/rbac/systems/save (SaveSystemRequest) returns (Response)
-
-	@handler DeleteSystem
-	post /v1/rbac/systems/delete (DeleteSystemRequest) returns (Response)
+	get /menus/public (SystemRequest) returns (Response)
 
 	@handler GetMenu
-	get /v1/rbac/menus/detail (GetMenuRequest) returns (Response)
+	get /menus/detail (GetMenuRequest) returns (Response)
 
 	@handler CreateMenu
-	post /v1/rbac/menus/create (CreateMenuRequest) returns (Response)
+	post /menus/create (CreateMenuRequest) returns (Response)
 
 	@handler UpdateMenu
-	post /v1/rbac/menus/update (UpdateMenuRequest) returns (Response)
+	post /menus/update (UpdateMenuRequest) returns (Response)
 
 	@handler DeleteMenu
-	post /v1/rbac/menus/delete (DeleteMenuRequest) returns (Response)
+	post /menus/delete (DeleteMenuRequest) returns (Response)
+}
 
+@server (
+	group:  systems
+	prefix: /v1/rbac
+)
+service rbac-api {
+	@handler ListSystems
+	get /systems returns (Response)
+
+	@handler SaveSystem
+	post /systems/save (SaveSystemRequest) returns (Response)
+
+	@handler DeleteSystem
+	post /systems/delete (DeleteSystemRequest) returns (Response)
+}
+
+@server (
+	group:  settings
+	prefix: /v1/rbac
+)
+service rbac-api {
 	@handler GetEmailSettings
-	get /v1/rbac/settings/email returns (Response)
+	get /settings/email returns (Response)
 
 	@handler SaveEmailSettings
-	post /v1/rbac/settings/email (SaveEmailSettingsRequest) returns (Response)
+	post /settings/email (SaveEmailSettingsRequest) returns (Response)
+}
 
+@server (
+	group:  blacklist
+	prefix: /v1/rbac
+)
+service rbac-api {
 	@handler Blacklist
-	get /v1/rbac/blacklist returns (Response)
+	get /blacklist returns (Response)
 
 	@handler BlockIP
-	post /v1/rbac/blacklist/add (BlockIPRequest) returns (Response)
+	post /blacklist/add (BlockIPRequest) returns (Response)
 
 	@handler UnblockIP
-	post /v1/rbac/blacklist/delete (UnblockIPRequest) returns (Response)
+	post /blacklist/delete (UnblockIPRequest) returns (Response)
 }
 

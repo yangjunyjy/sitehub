@@ -130,8 +130,6 @@ import {
 import { logout } from '@/api/auth'
 import { getArticleStats } from '@/api/statistics'
 import { useRbacStore } from '@/store/rbac'
-import { navigationMenus } from '@/router/pages'
-import { isSuperAdmin } from '@/router/pages'
 import { previewWebsite } from '@/utils/website'
 defineProps({ isCollapse: Boolean })
 defineEmits(['toggle-collapse'])
@@ -150,11 +148,11 @@ const pages = computed(() => {
   const result = []
   const visit = (menus) =>
     menus.forEach((menu) => {
-      if (menu.type === 'menu')
-        result.push({ value: menu.title, path: menu.path, section: '管理页面' })
+      if (menu.menu_type === 2 && menu.pageType !== 'external')
+        result.push({ value: menu.menu_name, path: menu.path, section: '管理页面' })
       if (menu.children) visit(menu.children)
     })
-  visit(navigationMenus(rbac.currentMenus, isSuperAdmin(userInfo.value)))
+  visit(router.navigation(rbac.currentMenus, userInfo.value))
   return [...new Map(result.map((item) => [item.path, item])).values()]
 })
 function suggestions(query, callback) {

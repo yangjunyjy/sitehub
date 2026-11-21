@@ -53,11 +53,6 @@ export function emptyWebsiteContent() {
       recordNumber: "",
       copyright: "",
     },
-    navigation: [
-      { label: "首页", path: "/" },
-      { label: "下载", path: "/download" },
-      { label: "文档", path: "/docs" },
-    ],
     home: { meta: [] },
     capabilities: [],
     deliverySteps: [],

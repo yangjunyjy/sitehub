@@ -73,59 +73,20 @@ func (s *websiteContentService) GetDocs() (result productcontract.WebsiteDocs, e
 	return
 }
 func (s *websiteContentService) GetDocsNavigation(version string, requestedMode ...string) (productcontract.WebsiteDocsNavigation, error) {
-	docs, err := s.GetDocs()
+	mode := ""
+	if len(requestedMode) > 0 {
+		mode = requestedMode[0]
+	}
+	catalog, err := s.GetDocCatalog(version, mode)
 	if err != nil {
 		return productcontract.WebsiteDocsNavigation{}, err
 	}
-	mode := docs.DefaultMode
-	if version != "" {
-		for _, v := range docs.Versions {
-			if v.ID == version {
-				mode = v.ModeID
-			}
-		}
-	}
-	if len(requestedMode) > 0 && requestedMode[0] != "" {
-		mode = requestedMode[0]
-	}
-	var selected *productcontract.WebsiteDocMode
-	for i := range docs.Modes {
-		if docs.Modes[i].ID == mode {
-			selected = &docs.Modes[i]
-		}
-	}
-	if selected == nil || !selected.Available {
+	if catalog.Navigation == nil {
 		return productcontract.WebsiteDocsNavigation{}, ErrWebsiteDocumentNotFound
 	}
-	if version == "" {
-		version = selected.DefaultVersion
-	}
-	nav := productcontract.WebsiteDocsNavigation{Title: docs.Title, Description: docs.Description, VersionID: version, DefaultVersion: docs.DefaultVersion, Versions: []productcontract.WebsiteDocVersionSummary{}, Groups: []productcontract.WebsiteDocNavigationGroup{}}
-	nav.DefaultVersion = selected.DefaultVersion
-	found := false
-	for _, v := range docs.Versions {
-		if v.Status != "published" || v.ModeID != mode {
-			continue
-		}
-		nav.Versions = append(nav.Versions, productcontract.WebsiteDocVersionSummary{ID: v.ID, Name: v.Name})
-		if v.ID != version {
-			continue
-		}
-		found = true
-		nav.Version = v.Name
-		for _, g := range v.Groups {
-			entry := productcontract.WebsiteDocNavigationGroup{Title: g.Title, Items: []productcontract.WebsiteDocNavigationDocument{}}
-			for _, d := range g.Items {
-				entry.Items = append(entry.Items, productcontract.WebsiteDocNavigationDocument{ID: d.ID, Slug: d.Slug, Title: d.Title, Summary: d.Summary})
-			}
-			nav.Groups = append(nav.Groups, entry)
-		}
-	}
-	if !found {
-		return nav, ErrWebsiteDocumentNotFound
-	}
-	return nav, nil
+	return *catalog.Navigation, nil
 }
+
 func findVersion(r productrepository.ProductDocsRepository, id string) (productdomain.DocVersion, error) {
 	versions, err := r.Versions()
 	if err != nil {
@@ -140,25 +101,19 @@ func findVersion(r productrepository.ProductDocsRepository, id string) (productd
 }
 func (s *websiteContentService) readDocument(id, version string, public bool, mode string) (result productcontract.WebsiteDocDocument, err error) {
 	err = s.docs.Transaction(func(r productrepository.ProductDocsRepository) error {
-		site, e := r.Site(false)
-		if e != nil {
-			return e
-		}
-		if public {
-			v, e := publicDocVersion(r, site, version, mode)
-			if e != nil {
-				return e
+		if version == "" && mode == "" {
+			site, err := r.Site(false)
+			if err != nil {
+				return err
 			}
-			version = v.ID
-		} else if version == "" {
 			version = site.DefaultVersion
 		}
-		v, e := findVersion(r, version)
-		if e != nil {
-			return e
-		}
-		if public && v.Status != "published" {
-			return ErrWebsiteDocumentNotFound
+		if public {
+			selected, err := publicDocVersion(r, version, mode)
+			if err != nil {
+				return err
+			}
+			version = selected.ID
 		}
 		d, e := r.Document(version, id)
 		if e != nil {

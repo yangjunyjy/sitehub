@@ -39,7 +39,7 @@
     <template #default="{ tableHeight, tableProps }">
       <AdminDataTable v-bind="tableProps" :data="pageItems" :max-height="tableHeight">
         <template #label="{ row }"
-          ><strong>{{ row.label }}</strong>
+          ><ResourceIcon :name="row.icon" /> <strong>{{ row.label }}</strong>
           <el-tag v-if="row.id === manifest.defaultMode" size="small" effect="plain">默认</el-tag>
         </template>
         <template #status="{ row }"
@@ -102,13 +102,7 @@
               show-word-limit
           /></el-form-item>
           <el-form-item label="展示图标"
-            ><el-select v-model="form.icon"
-              ><el-option
-                v-for="item in icons"
-                :key="item.id"
-                :label="item.label"
-                :value="item.id" /></el-select
-          ></el-form-item>
+            ><IconPicker v-model="form.icon" /></el-form-item>
           <el-form-item label="展示状态"
             ><el-select v-model="form.status"
               ><el-option
@@ -148,6 +142,8 @@
   </AdminListPage>
 </template>
 <script setup>
+import ResourceIcon from '@shared/icons/ResourceIcon.vue'
+import IconPicker from '@/components/icons/IconPicker.vue'
 import { computed, reactive, ref, watch } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
@@ -167,23 +163,7 @@ const modeError = computed(
       : ''),
 )
 const statuses = { published: '已上线', upcoming: '待推出', hidden: '已隐藏' }
-const icons = [
-  { id: 'terminal', label: '命令行' },
-  { id: 'assets', label: '服务节点' },
-  { id: 'pipeline', label: '分布式' },
-  { id: 'playbook', label: '文档' },
-  { id: 'artifact', label: '制品' },
-  { id: 'shield', label: '安全' },
-]
-const columns = [
-  { key: 'label', label: '模式名称', minWidth: 190 },
-  { key: 'id', prop: 'id', label: '模式标识', minWidth: 170 },
-  { key: 'description', prop: 'description', label: '说明', minWidth: 220 },
-  { key: 'status', label: '展示状态', width: 110 },
-  { key: 'count', label: '所属内容', width: 110 },
-  { key: 'sortOrder', prop: 'sortOrder', label: '顺序', width: 80 },
-  { key: 'actions', label: '操作', width: 212, fixed: 'right', utility: true },
-]
+import { columns } from './columns'
 const keyword = ref(''),
   status = ref(''),
   applied = reactive({ keyword: '', status: '' })

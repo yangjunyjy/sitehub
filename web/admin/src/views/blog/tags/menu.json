@@ -1,0 +1,5 @@
+{
+  "name": "标签管理",
+  "permission": "blog:tag:list",
+  "sort": 13
+}

@@ -34,6 +34,7 @@ type WebsiteContentService interface {
 	GetPublishedDownload(id string) (productcontract.ProductDownload, error)
 	GetDocs() (productcontract.WebsiteDocs, error)
 	GetDocModes() (productcontract.WebsiteDocModes, error)
+	GetDocCatalog(version, mode string) (productcontract.WebsiteDocCatalog, error)
 	ChangeDocMode(productdomain.DocModeInput) error
 	GetStorage() (filecontract.WebsiteStorage, error)
 	GetDocsNavigation(version string, mode ...string) (productcontract.WebsiteDocsNavigation, error)
@@ -118,79 +119,11 @@ func (s *websiteContentService) GetContent() (productcontract.WebsiteContent, er
 	return value, s.load(websiteContentKey, &value)
 }
 
-func (s *websiteContentService) GetDownloads() (productcontract.WebsiteDownloads, error) {
-	value := DefaultWebsiteDownloads()
-	if err := s.load(websiteDownloadsKey, &value); err != nil {
-		return value, err
-	}
-	normalizeWebsiteDownloads(&value)
-	return value, nil
-}
-
-func (s *websiteContentService) GetPublicDownloads() (productcontract.WebsiteDownloads, error) {
-	value, err := s.GetDownloads()
-	if err != nil {
-		return value, err
-	}
-	// 草稿和下架包只在管理接口返回，公开接口不泄漏对应下载地址。
-	visible := make([]productcontract.WebsiteDownloadPackage, 0, len(value.Packages))
-	for _, item := range value.Packages {
-		if item.Status == "published" && validDownloadURL(item.URL) {
-			// 公开清单只给会员下载入口，实际存储地址在认证后解析。
-			item.URL = "/v1/file/download?id=" + url.QueryEscape(item.ID)
-			visible = append(visible, item)
-		}
-	}
-	value.Packages = visible
-	return value, nil
-}
-
 func (s *websiteContentService) SaveContent(content productcontract.WebsiteContent) error {
 	if err := validateWebsiteContent(content); err != nil {
 		return errorx.Invalid(err.Error())
 	}
 	return s.save(websiteContentKey, content)
-}
-
-func (s *websiteContentService) SaveDownloads(downloads productcontract.WebsiteDownloads) error {
-	// 全量校验字段，文件存在性只校验本次新增发布、重新发布和地址变更。
-	normalizeWebsiteDownloads(&downloads)
-	if err := validateWebsiteDownloads(downloads); err != nil {
-		return fmt.Errorf("%w: %s", ErrInvalidWebsiteDownloads, err)
-	}
-	snapshot, err := s.configs.GetConfig(websiteDownloadsKey)
-	if err != nil {
-		return err
-	}
-	if snapshot == nil {
-		if err := s.EnsureDefaults(); err != nil {
-			return err
-		}
-		snapshot, err = s.configs.GetConfig(websiteDownloadsKey)
-		if err != nil {
-			return err
-		}
-		if snapshot == nil {
-			return errors.New("下载配置初始化后仍不存在")
-		}
-	}
-	previous := DefaultWebsiteDownloads()
-	if strings.TrimSpace(snapshot.Value) != "" {
-		if err := json.Unmarshal([]byte(snapshot.Value), &previous); err != nil {
-			return fmt.Errorf("读取已有下载配置失败: %w", err)
-		}
-	}
-	normalizeWebsiteDownloads(&previous)
-	// 文件系统 I/O 在数据库锁外完成；提交时锁定同一配置并重验快照，
-	// 防止校验期间清单变化后仍按旧状态跳过发布检查。
-	if err := s.validateLocalReleases(previous, downloads); err != nil {
-		return err
-	}
-	encoded, err := json.Marshal(downloads)
-	if err != nil {
-		return fmt.Errorf("序列化下载内容失败: %w", err)
-	}
-	return s.configs.UpdateJSONConfigIfUnchanged(websiteDownloadsKey, snapshot.Value, string(encoded))
 }
 
 func (s *websiteContentService) load(key string, target any) error {
@@ -319,6 +252,9 @@ func normalizeWebsiteDownloads(value *productcontract.WebsiteDownloads) {
 	}
 	for i := range value.Packages {
 		item := &value.Packages[i]
+		if item.Status == "" {
+			item.Status = "draft"
+		}
 		item.GroupID = strings.TrimSpace(item.GroupID)
 		item.Edition = strings.TrimSpace(item.Edition)
 		item.ID = strings.TrimSpace(item.ID)

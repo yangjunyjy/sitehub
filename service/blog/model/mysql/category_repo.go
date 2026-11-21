@@ -73,13 +73,31 @@ func (r *CategoryRepositoryImpl) List(page, pageSize int, name string) ([]*bloge
 		return nil, 0, err
 	}
 
-	// 为每个分类填充文章数量
+	if len(categories) == 0 {
+		return categories, total, nil
+	}
+	ids := make([]uint, len(categories))
+	for i, category := range categories {
+		ids[i] = category.ID
+	}
+	var counts []struct {
+		CategoryID uint
+		Total      int64
+	}
+	const publishedCategory = "COALESCE(ap.category_id,a.category_id)"
+	err = r.db.Table("articles a").Joins("LEFT JOIN article_publications ap ON ap.article_id = a.id").
+		Select(publishedCategory+" AS category_id, COUNT(*) AS total").
+		Where("a.status = 1 AND a.deleted_at IS NULL AND "+publishedCategory+" IN ?", ids).
+		Group(publishedCategory).Scan(&counts).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	totals := make(map[uint]int64, len(counts))
+	for _, row := range counts {
+		totals[row.CategoryID] = row.Total
+	}
 	for _, category := range categories {
-		var count int64
-		if err := r.db.Table("articles a").Joins("LEFT JOIN article_publications ap ON ap.article_id = a.id").Where("a.status = 1 AND a.deleted_at IS NULL AND COALESCE(ap.category_id,a.category_id) = ?", category.ID).Count(&count).Error; err != nil {
-			return nil, 0, err
-		}
-		category.ArticleCount = count
+		category.ArticleCount = totals[category.ID]
 	}
 
 	return categories, total, err

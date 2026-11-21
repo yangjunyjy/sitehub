@@ -6,6 +6,11 @@ package handler
 import (
 	"net/http"
 
+	content "sitehub/service/product/api/internal/handler/content"
+	docsettings "sitehub/service/product/api/internal/handler/docsettings"
+	documents "sitehub/service/product/api/internal/handler/documents"
+	downloads "sitehub/service/product/api/internal/handler/downloads"
+	health "sitehub/service/product/api/internal/handler/health"
 	"sitehub/service/product/api/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
@@ -16,98 +21,138 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 		[]rest.Route{
 			{
 				Method:  http.MethodGet,
+				Path:    "/content",
+				Handler: content.ContentHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/content",
+				Handler: content.SaveContentHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/product"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodPost,
+				Path:    "/docs/groups",
+				Handler: docsettings.ChangeDocGroupHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/docs/modes",
+				Handler: docsettings.ChangeDocModeHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/docs/settings",
+				Handler: docsettings.SaveDocSettingsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/docs/versions",
+				Handler: docsettings.ChangeDocVersionHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/product"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/admin/docs",
+				Handler: documents.DocsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/admin/docs/document",
+				Handler: documents.AdminDocumentHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/admin/docs/history",
+				Handler: documents.DocumentHistoryHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/docs/catalog",
+				Handler: documents.DocCatalogHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/docs/delete",
+				Handler: documents.DeleteDocumentHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/docs/document",
+				Handler: documents.DocumentHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/docs/modes",
+				Handler: documents.DocModesHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/docs/navigation",
+				Handler: documents.DocsNavigationHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/docs/save",
+				Handler: documents.SaveDocumentHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/product"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/admin/downloads",
+				Handler: downloads.AdminDownloadsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/downloads",
+				Handler: downloads.DownloadsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/downloads",
+				Handler: downloads.SaveDownloadsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodGet,
+				Path:    "/downloads/resolve",
+				Handler: downloads.ResolveDownloadHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/v1/product"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
+				Path:    "/download",
+				Handler: downloads.InternalDownloadHandler(serverCtx),
+			},
+		},
+		rest.WithPrefix("/internal/product"),
+	)
+
+	server.AddRoutes(
+		[]rest.Route{
+			{
+				Method:  http.MethodGet,
 				Path:    "/health",
-				Handler: HealthHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/product/admin/docs",
-				Handler: DocsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/product/admin/docs/document",
-				Handler: AdminDocumentHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/product/admin/docs/history",
-				Handler: DocumentHistoryHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/product/admin/downloads",
-				Handler: AdminDownloadsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/product/content",
-				Handler: ContentHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/product/content",
-				Handler: SaveContentHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/product/docs/delete",
-				Handler: DeleteDocumentHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/product/docs/document",
-				Handler: DocumentHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/product/docs/groups",
-				Handler: ChangeDocGroupHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/product/docs/modes",
-				Handler: DocModesHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/product/docs/modes",
-				Handler: ChangeDocModeHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/product/docs/navigation",
-				Handler: DocsNavigationHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/product/docs/save",
-				Handler: SaveDocumentHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/product/docs/settings",
-				Handler: SaveDocSettingsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/product/docs/versions",
-				Handler: ChangeDocVersionHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/product/downloads",
-				Handler: DownloadsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodPost,
-				Path:    "/v1/product/downloads",
-				Handler: SaveDownloadsHandler(serverCtx),
-			},
-			{
-				Method:  http.MethodGet,
-				Path:    "/v1/product/downloads/resolve",
-				Handler: ResolveDownloadHandler(serverCtx),
+				Handler: health.HealthHandler(serverCtx),
 			},
 		},
 	)

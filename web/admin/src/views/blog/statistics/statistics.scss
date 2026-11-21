@@ -1,0 +1,131 @@
+.content-statistics {
+  padding: 20px;
+  min-width: 0;
+}
+.statistics-shell {
+  background: transparent;
+  border: 0;
+  overflow: visible;
+}
+.statistics-shell > :deep(.el-card__header) {
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  border: 0;
+  border-radius: 4px;
+  background: #fff;
+}
+.statistics-shell > :deep(.el-card__body) {
+  padding: 0;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 16px;
+  font-weight: 500;
+}
+.card-header :deep(.el-date-editor) {
+  flex: 0 1 340px;
+  max-width: 100%;
+}
+.statistics-shell :deep(.el-card) {
+  border: 0;
+  border-radius: 4px;
+  box-shadow: none;
+}
+.statistics-shell :deep(.el-card__header) {
+  font-weight: 500;
+  font-size: 14px;
+  border-color: #f0f2f5;
+}
+.stats-cards {
+  row-gap: 16px;
+}
+.stat-item {
+  position: relative;
+  padding: 8px 0;
+}
+.stat-value {
+  font-size: 30px;
+  font-weight: 500;
+  color: #303133;
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+.stat-label {
+  font-size: 13px;
+  color: #909399;
+}
+.stat-icon {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 23px;
+}
+.article-icon {
+  background: #ecf5ff;
+  color: #409eff;
+}
+.published-icon {
+  background: #f0f9eb;
+  color: #67c23a;
+}
+.draft-icon {
+  background: #fdf6ec;
+  color: #e6a23c;
+}
+.views-icon {
+  background: #f4f0ff;
+  color: #9b70e8;
+}
+.charts-row,
+.category-tag-row {
+  margin-top: 20px;
+  row-gap: 20px;
+}
+.hot-articles-card,
+.hot-tags-card {
+  margin-top: 20px;
+}
+.tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 0;
+}
+.tag-item {
+  cursor: default;
+}
+@media (max-width: 720px) {
+  .content-statistics {
+    padding: 12px;
+  }
+  .stat-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 18px;
+    top: 12px;
+    transform: none;
+  }
+  .stat-value {
+    font-size: 24px;
+  }
+  .stat-item {
+    padding-top: 0;
+  }
+  .stat-card :deep(.el-card__body) {
+    padding: 14px;
+  }
+  .card-header :deep(.el-date-editor) {
+    flex-basis: 100%;
+    width: 100%;
+  }
+}

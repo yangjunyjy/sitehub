@@ -16,6 +16,7 @@ import (
 )
 
 type Module struct {
+	Icons       *rbacservice.SystemIcons
 	Members     *rbacservice.MemberService
 	Users       rbacservice.SysUserService
 	Roles       rbacservice.SysRoleService
@@ -37,6 +38,7 @@ func New(db *gorm.DB, cache *redis.Client, cfg *config.Config, configs settingsr
 		tokenConfig.ExpireTime = cfg.OnceToken.ExpireTime
 	}
 	return &Module{
+		Icons:   rbacservice.NewSystemIcons(db),
 		Members: rbacservice.NewMemberService(mysql.NewMemberRepository(db), cache, cfg),
 		Users:   rbacservice.NewSysUserService(users, mysql.NewSysLogRepositoryImpl(db), impl.NewRedisCacheRepo(cache)),
 		Roles:   rbacservice.NewSysRoleService(roles), Menus: rbacservice.NewSysMenuService(menus),

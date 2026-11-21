@@ -4,10 +4,8 @@
 package types
 
 type AdminDocumentRequest struct {
-	ID        string `form:"id,optional"`
-	Version   string `form:"version,optional"`
-	Mode      string `form:"mode,optional"`
-	HistoryID uint64 `form:"historyId,optional"`
+	ID      string `form:"id,optional"`
+	Version string `form:"version,optional"`
 }
 
 type ChangeDocGroupRequest struct {
@@ -47,11 +45,14 @@ type DeleteDocumentRequest struct {
 	Revision uint64 `json:"revision,optional"`
 }
 
+type DocCatalogRequest struct {
+	Version string `form:"version,optional"`
+	Mode    string `form:"mode,optional"`
+}
+
 type DocsNavigationRequest struct {
-	ID        string `form:"id,optional"`
-	Version   string `form:"version,optional"`
-	Mode      string `form:"mode,optional"`
-	HistoryID uint64 `form:"historyId,optional"`
+	Version string `form:"version,optional"`
+	Mode    string `form:"mode,optional"`
 }
 
 type DocumentHistoryRequest struct {
@@ -62,10 +63,14 @@ type DocumentHistoryRequest struct {
 }
 
 type DocumentRequest struct {
-	ID        string `form:"id,optional"`
-	Version   string `form:"version,optional"`
-	Mode      string `form:"mode,optional"`
-	HistoryID uint64 `form:"historyId,optional"`
+	ID      string `form:"id,optional"`
+	Version string `form:"version,optional"`
+	Mode    string `form:"mode,optional"`
+}
+
+type PublishedDownload struct {
+	URL      string `json:"url"`
+	FileName string `json:"fileName"`
 }
 
 type ResolveDownloadRequest struct {
@@ -154,6 +159,7 @@ type WebsiteBrand struct {
 }
 
 type WebsiteCapability struct {
+	Icon        string   `json:"icon,optional"`
 	Key         string   `json:"key,optional"`
 	Index       string   `json:"index,optional"`
 	Title       string   `json:"title,optional"`
