@@ -126,6 +126,7 @@ func newCommandWithRegistry(plugins *plugin.Registry) *cobra.Command {
 		}
 		return nil
 	}})
+	root.AddCommand(consoleUserCommand(load))
 	return root
 }
 

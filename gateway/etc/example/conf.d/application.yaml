@@ -24,7 +24,6 @@ routes:
       rate-limit: null
 
   - id: gateway-ping
-    host: example.test
     paths: [/ping]
     plugins:
       static-response:

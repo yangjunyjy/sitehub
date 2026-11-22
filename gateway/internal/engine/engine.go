@@ -24,32 +24,42 @@ import (
 )
 
 type Engine struct {
-	metrics  *metrics
-	mu       sync.Mutex
-	current  atomic.Pointer[Snapshot]
-	registry *plugin.Registry
-	provider *discovery.Manager
-	pools    map[string]*pool
-	states   map[string]plugin.Middleware
-	maxBody  int64
-	closed   bool
+	metrics       *metrics
+	mu            sync.Mutex
+	current       atomic.Pointer[Snapshot]
+	registry      *plugin.Registry
+	provider      *discovery.Manager
+	pools         map[string]*pool
+	states        map[string]plugin.Middleware
+	maxBody       int64
+	closed        bool
+	streamSockets map[string]*streamSocket
+	streamContext context.Context
+	stopStreams   context.CancelFunc
+	streamWorkers sync.WaitGroup
+	streamSlots   chan struct{}
 }
 type route struct {
 	config  manifest.Route
+	host    manifest.HostMatcher
 	handler http.Handler
 }
 type Snapshot struct {
-	Document manifest.Document
-	Revision string
-	routes   []route
-	pools    map[string]*pool
-	states   map[string]plugin.Middleware
-	refs     atomic.Int64
-	owner    *Engine
+	Document      manifest.Document
+	Revision      string
+	routes        []route
+	pools         map[string]*pool
+	states        map[string]plugin.Middleware
+	refs          atomic.Int64
+	owner         *Engine
+	streamTargets map[*streamSocket]string
+	heldSockets   []*streamSocket // owned by the prepared configuration, then by the active revision
 }
 
 func New(provider *discovery.Manager, registry *plugin.Registry, maxBody int64) *Engine {
-	return &Engine{metrics: newMetrics(), provider: provider, registry: registry, pools: map[string]*pool{}, states: map[string]plugin.Middleware{}, maxBody: maxBody}
+	ctx, cancel := context.WithCancel(context.Background())
+	return &Engine{metrics: newMetrics(), provider: provider, registry: registry, pools: map[string]*pool{}, states: map[string]plugin.Middleware{}, maxBody: maxBody,
+		streamSockets: make(map[string]*streamSocket), streamContext: ctx, stopStreams: cancel, streamSlots: make(chan struct{}, 1024)}
 }
 func (e *Engine) Prepare(d manifest.Document) (*Snapshot, error) {
 	if err := manifest.Validate(d, e.registry); err != nil {
@@ -97,14 +107,21 @@ func (e *Engine) Prepare(d manifest.Document) (*Snapshot, error) {
 		if r.Upstream != "" {
 			terminal = e.proxy(s.pools[r.Upstream])
 		}
-		s.routes = append(s.routes, route{config: r, handler: middleware(terminal)})
+		host, _ := manifest.ParseHost(r.Host) // checked by manifest.Validate
+		s.routes = append(s.routes, route{config: r, host: host, handler: middleware(terminal)})
 	}
 	sort.SliceStable(s.routes, func(i, j int) bool {
 		if s.routes[i].config.Priority != s.routes[j].config.Priority {
 			return s.routes[i].config.Priority > s.routes[j].config.Priority
 		}
+		if a, b := s.routes[i].host.Specificity(), s.routes[j].host.Specificity(); a != b {
+			return a > b
+		}
 		return s.routes[i].config.ID < s.routes[j].config.ID
 	})
+	if err := e.reserveStreams(s); err != nil {
+		return fail(err)
+	}
 	return s, nil
 }
 func (e *Engine) Commit(s *Snapshot) {
@@ -117,6 +134,16 @@ func (e *Engine) Commit(s *Snapshot) {
 	e.metrics.reloads.Inc()
 	e.states = s.states
 	previous := e.current.Swap(s)
+	for _, socket := range s.heldSockets {
+		if !socket.started {
+			socket.started = true
+			e.streamWorkers.Add(1)
+			go socket.serve()
+		}
+	}
+	if previous != nil {
+		e.releaseStreams(previous)
+	}
 	e.mu.Unlock()
 	if previous != nil {
 		previous.Release()
@@ -141,6 +168,7 @@ func (s *Snapshot) Release() {
 	}
 }
 func (e *Engine) releasePools(s *Snapshot) {
+	e.releaseStreams(s)
 	for _, p := range s.pools {
 		p.refs--
 		if p.refs == 0 {
@@ -154,10 +182,19 @@ func (e *Engine) Close() {
 	e.mu.Lock()
 	e.closed = true
 	previous := e.current.Swap(nil)
+	e.stopStreams()
+	if previous != nil {
+		e.releaseStreams(previous)
+	}
+	// A publisher can still hold an uncommitted reservation during shutdown.
+	for _, socket := range e.streamSockets {
+		socket.close()
+	}
 	e.mu.Unlock()
 	if previous != nil {
 		previous.Release()
 	}
+	e.streamWorkers.Wait()
 }
 func (e *Engine) Revision() string {
 	if s := e.current.Load(); s != nil {
@@ -193,16 +230,28 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 400, "Invalid request path")
 		return
 	}
-	host := strings.ToLower(r.Host)
-	if h, _, err := net.SplitHostPort(host); err == nil {
-		host = h
+	host, err := manifest.ParseHost(r.Host)
+	if err != nil {
+		writeError(w, 400, "Invalid request host")
+		return
+	}
+	if host.Port == "" {
+		host.Port = "80"
+		if r.TLS != nil {
+			host.Port = "443"
+		}
 	}
 	var selected *route
 	longest := -1
 	for i := range s.routes {
 		candidate := &s.routes[i]
 		c := candidate.config
-		if c.Host != host {
+		// Routes are ordered by priority, host specificity, then ID. Only
+		// routes in the winning group can improve on the longest path.
+		if selected != nil && (c.Priority != selected.config.Priority || candidate.host.Specificity() != selected.host.Specificity()) {
+			break
+		}
+		if !candidate.host.Matches(host) {
 			continue
 		}
 		if len(c.Methods) > 0 {
@@ -218,13 +267,10 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		for _, pattern := range c.Paths {
 			match := p == pattern || (strings.HasSuffix(pattern, "/*") && strings.HasPrefix(p, strings.TrimSuffix(pattern, "*")))
-			if match && (selected == nil || (c.Priority == selected.config.Priority && len(pattern) > longest)) {
+			if match && len(pattern) > longest {
 				selected = candidate
 				longest = len(pattern)
 			}
-		}
-		if selected != nil && c.Priority < selected.config.Priority {
-			break
 		}
 	}
 	if selected == nil {

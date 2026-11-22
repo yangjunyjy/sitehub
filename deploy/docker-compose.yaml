@@ -163,7 +163,7 @@ services:
       <<: *control-environment
       GATEWAY_ADMIN_KEY: ${GATEWAY_ADMIN_KEY:?set a gateway control key of at least 32 characters}
       GATEWAY_CONSOLE_ORIGIN: ${GATEWAY_CONSOLE_ORIGIN:-http://127.0.0.1:9190}
-      SERVICE_KEY: ${SERVICE_KEY:?set SERVICE_KEY}
+      GATEWAY_CONSOLE_COOKIE_PATH: ${GATEWAY_CONSOLE_COOKIE_PATH:-/}
     depends_on:
       rbac-api:
         condition: service_started

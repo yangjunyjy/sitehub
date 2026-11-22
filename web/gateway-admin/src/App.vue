@@ -87,6 +87,7 @@ onBeforeUnmount(() => {
   <ConsoleLayout
     v-else-if="workspace"
     :actor="workspace.actor"
+    :role="workspace.role"
     :busy="busy"
     @logout="logoutDialog = true"
     v-slot="{ section }"
@@ -122,7 +123,7 @@ onBeforeUnmount(() => {
       {{
         dirty
           ? '本页尚有未发布的修改。退出会丢弃这些修改并结束当前会话。'
-          : '确定结束当前管理员会话？'
+          : '确定退出当前网关账号？'
       }}
     </p>
   </Dialog>

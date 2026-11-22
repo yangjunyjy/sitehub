@@ -82,16 +82,47 @@ func RunWithRegistry(ctx context.Context, c config.Config, plugins *plugin.Regis
 	if c.SourceType() == "file" {
 		controller.Load = load
 	}
-	// Validate the seed before the first persistent write. Existing records are
-	// authoritative and never overwritten by process startup or image upgrades.
-	prepared, err := proxy.Prepare(seed)
+	// Reserve the process endpoints before a stream manifest can claim any of
+	// them or become the first persisted configuration.
+	publicListener, err := net.Listen("tcp", c.Listen)
 	if err != nil {
 		return err
 	}
-	prepared.Release()
-	record, err := control.Seed(ctx, store, seed)
+	defer publicListener.Close()
+	adminListener, err := net.Listen("tcp", c.Admin.Listen)
 	if err != nil {
 		return err
+	}
+	defer adminListener.Close()
+	var consoleListener net.Listener
+	if c.Console.Enabled {
+		consoleListener, err = net.Listen("tcp", c.Console.Listen)
+		if err != nil {
+			return err
+		}
+		defer consoleListener.Close()
+	}
+	// Validate the seed before the first persistent write. Existing records are
+	// authoritative and never overwritten by process startup or image upgrades.
+	record, err := store.Read(ctx)
+	if err != nil {
+		return err
+	}
+	if record.Revision == 0 {
+		prepared, err := proxy.Prepare(seed)
+		if err != nil {
+			return err
+		}
+		// Keep candidate sockets reserved through the first Apply. It shares
+		// unchanged listeners, including after a concurrent seed wins the CAS.
+		record, err = control.Seed(ctx, store, seed)
+		if err == nil && string(record.Data) == string(manifest.Bytes(seed)) {
+			err = controller.Apply(record)
+		}
+		prepared.Release()
+		if err != nil {
+			return err
+		}
 	}
 	if err = controller.Apply(record); err != nil {
 		return err
@@ -113,19 +144,9 @@ func RunWithRegistry(ctx context.Context, c config.Config, plugins *plugin.Regis
 		}, controller.Failure)
 	}()
 	connections := newConnections()
-	public := &http.Server{Addr: c.Listen, Handler: proxy, ReadHeaderTimeout: c.HTTP.ReadHeaderTimeout, IdleTimeout: c.HTTP.IdleTimeout, MaxHeaderBytes: 1 << 20, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12}}
+	public := &http.Server{Addr: c.Listen, Handler: console.WithoutSession(proxy), ReadHeaderTimeout: c.HTTP.ReadHeaderTimeout, IdleTimeout: c.HTTP.IdleTimeout, MaxHeaderBytes: 1 << 20, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS12}}
 	admin := &http.Server{Addr: c.Admin.Listen, Handler: controller.Handler(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 15 * time.Second, IdleTimeout: 30 * time.Second, MaxHeaderBytes: 16 << 10}
-	publicListener, err := net.Listen("tcp", c.Listen)
-	if err != nil {
-		return err
-	}
-	defer publicListener.Close()
 	publicListener = &trackingListener{Listener: publicListener, owner: connections}
-	adminListener, err := net.Listen("tcp", c.Admin.Listen)
-	if err != nil {
-		return err
-	}
-	defer adminListener.Close()
 	failures := make(chan error, 3)
 	servers := []*http.Server{public, admin}
 	if c.Console.Enabled {
@@ -136,19 +157,13 @@ func RunWithRegistry(ctx context.Context, c config.Config, plugins *plugin.Regis
 			host = "::1"
 		}
 		client := &publisher.Client{URL: "http://" + net.JoinHostPort(host, port), Key: c.Admin.Key, HTTP: &http.Client{Timeout: 15 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}}
-		handler, closeAuth, err := console.New(c.Console.Config, client, plugins, c.Console.StateDir)
+		handler, err := console.New(c.Console.Config, client, plugins, c.Console.StateDir)
 		if err != nil {
 			return err
 		}
-		defer closeAuth()
-		listener, err := net.Listen("tcp", c.Console.Listen)
-		if err != nil {
-			return err
-		}
-		defer listener.Close()
 		web := &http.Server{Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 40 * time.Second, IdleTimeout: 60 * time.Second}
 		servers = append(servers, web)
-		go func() { failures <- web.Serve(listener) }()
+		go func() { failures <- web.Serve(consoleListener) }()
 	}
 	go func() {
 		if c.TLS.Certificate != "" {

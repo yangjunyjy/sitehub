@@ -31,7 +31,6 @@ func MenuCatalog() ([]MenuSeed, error) {
 		"blog":    {"blog:article:list", "blog:article:edit", "blog:article:create", "blog:article:update", "blog:article:delete", "blog:article:publish", "blog:article:audit", "blog:category:list", "blog:category:edit", "blog:category:create", "blog:category:update", "blog:category:delete", "blog:tag:list", "blog:tag:edit", "blog:tag:create", "blog:tag:update", "blog:tag:delete", "blog:statistics:list", "blog:settings:list", "blog:settings:edit"},
 		"product": {"website:content:edit", "website:docs:edit", "website:downloads:edit", "product:content:list", "product:content:edit", "product:download:list", "product:download:edit", "product:download:create", "product:download:update", "product:download:delete", "product:doc:list", "product:doc:edit", "product:doc:create", "product:doc:update", "product:doc:delete", "product:doc:publish", "file:storage:list", "file:storage:edit"},
 	}
-	permissions["system"] = append(permissions["system"], "gateway:config:read", "gateway:config:publish", "gateway:config:rollback")
 	if address := strings.TrimSpace(os.Getenv("GATEWAY_CONSOLE_URL")); address != "" {
 		u, err := url.Parse(address)
 		if err != nil || u.Hostname() == "" || u.User != nil || (u.Scheme != "https" && u.Scheme != "http") || u.RawQuery != "" || u.Fragment != "" {

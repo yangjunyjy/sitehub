@@ -31,11 +31,10 @@ func consoleCommand(file *string) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		handler, closeAuth, err := console.New(cfg.Config, client, plugin.DefaultRegistry(), cfg.StateDir)
+		handler, err := console.New(cfg.Config, client, plugin.DefaultRegistry(), cfg.StateDir)
 		if err != nil {
 			return err
 		}
-		defer closeAuth()
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer stop()
 		server := &http.Server{Addr: cfg.Config.Listen, Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 40 * time.Second, IdleTimeout: 60 * time.Second}

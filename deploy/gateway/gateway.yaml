@@ -40,6 +40,5 @@ Console:
   Listen: 0.0.0.0:9190
   Origin: ${GATEWAY_CONSOLE_ORIGIN}
   TrustedProxies: [127.0.0.1/32, 172.30.0.1/32, 172.31.0.1/32]
-  RBACAddress: rbac-rpc:9801
-  ServiceKey: ${SERVICE_KEY}
+  CookiePath: ${GATEWAY_CONSOLE_COOKIE_PATH}
   StateDir: /data/releases

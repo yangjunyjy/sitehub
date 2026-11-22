@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"net/url"
 	"path"
 	"regexp"
@@ -25,6 +24,7 @@ type Document struct {
 	Upstreams map[string]Upstream `json:"upstreams"`
 	Profiles  map[string]Plugins  `json:"profiles"`
 	Routes    []Route             `json:"routes"`
+	Streams   []Stream            `json:"streams,omitempty"`
 }
 type Node struct {
 	URL    string `json:"url"`
@@ -89,8 +89,11 @@ func EffectivePlugins(d Document, route Route) Plugins {
 	return result
 }
 func Validate(d Document, plugins *plugin.Registry) error {
-	if d.Version != 1 || len(d.Routes) == 0 || len(d.Routes) > 1000 || len(d.Upstreams) > 256 || len(d.Profiles) > 256 {
-		return fmt.Errorf("manifest version must be 1 with 1..1000 routes and at most 256 upstreams/profiles")
+	if d.Version != 1 || len(d.Routes)+len(d.Streams) == 0 || len(d.Routes)+len(d.Streams) > 1000 || len(d.Upstreams) > 256 || len(d.Profiles) > 256 {
+		return fmt.Errorf("manifest version must be 1 with 1..1000 HTTP and stream routes and at most 256 upstreams/profiles")
+	}
+	if err := validateStreams(d.Streams); err != nil {
+		return err
 	}
 	if err := plugins.ValidateOverrides(d.Plugins); err != nil {
 		return fmt.Errorf("global plugins: %w", err)
@@ -131,8 +134,8 @@ func Validate(d Document, plugins *plugin.Registry) error {
 			return fmt.Errorf("invalid or duplicate route id %s", r.ID)
 		}
 		seen[r.ID] = true
-		if r.Host == "" || r.Host != strings.ToLower(r.Host) || strings.ContainsAny(r.Host, "* /:\\\t\r\n") || net.ParseIP(r.Host) != nil {
-			return fmt.Errorf("route %s needs a lowercase explicit DNS host without port", r.ID)
+		if _, err := ParseHost(r.Host); err != nil {
+			return fmt.Errorf("route %s host: %w", r.ID, err)
 		}
 		if len(r.Paths) == 0 || len(r.Paths) > 64 {
 			return fmt.Errorf("route %s needs paths", r.ID)

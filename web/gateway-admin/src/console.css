@@ -4,7 +4,7 @@
 :root {
   font:
     14px/1.5 Inter,
-    'Microsoft YaHei',
+    "Microsoft YaHei",
     system-ui,
     sans-serif;
   color: #28364b;
@@ -124,7 +124,7 @@ select {
   background: transparent;
 }
 .shell {
-  grid-template-rows:minmax(0,1fr);
+  grid-template-rows: minmax(0, 1fr);
   display: grid;
   grid-template-columns: var(--sidebar) minmax(0, 1fr);
   height: 100dvh;
@@ -215,7 +215,7 @@ select {
   padding-top: 12px;
 }
 .main-column {
-  min-height:0;
+  min-height: 0;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -386,7 +386,7 @@ td {
 .mono,
 pre,
 textarea {
-  font-family: 'IBM Plex Mono', Consolas, monospace;
+  font-family: "IBM Plex Mono", Consolas, monospace;
 }
 .row-actions {
   white-space: nowrap;
@@ -531,7 +531,8 @@ textarea {
   padding: 32px;
   background-color: #192a46;
   background-image:
-    radial-gradient(#91b6ed33 0.8px, transparent 0.8px), linear-gradient(135deg, #172641, #263f62);
+    radial-gradient(#91b6ed33 0.8px, transparent 0.8px),
+    linear-gradient(135deg, #172641, #263f62);
   background-size:
     16px 16px,
     100% 100%;
@@ -551,7 +552,7 @@ textarea {
 }
 
 .network-art {
-  margin-block:auto;
+  margin-block: auto;
   position: relative;
   align-self: center;
   display: grid;
@@ -631,7 +632,7 @@ textarea {
 .login-form label {
   margin-bottom: 4px;
 }
-.login-form p[role='status'] {
+.login-form p[role="status"] {
   color: #397059;
 }
 .code-row {
@@ -719,5 +720,189 @@ textarea {
   }
   .editor-grid {
     grid-template-columns: 1fr;
+  }
+}
+.page-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 9px 0 23px;
+}
+.page-intro h1 {
+  font-size: 28px;
+  letter-spacing: -0.7px;
+  color: #172b42;
+}
+.page-intro p,
+.muted {
+  color: #5a6d82;
+  margin-top: 5px;
+}
+.page-actions {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.work-area {
+  padding: clamp(16px, 3vw, 42px);
+}
+.listing {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px #21324a07;
+}
+.tools {
+  column-gap: 14px;
+}
+.search-control {
+  margin-right: auto;
+  width: min(270px, 100%);
+}
+#app .refresh {
+  margin-left: 0;
+}
+.revision .pending {
+  background: #d99c38;
+}
+.mode-note {
+  color: #486382;
+  background: #eff5fb;
+  border-left: 3px solid #8ea9ce;
+  padding: 9px 12px;
+  margin: 0 0 12px;
+}
+.rule-id {
+  color: #20364e;
+  font-weight: 650;
+}
+.cell-note,
+.field-list small {
+  display: block;
+  color: #596d82;
+  font-size: 12px;
+  margin-top: 4px;
+}
+.cell-note {
+  max-width: 32ch;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+table tbody tr:hover {
+  background: #f9fbfd;
+}
+.protocol {
+  color: #24566a;
+  background: #e5f4f5;
+  border: 1px solid #cde7e9;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font:
+    600 12px/20px Consolas,
+    monospace;
+}
+.field-group + .field-group {
+  margin-top: 20px;
+}
+.field-group h3,
+.field-group summary {
+  font-size: 14px;
+  margin: 0 0 12px;
+  color: #24445d;
+}
+.field-group h3 {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+.field-group small {
+  color: #607286;
+  line-height: 1.5;
+}
+.field-list {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 12px;
+}
+.field-list dt {
+  color: #607286;
+}
+.field-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.change {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.change p {
+  margin: 4px 0;
+  color: #50667b;
+  overflow-wrap: anywhere;
+}
+.change details:last-of-type {
+  margin: 0;
+}
+.confirm-password {
+  margin-top: 18px;
+}
+.account small {
+  color: var(--muted);
+}
+.sidebar {
+  background: #172943;
+  border-right-color: #172943;
+}
+.brand {
+  color: #f4f8ff !important;
+  border-color: #34455c;
+}
+.sidebar nav small {
+  color: #a2b3cb;
+}
+.sidebar nav a {
+  color: #c6d4e7 !important;
+}
+.sidebar nav a:hover {
+  background: #253c57;
+}
+.sidebar nav a[aria-current] {
+  color: white !important;
+  background: #2d486b;
+  box-shadow: inset 3px 0 #78adff;
+}
+#app .sidebar-toggle {
+  color: #c6d4e7;
+  border-color: #34455c;
+  background: #172943;
+}
+#app .sidebar-toggle:hover {
+  background: #223b58;
+}
+@media (max-width: 760px) {
+  .work-area {
+    padding: 14px;
+  }
+  .page-intro h1 {
+    font-size: 24px;
+  }
+  .page-intro {
+    align-items: start;
+    padding-bottom: 16px;
+  }
+  .search-control {
+    width: 100%;
+  }
+  .account small {
+    display: none;
+  }
+  .revision {
+    margin-right: auto;
+  }
+  .cell-note {
+    max-width: 22ch;
   }
 }

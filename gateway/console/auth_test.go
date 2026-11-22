@@ -2,61 +2,113 @@ package console
 
 import (
 	"bytes"
-	"context"
-	"encoding/base64"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
-	"image"
-	"image/png"
-	pb "sitehub/service/rbac/rpc/pb/rbac"
-	"sync/atomic"
-	"time"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"strings"
+	"testing"
 )
 
-// Browser fixture for the RPC boundary. No SMTP or production credentials are used.
-type fixtureAuth struct {
-	pb.RbacClient
-	verified, mailed, revoked atomic.Bool
+func consoleRequest(c *console, path string, body any, cookie *http.Cookie, origin string) *httptest.ResponseRecorder {
+	method := http.MethodGet
+	var data []byte
+	if body != nil {
+		method = http.MethodPost
+		data, _ = json.Marshal(body)
+	}
+	r := httptest.NewRequest(method, path, bytes.NewReader(data))
+	r.Header.Set("Origin", origin)
+	r.Header.Set("Content-Type", "application/json")
+	if cookie != nil {
+		r.AddCookie(cookie)
+	}
+	w := httptest.NewRecorder()
+	c.handler().ServeHTTP(w, r)
+	return w
 }
 
-func (f *fixtureAuth) Captcha(ctx context.Context, _ *pb.Empty, _ ...grpc.CallOption) (*pb.SliderCaptchaResult, error) {
-	thumbnail := func(w, h int) string {
-		var buf bytes.Buffer
-		_ = png.Encode(&buf, image.NewRGBA(image.Rect(0, 0, w, h)))
-		return "data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes())
+func loginFixture(t *testing.T, c *console, name string) string {
+	t.Helper()
+	w := consoleRequest(c, "/api/auth/login", map[string]string{"username": name, "password": "fixture-password"}, nil, c.Origin)
+	if w.Code != 204 {
+		t.Fatalf("login: %d %s", w.Code, w.Body.String())
 	}
-	return &pb.SliderCaptchaResult{CaptchaKey: "test-challenge", BackgroundImage: thumbnail(300, 150), SliderImage: thumbnail(52, 52), Y: 20, ImgWidth: 300, ImgHeight: 150, PieceSize: 44, PiecePadding: 4}, nil
+	cookie := w.Result().Cookies()[0]
+	if cookie.Name != sessionCookie || !cookie.HttpOnly || cookie.Path != c.CookiePath || cookie.SameSite != http.SameSiteStrictMode {
+		t.Fatalf("unexpected session cookie attributes: %+v", cookie)
+	}
+	return cookie.Value
 }
-func (f *fixtureAuth) VerifyCaptcha(ctx context.Context, in *pb.CaptchaVerifyRequest, _ ...grpc.CallOption) (*pb.BoolReply, error) {
-	ok := in.CaptchaKey == "test-challenge" && in.Duration >= 300 && in.MoveCount >= 3
-	f.verified.Store(ok)
-	return &pb.BoolReply{Value: ok}, nil
+
+func TestIndependentIdentityAndRevocation(t *testing.T) {
+	c, _ := testConsole(t)
+	c.Origin = "https://console.test"
+	token := loginFixture(t, c, "deployer")
+	get := func(name, value string) *httptest.ResponseRecorder {
+		return consoleRequest(c, "/api/workspace", nil, &http.Cookie{Name: name, Value: value}, c.Origin)
+	}
+	if w := get("sitehub_admin_session", token); w.Code != 401 {
+		t.Fatal("business admin session accepted", w.Code)
+	}
+	if w := get(sessionCookie, token); w.Code != 200 || !strings.Contains(w.Body.String(), `"publish":true`) || !strings.Contains(w.Body.String(), `"rollback":false`) {
+		t.Fatal(w.Code, w.Body.String())
+	}
+	cookie := &http.Cookie{Name: sessionCookie, Value: token}
+	// Guard must reject this role before reading the payload or forwarding to control.
+	w := consoleRequest(c, "/api/rollback", map[string]any{}, cookie, c.Origin)
+	if w.Code != 403 {
+		t.Fatal(w.Code)
+	}
+	w = consoleRequest(c, "/api/publish", map[string]any{"revision": 7, "password": "wrong"}, cookie, c.Origin)
+	if w.Code != 403 {
+		t.Fatal("incorrect confirmation accepted", w.Code)
+	}
+	w = consoleRequest(c, "/api/auth/logout", map[string]any{}, cookie, "https://other.test")
+	if w.Code != 403 || get(sessionCookie, token).Code != 200 {
+		t.Fatal("cross-origin logout")
+	}
+	w = consoleRequest(c, "/api/auth/logout", map[string]any{}, cookie, c.Origin)
+	if w.Code != 204 || get(sessionCookie, token).Code != 401 || !w.Result().Cookies()[0].Secure {
+		t.Fatal("logout failed")
+	}
+	token = loginFixture(t, c, "reader")
+	if err := SetAccount(c.dir, "reader", "publisher", []byte("fixture-password")); err != nil {
+		t.Fatal(err)
+	}
+	if get(sessionCookie, token).Code != 401 {
+		t.Fatal("role change retained previous session")
+	}
+	token = loginFixture(t, c, "reader")
+	if err := RemoveAccount(c.dir, "reader"); err != nil {
+		t.Fatal(err)
+	}
+	if get(sessionCookie, token).Code != 401 {
+		t.Fatal("deleted account retained previous session")
+	}
 }
-func (f *fixtureAuth) SendAdminCode(ctx context.Context, in *pb.SendCodeRequest, _ ...grpc.CallOption) (*pb.Empty, error) {
-	if in.CaptchaKey != "test-challenge" || in.Email != "ops@example.test" || !f.verified.Swap(false) {
-		return nil, status.Error(codes.InvalidArgument, "verify captcha")
+
+func TestAccountStorageAndThrottling(t *testing.T) {
+	c, _ := testConsole(t)
+	path, err := accountFile(c.dir, "operator")
+	if err != nil {
+		t.Fatal(err)
 	}
-	f.mailed.Store(true)
-	return &pb.Empty{}, nil
-}
-func (f *fixtureAuth) Login(ctx context.Context, in *pb.SysLoginRequest, _ ...grpc.CallOption) (*pb.AdminSession, error) {
-	md, _ := metadata.FromOutgoingContext(ctx)
-	if len(md.Get("x-client-ip")) != 1 || md.Get("x-client-ip")[0] == "" {
-		return nil, status.Error(codes.Internal, "missing client identity")
+	data, err := os.ReadFile(path)
+	if err != nil || bytes.Contains(data, []byte("fixture-password")) {
+		t.Fatal("credential storage")
 	}
-	if in.Username != "operator" || in.Password != "fixture-password" || in.Email != "ops@example.test" || in.Code != "654321" || !f.mailed.Swap(false) {
-		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
+	if err := SetAccount(c.dir, "../escape", "admin", []byte("fixture-password")); err == nil {
+		t.Fatal("invalid account path accepted")
 	}
-	f.revoked.Store(false)
-	return &pb.AdminSession{Token: "operator", ExpiresAt: time.Now().Add(time.Hour).Unix()}, nil
-}
-func (f *fixtureAuth) Logout(ctx context.Context, _ *pb.Empty, _ ...grpc.CallOption) (*pb.Empty, error) {
-	md, _ := metadata.FromOutgoingContext(ctx)
-	if tokens := md.Get("authorization"); len(tokens) != 1 || tokens[0] != "operator" {
-		return nil, status.Error(codes.Internal, "wrong session")
+	for i := 0; i < 10; i++ {
+		w := consoleRequest(c, "/api/auth/login", map[string]string{"username": "unknown", "password": strings.Repeat("a", 73)}, nil, c.Origin)
+		if w.Code != 403 {
+			t.Fatalf("failed login %d: %d", i, w.Code)
+		}
 	}
-	f.revoked.Store(true)
-	return &pb.Empty{}, nil
+	w := consoleRequest(c, "/api/auth/login", map[string]string{"username": "operator", "password": "fixture-password"}, nil, c.Origin)
+	if w.Code != 429 {
+		t.Fatalf("limit bypassed: %d", w.Code)
+	}
 }

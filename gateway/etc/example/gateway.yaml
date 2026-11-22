@@ -12,3 +12,9 @@ Admin:
   AllowedCIDRs: [127.0.0.1/32, '::1/128']
 Discovery:
   Enabled: false
+Console:
+  Enabled: false
+  Listen: 127.0.0.1:9190
+  Origin: http://127.0.0.1:9190
+  CookiePath: /api/
+  StateDir: .tmp/gateway-releases

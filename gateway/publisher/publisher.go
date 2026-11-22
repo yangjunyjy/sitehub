@@ -94,6 +94,10 @@ func Diff(desired, previous manifest.Document) []string {
 			b, _ := json.Marshal(v)
 			out["route/"+v.ID] = string(b)
 		}
+		for _, stream := range d.Streams {
+			b, _ := json.Marshal(stream)
+			out["stream/"+stream.ID] = string(b)
+		}
 		return out
 	}
 	old, next := flatten(previous), flatten(desired)

@@ -29,6 +29,7 @@ type fileDocument struct {
 	Upstreams map[string]json.RawMessage `json:"upstreams"`
 	Profiles  map[string]Plugins         `json:"profiles"`
 	Routes    []Route                    `json:"routes"`
+	Streams   []Stream                   `json:"streams"`
 }
 
 type fileLoader struct {
@@ -179,6 +180,12 @@ func (l *fileLoader) merge(part fileDocument, file string) error {
 			return err
 		}
 		l.document.Routes = append(l.document.Routes, route)
+	}
+	for _, stream := range part.Streams {
+		if err := l.definition("stream", stream.ID, file); err != nil {
+			return err
+		}
+		l.document.Streams = append(l.document.Streams, stream)
 	}
 	return nil
 }

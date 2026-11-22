@@ -15,8 +15,8 @@ import (
 
 	"sitehub/gateway/manifest"
 
+	"sitehub/common/rpcx"
 	"sitehub/gateway/publisher"
-	pb "sitehub/service/rbac/rpc/pb/rbac"
 )
 
 var generationID = regexp.MustCompile("^[0-9a-f]{24}$")
@@ -66,12 +66,13 @@ func releaseHistory(dir string) ([]historyItem, error) {
 }
 
 type changeRequest struct {
+	Password   string          `json:"password,omitempty"`
 	Revision   int64           `json:"revision"`
 	Manifest   json.RawMessage `json:"manifest"`
 	Generation string          `json:"generation"`
 }
 
-func (c *console) change(w http.ResponseWriter, r *http.Request, actor *pb.Principal) {
+func (c *console) change(w http.ResponseWriter, r *http.Request, actor account) {
 	contentType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil || contentType != "application/json" {
 		problem(w, 415, "请提交 JSON")
@@ -82,6 +83,9 @@ func (c *console) change(w http.ResponseWriter, r *http.Request, actor *pb.Princ
 	decoder.DisallowUnknownFields()
 	if decoder.Decode(&req) != nil || decoder.Decode(new(any)) != io.EOF || req.Revision < 1 {
 		problem(w, 400, "配置或修订号无效")
+		return
+	}
+	if r.URL.Path != "/api/preview" && !c.identity.checkPassword(w, rpcx.HTTPValue(r.Context(), "x-client-ip"), actor, req.Password) {
 		return
 	}
 	state, err := c.client.Snapshot(r.Context())
@@ -143,7 +147,7 @@ func (c *console) change(w http.ResponseWriter, r *http.Request, actor *pb.Princ
 		problem(w, 400, "没有待发布的变更")
 		return
 	}
-	record, err := publisher.ApplyRelease(r.Context(), c.client, c.dir, actorName(actor), req.Generation, state, desired)
+	record, err := publisher.ApplyRelease(r.Context(), c.client, c.dir, actor.Name, req.Generation, state, desired)
 	if err != nil {
 		var upstream *publisher.ControlError
 		if errors.As(err, &upstream) && upstream.Status == 409 {

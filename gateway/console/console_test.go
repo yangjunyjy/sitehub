@@ -2,23 +2,18 @@ package console
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"sitehub/gateway/manifest"
+	"sitehub/gateway/plugin"
+	"sitehub/gateway/publisher"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"sitehub/gateway/manifest"
-	"sitehub/gateway/plugin"
-	"sitehub/gateway/publisher"
-	pb "sitehub/service/rbac/rpc/pb/rbac"
 )
 
 func testConsole(t *testing.T) (*console, *publisher.State) {
@@ -52,31 +47,26 @@ func testConsole(t *testing.T) (*console, *publisher.State) {
 		_ = json.NewEncoder(w).Encode(state)
 	}))
 	t.Cleanup(gateway.Close)
-	auth := &fixtureAuth{}
-	return &console{auth: auth, plugins: plugin.DefaultRegistry(), client: &publisher.Client{URL: gateway.URL, Key: "fixture-control-key", HTTP: gateway.Client()}, dir: t.TempDir(), origin: "http://console.test",
-		authorize: func(_ context.Context, in *pb.AuthorizeRequest) (*pb.Principal, error) {
-			if auth.revoked.Load() || in.Audience != "admin" || (in.Token != "reader" && in.Token != "operator") {
-				return nil, status.Error(codes.Unauthenticated, "invalid admin session")
-			}
-			grants := []string{readConfig}
-			if in.Token == "operator" {
-				grants = append(grants, publishConfig, rollbackConfig)
-			}
-			if in.Permission != readConfig {
-				if in.Token != "operator" || !in.Secure {
-					return nil, status.Error(codes.PermissionDenied, "permission denied")
-				}
-				if in.Totp != "123456" {
-					return nil, status.Error(codes.PermissionDenied, "invalid TOTP")
-				}
-			}
-			return &pb.Principal{Id: 23, Name: in.Token, Permissions: grants}, nil
-		}}, state
+	dir := t.TempDir()
+	auth, err := newIdentityStore(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, role := range map[string]string{"operator": "admin", "reader": "viewer", "deployer": "publisher"} {
+		if err := SetAccount(dir, name, role, []byte("fixture-password")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return &console{Config: Config{Origin: "http://console.test", CookiePath: "/gateway-console/"}, identity: auth, plugins: plugin.DefaultRegistry(), client: &publisher.Client{URL: gateway.URL, Key: "fixture-control-key", HTTP: gateway.Client()}, dir: dir}, state
 }
 
 func TestConsoleReleaseLifecycle(t *testing.T) {
 	c, state := testConsole(t)
 	handler := c.handler()
+	tokens := map[string]string{}
+	for _, name := range []string{"operator", "reader"} {
+		tokens[name] = loginFixture(t, c, name)
+	}
 	request := func(path, token string, body any, want int) map[string]any {
 		t.Helper()
 		method := "GET"
@@ -86,11 +76,11 @@ func TestConsoleReleaseLifecycle(t *testing.T) {
 		data, _ := json.Marshal(body)
 		r := httptest.NewRequest(method, "/api/"+path, bytes.NewReader(data))
 		if token != "" {
-			r.AddCookie(&http.Cookie{Name: "sitehub_admin_session", Value: token})
+			r.AddCookie(&http.Cookie{Name: sessionCookie, Value: tokens[token]})
 		}
 		r.Header.Set("Content-Type", "application/json")
-		r.Header.Set("Origin", c.origin)
-		r.Header.Set("X-TOTP-Token", "123456")
+		r.Header.Set("Origin", c.Origin)
+
 		w := httptest.NewRecorder()
 		handler.ServeHTTP(w, r)
 		if w.Code != want {
@@ -109,7 +99,7 @@ func TestConsoleReleaseLifecycle(t *testing.T) {
 	original := manifest.Revision(state.Manifest)
 	desired, _ := manifest.Decode(manifest.Bytes(state.Manifest))
 	desired.Routes[0].Priority = 3
-	payload := map[string]any{"revision": 7, "manifest": desired}
+	payload := map[string]any{"password": "fixture-password", "revision": 7, "manifest": desired}
 	request("publish", "reader", payload, 403)
 	request("preview", "operator", map[string]any{"revision": 7, "manifest": map[string]any{"version": 9}}, 400)
 	r := httptest.NewRequest("POST", "/api/publish", nil)
@@ -127,7 +117,7 @@ func TestConsoleReleaseLifecycle(t *testing.T) {
 		t.Fatal("publish failed")
 	}
 	request("publish", "operator", payload, 409)
-	rollback := map[string]any{"generation": result["generation"], "revision": 8}
+	rollback := map[string]any{"password": "fixture-password", "generation": result["generation"], "revision": 8}
 	request("rollback", "operator", rollback, 200)
 	if state.Revision != 9 || manifest.Revision(state.Manifest) != original {
 		t.Fatal("rollback did not restore original configuration")
@@ -135,7 +125,7 @@ func TestConsoleReleaseLifecycle(t *testing.T) {
 	rollback["revision"] = 9
 	request("rollback", "operator", rollback, 409)
 	history, err := releaseHistory(c.dir)
-	if err != nil || len(history) != 2 || history[0].RollbackOf != result["generation"] || history[1].Actor != "operator (#23)" {
+	if err != nil || len(history) != 2 || history[0].RollbackOf != result["generation"] || history[1].Actor != "operator" {
 		t.Fatal(history, err)
 	}
 	state.FileManaged = true
@@ -154,7 +144,7 @@ func TestConsoleBrowser(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle("/gateway-console/", http.StripPrefix("/gateway-console", c.handler()))
 	server := httptest.NewUnstartedServer(mux)
-	c.origin = "http://" + server.Listener.Addr().String()
+	c.Origin = "http://" + server.Listener.Addr().String()
 	server.Start()
 	defer server.Close()
 	cmd := exec.Command("node", "../../web/tests/gateway-console-browser.mjs")
