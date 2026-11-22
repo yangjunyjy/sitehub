@@ -33,7 +33,7 @@ func (s *ServiceContext) Authorize(ctx context.Context, credential, permission, 
 		if err != nil {
 			return nil, rpcx.Error(err)
 		}
-		return &pb.Principal{Id: user.ID, Email: user.Email, Member: true}, nil
+		return &pb.Principal{Id: user.ID, Name: user.Nickname, Email: user.Email, Member: true}, nil
 	}
 	if audience != "admin" {
 		return nil, status.Error(codes.InvalidArgument, "unknown authentication audience")

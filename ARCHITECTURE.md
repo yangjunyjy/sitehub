@@ -34,9 +34,18 @@ flowchart LR
 | --- | --- | --- |
 | rbac | 管理员、角色、菜单、关联、登录日志、会员、验证码、会话、黑名单、邮件配置 | 向其他域提供 Authorize / CheckClient |
 | blog | 文章、分类标签、快照修订、资源引用、统计；文件存储与读写；发布和清理调度 | 文件、调度进程内调用；rbac RPC 鉴权，API 通过 product 内部 HTTP 接口 取得下载授权 |
-| product | 站点内容、下载发布清单、文档模式/版本/分组/正文/修订 | 通过 blog 内部 HTTP 接口 检查文件；通过 rbac RPC 验证会员及管理员 |
+| product | 站点内容、下载分组和发行文件、文档模式/版本/分组/草稿与发布修订 | 通过 blog 内部 HTTP 接口 检查文件；通过 rbac RPC 验证会员及管理员 |
 
 rbac-rpc 和 product-api 各连接自己的数据库；blog-api 同时连接 blog 和 file 两个逻辑库，分别由 `Database` 与 `FileDatabase` 配置账号、连接池和超时。保留原有 schema 所有权，不在运行时自动合库或迁移数据。`common/settings` 共享配置存取代码，实际表在各域自己的库中，并限制允许访问的配置键。文章作者使用 ID 与名称快照，不对 rbac 用户表建立数据库关联。
+
+
+### 产品文档和下载
+
+管理端从 `/v1/product/admin/manuals/workspace` 读取所选版本的目录摘要。草稿和修订正文按需读取，发布将线上版本指向一条修订。读者只在 `/v1/product/manuals/catalog` 和 `/v1/product/manuals/document` 读取公开内容。
+
+下载分组、文件与站点设置使用独立的关系表。管理端通过 `/v1/product/admin/releases` 下的资源接口编辑和上下架，公开清单从 `/v1/product/releases/catalog` 读取。`/v1/file/download` 在每次下载时校验会员和当前上架状态。
+
+升级已有站点时，使用现有连接分别执行 `go run ./tools/bootstrap -service product` 和 `go run ./tools/bootstrap -service rbac`，SQLite 追加 `-driver sqlite`。产品数据库结构版本为 2。旧文档进入草稿区，发布后对外可见。新下载目录初始为空，已有文件需要重新登记并上架。原文件和旧 JSON 记录保留在原位置。
 
 ## 分层约束
 
@@ -64,7 +73,7 @@ API 只接收用户 Bearer/TOTP 凭据，将可信连接 IP 与用户代理作�
 
 文章资源的元数据和授权属于 blog，文件实体由 blog-api 内嵌的文件模块管理。上传先记录持久化 pending 状态，再通过进程内文件能力写入，失败保留可恢复记录。清理先在 blog 事务中退休资源，再在进程内删除物理文件；失败记录供后续任务重试。外部文件 I/O 不放入数据库事务，避免以跨服务调用延长数据库锁。
 
-product 的文档修订与关联变更在本域事务内完成；下载清单使用快照比较控制并发，新发布或变更的本地文件通过 blog 内部 HTTP 接口 验证。下载请求由 product 检查会员与当前发布状态，blog-api 的文件处理器再流式读取。本地安装包不提供绕过授权的公开路径。
+product 在本域事务中写入文档修订和关联变更。下载文件、分组和下载页设置各自校验修订号，同一记录的过期更新返回 409。发布或变更本地文件时，product 调用 blog 内部 HTTP 接口校验文件。会员请求下载时，product 检查身份和上架状态，blog-api 随后流式返回文件。
 
 文件流以有界分块传输并校验声明大小；临时文件在退出时清理。下载使用可重新打开的 RPC 流支持 Range/HEAD，避免将整个安装包载入内存。存储快照依赖稳定的 `STORAGE_SECRET`，更换该密钥需要显式的数据与密钥迁移。
 

@@ -123,6 +123,7 @@ type ListUsersRequest struct {
 }
 
 type LoginMemberRequest struct {
+	Account  string `json:"account,optional"`
 	Email    string `json:"email,optional"`
 	Password string `json:"password,optional"`
 }
@@ -135,9 +136,17 @@ type LoginRequest struct {
 }
 
 type RegisterMemberRequest struct {
+	Username string `json:"username"`
+	Nickname string `json:"nickname"`
 	Email    string `json:"email,optional"`
 	Password string `json:"password,optional"`
 	Code     string `json:"code,optional"`
+}
+
+type ResetMemberPasswordRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Code     string `json:"code"`
 }
 
 type Response struct {
@@ -192,6 +201,12 @@ type UnblockIPRequest struct {
 type UpdateIconRequest struct {
 	ID uint64 `json:"id"`
 	IconInput
+}
+
+type UpdateMemberProfileRequest struct {
+	Username string `json:"username"`
+	Nickname string `json:"nickname"`
+	Avatar   string `json:"avatar,optional"`
 }
 
 type UpdateMenuRequest struct {

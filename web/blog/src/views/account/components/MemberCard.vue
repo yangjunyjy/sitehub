@@ -1,7 +1,17 @@
 <script setup>
-import { computed } from "vue";
+import MemberAvatar from "@/components/member/MemberAvatar.vue";
+import ProfileEditor from "./ProfileEditor.vue";
+import { computed, ref } from "vue";
 import { displayDate } from "@/utils/format";
 const props = defineProps({ user: { type: Object, required: true } });
+const editing = ref(false);
+const editButton = ref(null);
+const saved = ref(false);
+function finish(updated) {
+  editing.value = false;
+  saved.value = updated;
+  editButton.value?.focus();
+}
 const name = computed(
   () =>
     props.user.nickname ||
@@ -16,13 +26,23 @@ const joined = computed(() => displayDate(props.user.createdAt));
     <div>
       <h1>个人中心</h1>
       <div class="identity">
-        <span class="monogram" aria-hidden="true">{{
-          [...name][0].toUpperCase()
-        }}</span>
+        <MemberAvatar :user="user" style="--avatar-size: 48px" />
         <div>
           <strong>{{ name }}</strong>
           <p v-if="user.email">{{ user.email }}</p>
         </div>
+        <button
+          ref="editButton"
+          class="edit-profile"
+          type="button"
+          :aria-expanded="editing"
+          @click="
+            saved = false;
+            editing = !editing;
+          "
+        >
+          编辑资料
+        </button>
       </div>
     </div>
     <div class="bookplate" aria-hidden="true"></div>
@@ -30,6 +50,8 @@ const joined = computed(() => displayDate(props.user.createdAt));
       >加入于 <time :datetime="joined">{{ joined }}</time></small
     >
   </header>
+  <ProfileEditor v-if="editing" :user="user" @finish="finish" />
+  <p v-if="saved" role="status" class="saved">个人资料已保存</p>
 </template>
 <style scoped>
 .member-card {
@@ -74,18 +96,19 @@ h1 {
   gap: 12px;
   overflow-wrap: anywhere;
 }
-.monogram {
-  display: grid;
-  place-items: center;
-  width: 43px;
-  height: 43px;
-  flex: none;
-  background: #463947;
-  color: #fff7ef;
-  border-radius: 50%;
-  font:
-    italic 23px/1 Georgia,
-    serif;
+.identity {
+  flex-wrap: wrap;
+}
+.edit-profile {
+  padding: 6px 12px;
+  border: 1px solid var(--journal-rule);
+  border-radius: 20px;
+  background: #ffffffa6;
+  color: var(--journal-accent);
+  cursor: pointer;
+}
+.saved {
+  margin-top: 12px;
 }
 .identity strong {
   font-size: 15px;

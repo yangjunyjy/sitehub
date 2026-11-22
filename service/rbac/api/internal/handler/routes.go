@@ -186,6 +186,21 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodPost,
+				Path:    "/members/password/code",
+				Handler: members.SendMemberResetCodeHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/members/password/reset",
+				Handler: members.ResetMemberPasswordHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
+				Path:    "/members/profile",
+				Handler: members.UpdateMemberProfileHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
 				Path:    "/members/register",
 				Handler: members.RegisterMemberHandler(serverCtx),
 			},

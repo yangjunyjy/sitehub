@@ -3,6 +3,23 @@
 
 package types
 
+type AboutLink struct {
+	Label string `json:"label"`
+	URL   string `json:"url"`
+}
+
+type AboutSettingsRequest struct {
+	Name     string      `json:"name,optional"`
+	Title    string      `json:"title,optional"`
+	Bio      string      `json:"bio,optional"`
+	Content  string      `json:"content,optional"`
+	Avatar   string      `json:"avatar,optional"`
+	Location string      `json:"location,optional"`
+	Email    string      `json:"email,optional"`
+	Skills   []string    `json:"skills,optional"`
+	Socials  []AboutLink `json:"socials,optional"`
+}
+
 type AdminArticlesRequest struct {
 	Page       int64    `form:"page,optional"`
 	PageSize   int64    `form:"pageSize,optional"`

@@ -47,6 +47,7 @@ type (
 	PublicMenu                   = rbac.PublicMenu
 	PublicMenuPage               = rbac.PublicMenuPage
 	RegisterMemberInput          = rbac.RegisterMemberInput
+	ResetMemberPasswordInput     = rbac.ResetMemberPasswordInput
 	RoleAssignMenusRequest       = rbac.RoleAssignMenusRequest
 	RolePage                     = rbac.RolePage
 	RoleSearchQueryRequest       = rbac.RoleSearchQueryRequest
@@ -62,6 +63,7 @@ type (
 	TOTPInfo                     = rbac.TOTPInfo
 	TokenReply                   = rbac.TokenReply
 	UpdateEmailSettingsRequest   = rbac.UpdateEmailSettingsRequest
+	UpdateMemberProfileInput     = rbac.UpdateMemberProfileInput
 	UpdatePasswordRequest        = rbac.UpdatePasswordRequest
 	UpdateRoleRequest            = rbac.UpdateRoleRequest
 	UpdateSysMenuRequest         = rbac.UpdateSysMenuRequest
@@ -94,6 +96,9 @@ type (
 		SendMemberCode(ctx context.Context, in *SendCodeRequest, opts ...grpc.CallOption) (*Empty, error)
 		RegisterMember(ctx context.Context, in *RegisterMemberInput, opts ...grpc.CallOption) (*MemberProfile, error)
 		LoginMember(ctx context.Context, in *LoginMemberInput, opts ...grpc.CallOption) (*MemberSessionReply, error)
+		SendMemberResetCode(ctx context.Context, in *SendCodeRequest, opts ...grpc.CallOption) (*Empty, error)
+		ResetMemberPassword(ctx context.Context, in *ResetMemberPasswordInput, opts ...grpc.CallOption) (*Empty, error)
+		UpdateMemberProfile(ctx context.Context, in *UpdateMemberProfileInput, opts ...grpc.CallOption) (*MemberProfile, error)
 		CurrentMember(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*MemberProfile, error)
 		LogoutMember(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 		ListUsers(ctx context.Context, in *SearchSysUserQueryRequest, opts ...grpc.CallOption) (*UserPage, error)
@@ -254,6 +259,21 @@ func (m *defaultRbac) RegisterMember(ctx context.Context, in *RegisterMemberInpu
 func (m *defaultRbac) LoginMember(ctx context.Context, in *LoginMemberInput, opts ...grpc.CallOption) (*MemberSessionReply, error) {
 	client := rbac.NewRbacClient(m.cli.Conn())
 	return client.LoginMember(ctx, in, opts...)
+}
+
+func (m *defaultRbac) SendMemberResetCode(ctx context.Context, in *SendCodeRequest, opts ...grpc.CallOption) (*Empty, error) {
+	client := rbac.NewRbacClient(m.cli.Conn())
+	return client.SendMemberResetCode(ctx, in, opts...)
+}
+
+func (m *defaultRbac) ResetMemberPassword(ctx context.Context, in *ResetMemberPasswordInput, opts ...grpc.CallOption) (*Empty, error) {
+	client := rbac.NewRbacClient(m.cli.Conn())
+	return client.ResetMemberPassword(ctx, in, opts...)
+}
+
+func (m *defaultRbac) UpdateMemberProfile(ctx context.Context, in *UpdateMemberProfileInput, opts ...grpc.CallOption) (*MemberProfile, error) {
+	client := rbac.NewRbacClient(m.cli.Conn())
+	return client.UpdateMemberProfile(ctx, in, opts...)
 }
 
 func (m *defaultRbac) CurrentMember(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*MemberProfile, error) {

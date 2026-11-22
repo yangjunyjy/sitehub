@@ -200,11 +200,15 @@ message IDRequest {
 }
 
 message LoginMemberInput {
+  string account = 3;
   string email = 1 [json_name = "email"];
   string password = 2 [json_name = "password"];
 }
 
 message MemberProfile {
+  string username = 4;
+  string nickname = 5;
+  string avatar = 6;
   uint64 id = 1 [json_name = "id"];
   string email = 2 [json_name = "email"];
   google.protobuf.Timestamp created_at = 3 [json_name = "createdAt"];
@@ -264,7 +268,21 @@ message Principal {
   repeated string permissions = 6 [json_name = "permissions"];
 }
 
+message ResetMemberPasswordInput {
+  string email = 1;
+  string password = 2;
+  string code = 3;
+}
+
+message UpdateMemberProfileInput {
+  string username = 1;
+  string nickname = 2;
+  string avatar = 3;
+}
+
 message RegisterMemberInput {
+  string username = 4;
+  string nickname = 5;
   string email = 1 [json_name = "email"];
   string password = 2 [json_name = "password"];
   string code = 3 [json_name = "code"];
@@ -447,6 +465,9 @@ service Rbac {
   rpc SendMemberCode(SendCodeRequest) returns (Empty);
   rpc RegisterMember(RegisterMemberInput) returns (MemberProfile);
   rpc LoginMember(LoginMemberInput) returns (MemberSessionReply);
+  rpc SendMemberResetCode(SendCodeRequest) returns (Empty);
+  rpc ResetMemberPassword(ResetMemberPasswordInput) returns (Empty);
+  rpc UpdateMemberProfile(UpdateMemberProfileInput) returns (MemberProfile);
   rpc CurrentMember(Empty) returns (MemberProfile);
   rpc LogoutMember(Empty) returns (Empty);
   rpc ListUsers(SearchSysUserQueryRequest) returns (UserPage);

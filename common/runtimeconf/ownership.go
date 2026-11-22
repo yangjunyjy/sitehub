@@ -15,7 +15,7 @@ func SchemaVersion(service string) int {
 		return 6
 	}
 	if service == "rbac" {
-		return 4
+		return 5
 	}
 	return 1
 }

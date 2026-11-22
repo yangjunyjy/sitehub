@@ -145,7 +145,7 @@ try:
     request('file',release['url'],expect=404)
     email='member@example.test';code='654321';digest=hmac.new(secret.encode(),('product-register:'+email+':'+code).encode(),hashlib.sha256).hexdigest()
     with sqlite3.connect(run/'rbac.db') as db:db.execute('INSERT INTO product_member_verifications(email,code_hash,expires_at,attempts) VALUES (?,?,?,0)',(email,digest,(datetime.datetime.now(datetime.timezone.utc)+datetime.timedelta(minutes=5)).isoformat()))
-    request('rbac','/v1/rbac/members/register',dict(email=email,password='MemberPassword123',code=code))
+    request('rbac','/v1/rbac/members/register',dict(email=email,password='MemberPassword123',username='member_test',nickname='测试读者',code=code))
     member=request('rbac','/v1/rbac/members/login',dict(email=email,password='MemberPassword123'))['token']
     body,headers=request('file','/v1/file/download?id=native',token=member,headers={'Range':'bytes=2-5'},expect=206,raw=True);assert body==data[2:6]
     body,headers=request('file','/v1/file/download?id=native',token=member,method='HEAD',raw=True);assert body==b'' and int(headers['Content-Length'])==len(data)

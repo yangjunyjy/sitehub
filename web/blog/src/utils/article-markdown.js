@@ -1,3 +1,5 @@
+import { highlightCode } from "./code-highlight";
+
 // HTML is sanitized before entering the blog's live DOM.
 function indexHeadings(fragment) {
   const headings = [];
@@ -74,7 +76,7 @@ export function createArticleRenderer(Marked, DOMPurify) {
           " ",
         ),
       ALLOWED_ATTR:
-        "alt class colspan dir height href id lang open rowspan scope src start title width".split(
+        "align alt class colspan dir height href id lang open rowspan scope src start title width".split(
           " ",
         ),
       ALLOW_ARIA_ATTR: false,
@@ -88,6 +90,16 @@ export function createArticleRenderer(Marked, DOMPurify) {
         [...node.classList].find((value) => /^language-[\w.+#-]+$/.test(value));
       node.removeAttribute("class");
       if (language) node.className = language;
+    }
+    // Marked emits GFM column alignment as an HTML attribute. Only keep the three cell values.
+    for (const node of fragment.querySelectorAll("[align]")) {
+      const alignment = node.getAttribute("align").toLowerCase();
+      node.removeAttribute("align");
+      if (
+        node.matches("th,td") &&
+        ["left", "center", "right"].includes(alignment)
+      )
+        node.className = "align-" + alignment;
     }
     const headings = indexHeadings(fragment);
     for (const table of fragment.querySelectorAll("table")) {
@@ -104,18 +116,27 @@ export function createArticleRenderer(Marked, DOMPurify) {
     }
     for (const pre of fragment.querySelectorAll("pre")) {
       const code = pre.querySelector(":scope > code");
+      const languageName = code?.className.replace(/^language-/, "") || "";
+      if (code) highlightCode(code, languageName.toLowerCase());
       const wrapper = document.createElement("figure");
       wrapper.className = "code-block-wrapper";
       const bar = document.createElement("figcaption");
       bar.className = "code-header";
       const language = document.createElement("span");
-      language.textContent =
-        code?.className.replace(/^language-/, "") || "纯文本";
+      language.textContent = languageName || "纯文本";
+      const actions = document.createElement("div");
+      actions.className = "code-actions";
+      const wrap = document.createElement("button");
+      wrap.type = "button";
+      wrap.className = "code-wrap-btn";
+      wrap.setAttribute("aria-pressed", "false");
+      wrap.textContent = "自动换行";
       const button = document.createElement("button");
       button.type = "button";
       button.className = "code-copy-btn";
       button.textContent = "复制代码";
-      bar.append(language, button);
+      actions.append(wrap, button);
+      bar.append(language, actions);
       pre.tabIndex = 0;
       pre.replaceWith(wrapper);
       wrapper.append(bar, pre);

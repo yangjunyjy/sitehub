@@ -16,8 +16,8 @@ const socials = computed(() =>
       <div class="intro-copy">
         <h1>关于{{ profile.name || "云间小记" }}</h1>
         <p v-if="profile.title" class="byline">{{ profile.title }}</p>
-        <p v-if="profile.bio || profile.homeVerse" class="bio">
-          {{ profile.bio || profile.homeVerse }}
+        <p v-if="profile.bio" class="bio">
+          {{ profile.bio }}
         </p>
         <div
           v-if="profile.location || profile.email || socials.length"
@@ -28,8 +28,8 @@ const socials = computed(() =>
             ><BlogIcon name="mail" :size="15" />{{ profile.email }}</a
           >
           <a
-            v-for="social in socials"
-            :key="social.url"
+            v-for="(social, index) in socials"
+            :key="index"
             :href="safeURL(social.url)"
             target="_blank"
             rel="noopener noreferrer"

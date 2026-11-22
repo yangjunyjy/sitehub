@@ -14,3 +14,10 @@ export const sendMemberCode = (email) =>
   request.post("/rbac/members/code", { email }).then((r) => r.data);
 export const registerMember = (values) =>
   request.post("/rbac/members/register", values);
+
+export const sendResetCode = (email) =>
+  request.post("/rbac/members/password/code", { email });
+export const resetMemberPassword = (values) =>
+  request.post("/rbac/members/password/reset", values);
+export const updateMemberProfile = (values) =>
+  request.post("/rbac/members/profile", values).then((response) => response.data);

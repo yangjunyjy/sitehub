@@ -292,6 +292,11 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 			},
 			{
 				Method:  http.MethodPost,
+				Path:    "/about/settings",
+				Handler: settings.SaveAboutSettingsHandler(serverCtx),
+			},
+			{
+				Method:  http.MethodPost,
 				Path:    "/home/settings",
 				Handler: settings.SaveHomeSettingsHandler(serverCtx),
 			},

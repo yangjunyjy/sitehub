@@ -46,6 +46,12 @@ export async function checkJournalLayout({ page, origin, artifacts }) {
     animations: "disabled",
   });
   const account = page.getByRole("button", { name: "账号菜单" });
+  await account.hover();
+  await page.locator("#member-options").getByRole("link", {name:"个人中心"}).waitFor();
+  await page.locator("#member-options").getByRole("button",{name:"退出登录"}).hover();
+  assert.equal(await account.getAttribute("aria-expanded"), "true");
+  await page.mouse.move(1,200);
+  await page.locator("#member-options").waitFor({state:"hidden"});
   await account.press("ArrowDown");
   const profileLink = page
     .locator("#member-options")

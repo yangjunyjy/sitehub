@@ -100,9 +100,21 @@ const apiFixture = async (route) => {
     for (const [component,path] of [["login","/signin"],["register","/join"],["account","/library"],["article","/read"]])
       data.items.push({name:component,path,component:component+"/index"});
   }
-  if(path.endsWith("/members/register")) registeredEmail=values.email;
+  if(path.endsWith("/members/register")) {
+    assert.equal(values.username, "reader99");
+    assert.equal(values.nickname, "林间读者");
+    registeredEmail=values.email;
+    Object.assign(reader, {username:values.username, nickname:values.nickname});
+  }
+  if(path.endsWith("/members/profile")) {
+    assert(signedIn);
+    Object.assign(reader, values);
+    data=reader;
+  }
+  if(path.endsWith("/members/password/code")) assert.equal(values.email, reader.email);
+  if(path.endsWith("/members/password/reset")) assert.deepEqual(values, {email:reader.email, password:"Recovered456!",code:"789012"});
   if(path.endsWith("/members/login")){
-    assert.equal(registeredEmail,values.email);
+    assert([registeredEmail, reader.username].includes(values.account));
     signedIn=true;
     data={user:reader};
   }
@@ -286,6 +298,8 @@ try {
   assert.equal(await page.locator('input[type="email"]').inputValue(),reader.email);
   await page.getByRole("button", {name:"获取验证码"}).click();
   await page.getByRole("status").getByText("验证码已发送，请查看邮箱。").waitFor();
+  await page.getByLabel("用户名", {exact:true}).fill("reader99");
+  await page.getByLabel("昵称",{exact:true}).fill("林间读者");
   await page.getByPlaceholder("6 位验证码").fill("123456");
   await page.locator('[autocomplete="new-password"]').fill("Reader123!");
   await page.screenshot({path:artifacts+"/register-desktop.png"});
@@ -311,6 +325,13 @@ try {
   await dialog.waitFor({state:"hidden"});
   assert.equal(savedIn,"1");
   await page.goto(origin+"/account", {waitUntil:"networkidle"});
+  await page.getByRole("button", {name:"编辑资料"}).click();
+  const editor=page.getByRole("form", {name:"编辑个人资料"});
+  await editor.getByLabel("昵称", {exact:true}).fill("山窗");
+  await editor.getByRole("button", {name:"保存资料"}).click();
+  await page.getByRole("button", {name:"账号菜单"}).getByText("山窗",{exact:true}).waitFor();
+  await page.reload({waitUntil:"networkidle"});
+  await page.locator(".member-card").getByText("山窗", {exact:true}).waitFor();
   await page.getByText("这个收藏夹还没有文章").waitFor();
   await page.getByRole("button", {name:/技术笔记/}).click();
   await page.getByRole("link", {name:/Isolated article fixture/}).waitFor();
@@ -497,13 +518,23 @@ try {
   await page.getByRole("link",{name:/注册账号/}).click();
   await page.waitForURL("**/join?**");
   await page.getByRole("link",{name:/登录 →/}).click();
+  await page.getByRole("button",{name:"忘记密码？"}).click();
   await page.locator('input[type="email"]').fill(reader.email);
-  await page.locator('[autocomplete="current-password"]').fill("Reader123!");
+  await page.getByRole("button",{name:"获取验证码"}).click();
+  await page.getByText("如该邮箱已注册，请查看密码重置邮件。").waitFor();
+  await page.getByPlaceholder("6 位验证码").fill("789012");
+  await page.locator('[autocomplete="new-password"]').fill("Recovered456!");
+  await page.getByRole("button",{name:"重置密码",exact:true}).click();
+  await page.getByText("密码已重置，请使用新密码登录。").waitFor();
+  await page.getByLabel("用户名或邮箱").fill(reader.username);
+  await page.locator('[autocomplete="current-password"]').fill("Recovered456!");
   await page.getByRole("button",{name:"登录",exact:true}).click();
   await page.waitForURL("**/read/1");
   signedIn=false;
   await page.goto(origin+"/join",{waitUntil:"networkidle"});
   await page.locator('input[type="email"]').fill(reader.email);
+  await page.getByLabel("用户名", {exact:true}).fill("reader99");
+  await page.getByLabel("昵称",{exact:true}).fill("林间读者");
   await page.getByPlaceholder("6 位验证码").fill("123456");
   await page.locator('[autocomplete="new-password"]').fill("Reader123!");
   await page.getByRole("button",{name:"注册并登录"}).click();

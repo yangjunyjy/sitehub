@@ -15,6 +15,23 @@ type HomeSettingsRequest {
 	HomeVerse     string `json:"homeVerse"`
 }
 
+type AboutLink {
+	Label string `json:"label"`
+	URL   string `json:"url"`
+}
+
+type AboutSettingsRequest {
+	Name     string      `json:"name,optional"`
+	Title    string      `json:"title,optional"`
+	Bio      string      `json:"bio,optional"`
+	Content  string      `json:"content,optional"`
+	Avatar   string      `json:"avatar,optional"`
+	Location string      `json:"location,optional"`
+	Email    string      `json:"email,optional"`
+	Skills   []string    `json:"skills,optional"`
+	Socials  []AboutLink `json:"socials,optional"`
+}
+
 type FriendApplication {
 	Name        string `json:"name"`
 	URL         string `json:"url"`
@@ -306,6 +323,9 @@ service blog-api {
 service blog-api {
 	@handler GetAbout
 	get /about returns (Response)
+
+	@handler SaveAboutSettings
+	post /about/settings (AboutSettingsRequest) returns (Response)
 
 	@handler SaveHomeSettings
 	post /home/settings (HomeSettingsRequest) returns (Response)

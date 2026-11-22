@@ -19,59 +19,62 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Rbac_ListIcons_FullMethodName          = "/rbac.Rbac/ListIcons"
-	Rbac_IconContent_FullMethodName        = "/rbac.Rbac/IconContent"
-	Rbac_ValidateIcon_FullMethodName       = "/rbac.Rbac/ValidateIcon"
-	Rbac_CreateIcon_FullMethodName         = "/rbac.Rbac/CreateIcon"
-	Rbac_UpdateIcon_FullMethodName         = "/rbac.Rbac/UpdateIcon"
-	Rbac_DeleteIcon_FullMethodName         = "/rbac.Rbac/DeleteIcon"
-	Rbac_CheckClient_FullMethodName        = "/rbac.Rbac/CheckClient"
-	Rbac_ConsumeToken_FullMethodName       = "/rbac.Rbac/ConsumeToken"
-	Rbac_Health_FullMethodName             = "/rbac.Rbac/Health"
-	Rbac_Authorize_FullMethodName          = "/rbac.Rbac/Authorize"
-	Rbac_Captcha_FullMethodName            = "/rbac.Rbac/Captcha"
-	Rbac_VerifyCaptcha_FullMethodName      = "/rbac.Rbac/VerifyCaptcha"
-	Rbac_SendAdminCode_FullMethodName      = "/rbac.Rbac/SendAdminCode"
-	Rbac_Login_FullMethodName              = "/rbac.Rbac/Login"
-	Rbac_Logout_FullMethodName             = "/rbac.Rbac/Logout"
-	Rbac_CurrentUser_FullMethodName        = "/rbac.Rbac/CurrentUser"
-	Rbac_CurrentPermissions_FullMethodName = "/rbac.Rbac/CurrentPermissions"
-	Rbac_CurrentMenus_FullMethodName       = "/rbac.Rbac/CurrentMenus"
-	Rbac_OnceToken_FullMethodName          = "/rbac.Rbac/OnceToken"
-	Rbac_TOTPStatus_FullMethodName         = "/rbac.Rbac/TOTPStatus"
-	Rbac_ChangePassword_FullMethodName     = "/rbac.Rbac/ChangePassword"
-	Rbac_SendMemberCode_FullMethodName     = "/rbac.Rbac/SendMemberCode"
-	Rbac_RegisterMember_FullMethodName     = "/rbac.Rbac/RegisterMember"
-	Rbac_LoginMember_FullMethodName        = "/rbac.Rbac/LoginMember"
-	Rbac_CurrentMember_FullMethodName      = "/rbac.Rbac/CurrentMember"
-	Rbac_LogoutMember_FullMethodName       = "/rbac.Rbac/LogoutMember"
-	Rbac_ListUsers_FullMethodName          = "/rbac.Rbac/ListUsers"
-	Rbac_GetUser_FullMethodName            = "/rbac.Rbac/GetUser"
-	Rbac_CreateUser_FullMethodName         = "/rbac.Rbac/CreateUser"
-	Rbac_UpdateUser_FullMethodName         = "/rbac.Rbac/UpdateUser"
-	Rbac_DeleteUser_FullMethodName         = "/rbac.Rbac/DeleteUser"
-	Rbac_AssignRoles_FullMethodName        = "/rbac.Rbac/AssignRoles"
-	Rbac_ListRoles_FullMethodName          = "/rbac.Rbac/ListRoles"
-	Rbac_GetRole_FullMethodName            = "/rbac.Rbac/GetRole"
-	Rbac_CreateRole_FullMethodName         = "/rbac.Rbac/CreateRole"
-	Rbac_UpdateRole_FullMethodName         = "/rbac.Rbac/UpdateRole"
-	Rbac_DeleteRole_FullMethodName         = "/rbac.Rbac/DeleteRole"
-	Rbac_AssignMenus_FullMethodName        = "/rbac.Rbac/AssignMenus"
-	Rbac_RoleMenus_FullMethodName          = "/rbac.Rbac/RoleMenus"
-	Rbac_MenuTree_FullMethodName           = "/rbac.Rbac/MenuTree"
-	Rbac_PublicMenus_FullMethodName        = "/rbac.Rbac/PublicMenus"
-	Rbac_ListSystems_FullMethodName        = "/rbac.Rbac/ListSystems"
-	Rbac_SaveSystem_FullMethodName         = "/rbac.Rbac/SaveSystem"
-	Rbac_DeleteSystem_FullMethodName       = "/rbac.Rbac/DeleteSystem"
-	Rbac_GetMenu_FullMethodName            = "/rbac.Rbac/GetMenu"
-	Rbac_CreateMenu_FullMethodName         = "/rbac.Rbac/CreateMenu"
-	Rbac_UpdateMenu_FullMethodName         = "/rbac.Rbac/UpdateMenu"
-	Rbac_DeleteMenu_FullMethodName         = "/rbac.Rbac/DeleteMenu"
-	Rbac_GetEmailSettings_FullMethodName   = "/rbac.Rbac/GetEmailSettings"
-	Rbac_SaveEmailSettings_FullMethodName  = "/rbac.Rbac/SaveEmailSettings"
-	Rbac_Blacklist_FullMethodName          = "/rbac.Rbac/Blacklist"
-	Rbac_BlockIP_FullMethodName            = "/rbac.Rbac/BlockIP"
-	Rbac_UnblockIP_FullMethodName          = "/rbac.Rbac/UnblockIP"
+	Rbac_ListIcons_FullMethodName           = "/rbac.Rbac/ListIcons"
+	Rbac_IconContent_FullMethodName         = "/rbac.Rbac/IconContent"
+	Rbac_ValidateIcon_FullMethodName        = "/rbac.Rbac/ValidateIcon"
+	Rbac_CreateIcon_FullMethodName          = "/rbac.Rbac/CreateIcon"
+	Rbac_UpdateIcon_FullMethodName          = "/rbac.Rbac/UpdateIcon"
+	Rbac_DeleteIcon_FullMethodName          = "/rbac.Rbac/DeleteIcon"
+	Rbac_CheckClient_FullMethodName         = "/rbac.Rbac/CheckClient"
+	Rbac_ConsumeToken_FullMethodName        = "/rbac.Rbac/ConsumeToken"
+	Rbac_Health_FullMethodName              = "/rbac.Rbac/Health"
+	Rbac_Authorize_FullMethodName           = "/rbac.Rbac/Authorize"
+	Rbac_Captcha_FullMethodName             = "/rbac.Rbac/Captcha"
+	Rbac_VerifyCaptcha_FullMethodName       = "/rbac.Rbac/VerifyCaptcha"
+	Rbac_SendAdminCode_FullMethodName       = "/rbac.Rbac/SendAdminCode"
+	Rbac_Login_FullMethodName               = "/rbac.Rbac/Login"
+	Rbac_Logout_FullMethodName              = "/rbac.Rbac/Logout"
+	Rbac_CurrentUser_FullMethodName         = "/rbac.Rbac/CurrentUser"
+	Rbac_CurrentPermissions_FullMethodName  = "/rbac.Rbac/CurrentPermissions"
+	Rbac_CurrentMenus_FullMethodName        = "/rbac.Rbac/CurrentMenus"
+	Rbac_OnceToken_FullMethodName           = "/rbac.Rbac/OnceToken"
+	Rbac_TOTPStatus_FullMethodName          = "/rbac.Rbac/TOTPStatus"
+	Rbac_ChangePassword_FullMethodName      = "/rbac.Rbac/ChangePassword"
+	Rbac_SendMemberCode_FullMethodName      = "/rbac.Rbac/SendMemberCode"
+	Rbac_RegisterMember_FullMethodName      = "/rbac.Rbac/RegisterMember"
+	Rbac_LoginMember_FullMethodName         = "/rbac.Rbac/LoginMember"
+	Rbac_SendMemberResetCode_FullMethodName = "/rbac.Rbac/SendMemberResetCode"
+	Rbac_ResetMemberPassword_FullMethodName = "/rbac.Rbac/ResetMemberPassword"
+	Rbac_UpdateMemberProfile_FullMethodName = "/rbac.Rbac/UpdateMemberProfile"
+	Rbac_CurrentMember_FullMethodName       = "/rbac.Rbac/CurrentMember"
+	Rbac_LogoutMember_FullMethodName        = "/rbac.Rbac/LogoutMember"
+	Rbac_ListUsers_FullMethodName           = "/rbac.Rbac/ListUsers"
+	Rbac_GetUser_FullMethodName             = "/rbac.Rbac/GetUser"
+	Rbac_CreateUser_FullMethodName          = "/rbac.Rbac/CreateUser"
+	Rbac_UpdateUser_FullMethodName          = "/rbac.Rbac/UpdateUser"
+	Rbac_DeleteUser_FullMethodName          = "/rbac.Rbac/DeleteUser"
+	Rbac_AssignRoles_FullMethodName         = "/rbac.Rbac/AssignRoles"
+	Rbac_ListRoles_FullMethodName           = "/rbac.Rbac/ListRoles"
+	Rbac_GetRole_FullMethodName             = "/rbac.Rbac/GetRole"
+	Rbac_CreateRole_FullMethodName          = "/rbac.Rbac/CreateRole"
+	Rbac_UpdateRole_FullMethodName          = "/rbac.Rbac/UpdateRole"
+	Rbac_DeleteRole_FullMethodName          = "/rbac.Rbac/DeleteRole"
+	Rbac_AssignMenus_FullMethodName         = "/rbac.Rbac/AssignMenus"
+	Rbac_RoleMenus_FullMethodName           = "/rbac.Rbac/RoleMenus"
+	Rbac_MenuTree_FullMethodName            = "/rbac.Rbac/MenuTree"
+	Rbac_PublicMenus_FullMethodName         = "/rbac.Rbac/PublicMenus"
+	Rbac_ListSystems_FullMethodName         = "/rbac.Rbac/ListSystems"
+	Rbac_SaveSystem_FullMethodName          = "/rbac.Rbac/SaveSystem"
+	Rbac_DeleteSystem_FullMethodName        = "/rbac.Rbac/DeleteSystem"
+	Rbac_GetMenu_FullMethodName             = "/rbac.Rbac/GetMenu"
+	Rbac_CreateMenu_FullMethodName          = "/rbac.Rbac/CreateMenu"
+	Rbac_UpdateMenu_FullMethodName          = "/rbac.Rbac/UpdateMenu"
+	Rbac_DeleteMenu_FullMethodName          = "/rbac.Rbac/DeleteMenu"
+	Rbac_GetEmailSettings_FullMethodName    = "/rbac.Rbac/GetEmailSettings"
+	Rbac_SaveEmailSettings_FullMethodName   = "/rbac.Rbac/SaveEmailSettings"
+	Rbac_Blacklist_FullMethodName           = "/rbac.Rbac/Blacklist"
+	Rbac_BlockIP_FullMethodName             = "/rbac.Rbac/BlockIP"
+	Rbac_UnblockIP_FullMethodName           = "/rbac.Rbac/UnblockIP"
 )
 
 // RbacClient is the client API for Rbac service.
@@ -102,6 +105,9 @@ type RbacClient interface {
 	SendMemberCode(ctx context.Context, in *SendCodeRequest, opts ...grpc.CallOption) (*Empty, error)
 	RegisterMember(ctx context.Context, in *RegisterMemberInput, opts ...grpc.CallOption) (*MemberProfile, error)
 	LoginMember(ctx context.Context, in *LoginMemberInput, opts ...grpc.CallOption) (*MemberSessionReply, error)
+	SendMemberResetCode(ctx context.Context, in *SendCodeRequest, opts ...grpc.CallOption) (*Empty, error)
+	ResetMemberPassword(ctx context.Context, in *ResetMemberPasswordInput, opts ...grpc.CallOption) (*Empty, error)
+	UpdateMemberProfile(ctx context.Context, in *UpdateMemberProfileInput, opts ...grpc.CallOption) (*MemberProfile, error)
 	CurrentMember(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*MemberProfile, error)
 	LogoutMember(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
 	ListUsers(ctx context.Context, in *SearchSysUserQueryRequest, opts ...grpc.CallOption) (*UserPage, error)
@@ -375,6 +381,36 @@ func (c *rbacClient) LoginMember(ctx context.Context, in *LoginMemberInput, opts
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(MemberSessionReply)
 	err := c.cc.Invoke(ctx, Rbac_LoginMember_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rbacClient) SendMemberResetCode(ctx context.Context, in *SendCodeRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, Rbac_SendMemberResetCode_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rbacClient) ResetMemberPassword(ctx context.Context, in *ResetMemberPasswordInput, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, Rbac_ResetMemberPassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rbacClient) UpdateMemberProfile(ctx context.Context, in *UpdateMemberProfileInput, opts ...grpc.CallOption) (*MemberProfile, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MemberProfile)
+	err := c.cc.Invoke(ctx, Rbac_UpdateMemberProfile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -699,6 +735,9 @@ type RbacServer interface {
 	SendMemberCode(context.Context, *SendCodeRequest) (*Empty, error)
 	RegisterMember(context.Context, *RegisterMemberInput) (*MemberProfile, error)
 	LoginMember(context.Context, *LoginMemberInput) (*MemberSessionReply, error)
+	SendMemberResetCode(context.Context, *SendCodeRequest) (*Empty, error)
+	ResetMemberPassword(context.Context, *ResetMemberPasswordInput) (*Empty, error)
+	UpdateMemberProfile(context.Context, *UpdateMemberProfileInput) (*MemberProfile, error)
 	CurrentMember(context.Context, *Empty) (*MemberProfile, error)
 	LogoutMember(context.Context, *Empty) (*Empty, error)
 	ListUsers(context.Context, *SearchSysUserQueryRequest) (*UserPage, error)
@@ -809,6 +848,15 @@ func (UnimplementedRbacServer) RegisterMember(context.Context, *RegisterMemberIn
 }
 func (UnimplementedRbacServer) LoginMember(context.Context, *LoginMemberInput) (*MemberSessionReply, error) {
 	return nil, status.Error(codes.Unimplemented, "method LoginMember not implemented")
+}
+func (UnimplementedRbacServer) SendMemberResetCode(context.Context, *SendCodeRequest) (*Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method SendMemberResetCode not implemented")
+}
+func (UnimplementedRbacServer) ResetMemberPassword(context.Context, *ResetMemberPasswordInput) (*Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResetMemberPassword not implemented")
+}
+func (UnimplementedRbacServer) UpdateMemberProfile(context.Context, *UpdateMemberProfileInput) (*MemberProfile, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateMemberProfile not implemented")
 }
 func (UnimplementedRbacServer) CurrentMember(context.Context, *Empty) (*MemberProfile, error) {
 	return nil, status.Error(codes.Unimplemented, "method CurrentMember not implemented")
@@ -1346,6 +1394,60 @@ func _Rbac_LoginMember_Handler(srv interface{}, ctx context.Context, dec func(in
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(RbacServer).LoginMember(ctx, req.(*LoginMemberInput))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rbac_SendMemberResetCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendCodeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RbacServer).SendMemberResetCode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rbac_SendMemberResetCode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RbacServer).SendMemberResetCode(ctx, req.(*SendCodeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rbac_ResetMemberPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResetMemberPasswordInput)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RbacServer).ResetMemberPassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rbac_ResetMemberPassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RbacServer).ResetMemberPassword(ctx, req.(*ResetMemberPasswordInput))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rbac_UpdateMemberProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateMemberProfileInput)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RbacServer).UpdateMemberProfile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rbac_UpdateMemberProfile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RbacServer).UpdateMemberProfile(ctx, req.(*UpdateMemberProfileInput))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1974,6 +2076,18 @@ var Rbac_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LoginMember",
 			Handler:    _Rbac_LoginMember_Handler,
+		},
+		{
+			MethodName: "SendMemberResetCode",
+			Handler:    _Rbac_SendMemberResetCode_Handler,
+		},
+		{
+			MethodName: "ResetMemberPassword",
+			Handler:    _Rbac_ResetMemberPassword_Handler,
+		},
+		{
+			MethodName: "UpdateMemberProfile",
+			Handler:    _Rbac_UpdateMemberProfile_Handler,
 		},
 		{
 			MethodName: "CurrentMember",

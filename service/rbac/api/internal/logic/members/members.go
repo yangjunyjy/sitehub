@@ -20,3 +20,15 @@ func RegisterMember(ctx context.Context, services *svc.ServiceContext, req *type
 func CurrentMember(ctx context.Context, services *svc.ServiceContext) (*types.Response, error) {
 	return logic.Forward(ctx, services, nil, &pb.Empty{}, services.RPC.CurrentMember)
 }
+
+func SendMemberResetCode(ctx context.Context, services *svc.ServiceContext, req *types.SendMemberCodeRequest) (*types.Response, error) {
+	return logic.Forward(ctx, services, req, &pb.SendCodeRequest{}, services.RPC.SendMemberResetCode)
+}
+
+func ResetMemberPassword(ctx context.Context, services *svc.ServiceContext, req *types.ResetMemberPasswordRequest) (*types.Response, error) {
+	return logic.Forward(ctx, services, req, &pb.ResetMemberPasswordInput{}, services.RPC.ResetMemberPassword)
+}
+
+func UpdateMemberProfile(ctx context.Context, services *svc.ServiceContext, req *types.UpdateMemberProfileRequest) (*types.Response, error) {
+	return logic.Forward(ctx, services, req, &pb.UpdateMemberProfileInput{}, services.RPC.UpdateMemberProfile)
+}

@@ -7,7 +7,7 @@
   opacity: 0.8;
 }
 .blog-header {
-  --menu-surface: linear-gradient(145deg, #252f58f0, #373957ee);
+  --menu-surface: linear-gradient(145deg, #252f58d9, #373957d4);
   --menu-ink: #fffbf5;
   --menu-muted: #d0d5e7;
   --menu-edge: #eef0ff36;
@@ -23,7 +23,7 @@
   z-index: 40;
   color: white;
   background: rgb(27 32 65 / 40%);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(16px) saturate(130%);
   transition:
     transform 340ms cubic-bezier(.22,.75,.2,1),
     color .25s, background-color .3s,
@@ -33,14 +33,14 @@
     pointer-events: none;
   }
   &.is-solid {
-    --menu-surface: linear-gradient(145deg, #fffdf9fa, #f0ecf5fa);
+    --menu-surface: linear-gradient(145deg, #fffdf9de, #f0ecf5d9);
     --menu-ink: #423d52;
     --menu-muted: #696378;
     --menu-edge: #807c982e;
     --menu-row: #9790b624;
     --menu-icon: #6c6486;
     color: var(--ink);
-    background: rgb(252 250 248 / 96%);
+    background: rgb(252 250 248 / 80%);
     box-shadow: 0 2px 12px #362d4512;
   }
 }

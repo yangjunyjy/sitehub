@@ -27,6 +27,10 @@ func memberLookupError(err error) error {
 	}
 	return err
 }
+func (r *memberRepository) MemberByUsername(username string) (m rbacdomain.Member, err error) {
+	err = memberLookupError(r.db.Where("username = ?", username).Take(&m).Error)
+	return
+}
 func (r *memberRepository) MemberByEmail(email string) (m rbacdomain.Member, err error) {
 	err = memberLookupError(r.db.Where("email = ?", email).Take(&m).Error)
 	return
@@ -58,4 +62,20 @@ func (r *memberRepository) DeleteSession(hash string) error {
 }
 func (r *memberRepository) DeleteExpiredSessions(id uint64, now time.Time) error {
 	return r.db.Where("member_id = ? AND expires_at <= ?", id, now).Delete(&rbacdomain.MemberSession{}).Error
+}
+
+func (r *memberRepository) LockMember(id uint64) (m rbacdomain.Member, err error) {
+	err = memberLookupError(r.db.Clauses(clause.Locking{Strength: "UPDATE"}).First(&m, id).Error)
+	return
+}
+func (r *memberRepository) SaveProfile(id uint64, profile rbacdomain.UpdateMemberProfileInput) error {
+	return r.db.Model(&rbacdomain.Member{}).Where("id = ?", id).Updates(map[string]any{"username": profile.Username, "nickname": profile.Nickname, "avatar": profile.Avatar}).Error
+}
+
+// 调用方在同一事务持有会员行锁，避免重置后留下用旧密码签发的会话。
+func (r *memberRepository) ResetPassword(id uint64, hash string) error {
+	if err := r.db.Model(&rbacdomain.Member{}).Where("id = ?", id).Update("password_hash", hash).Error; err != nil {
+		return err
+	}
+	return r.db.Where("member_id = ?", id).Delete(&rbacdomain.MemberSession{}).Error
 }

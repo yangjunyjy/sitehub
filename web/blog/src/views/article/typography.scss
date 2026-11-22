@@ -138,86 +138,168 @@
     padding: 0.12em 0.32em;
     font-size: 0.87em;
   }
+  .code-block-wrapper,
+  .article-table {
+    margin: 1.5em 0;
+    border: 1px solid #dcd7d2;
+    border-radius: 9px;
+    background: #fffefa;
+  }
   .code-block-wrapper {
-    border: 1px solid var(--journal-rule);
-    border-radius: 8px;
     overflow: hidden;
-    background: #f4f2f0;
+    background: #f8f6f3;
   }
   .code-header {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid var(--journal-rule);
-    padding: 6px 14px;
+    justify-content: space-between;
+    gap: 10px;
     margin: 0;
-    background: #383640;
-    color: #faf6f2;
+    padding: 5px 12px 5px 16px;
+    border-bottom: 1px solid #e1dcd7;
+    background: linear-gradient(110deg, #f1ede7, #f3f0f3);
+    color: #625865;
     font: 12px/1.5 var(--font-sans);
   }
-  .code-header span {
-    font-family: Consolas, monospace;
+  .code-header > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font:
+      600 12px/1.5 Consolas,
+      monospace;
+    letter-spacing: 0.04em;
   }
-  .code-header button {
+  .code-actions {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    flex: none;
+  }
+  .code-actions button {
+    border: 1px solid transparent;
+    padding: 4px 8px;
     background: transparent;
-    border: 0;
+    border-radius: 5px;
     color: inherit;
-    font-size: 12px;
-    padding: 4px 7px;
-    border-radius: 4px;
+    font: inherit;
   }
-  .code-header button:hover {
-    background: #514d58;
+  .code-actions button:is(:hover, :focus-visible, [aria-pressed="true"]) {
+    border-color: #d9d2d9;
+    background: #fffc;
+    color: #413749;
   }
   pre {
+    margin: 0;
+    padding: 16px 19px;
     overflow: auto;
     white-space: pre;
     overflow-wrap: normal;
-    padding: 17px 20px;
-    margin: 0;
+    scrollbar-width: thin;
     font-size: 14px;
-    line-height: 1.75;
-    color: var(--journal-ink);
+    line-height: 1.7;
+    color: #36333f;
+  }
+  .is-wrapped pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
   }
   pre code {
     padding: 0;
     font: inherit;
     color: inherit;
-    background: none;
+    background: transparent;
+  }
+  .hljs-comment,
+  .hljs-quote {
+    color: #706a72;
+    font-style: italic;
+  }
+  .hljs-keyword,
+  .hljs-selector-tag,
+  .hljs-doctag,
+  .hljs-literal {
+    color: #884164;
+  }
+  .hljs-string,
+  .hljs-regexp,
+  .hljs-addition {
+    color: #24635c;
+  }
+  .hljs-title,
+  .hljs-section,
+  .hljs-name,
+  .hljs-function .hljs-title {
+    color: #604a91;
+  }
+  .hljs-number,
+  .hljs-symbol,
+  .hljs-variable,
+  .hljs-attr,
+  .hljs-attribute {
+    color: #925124;
+  }
+  .hljs-built_in,
+  .hljs-type,
+  .hljs-meta {
+    color: #305b86;
   }
   .article-table {
+    max-width: 100%;
     overflow-x: auto;
-    border: 1px solid var(--journal-rule);
-    border-radius: 7px;
-    margin: 1.6em 0;
     scrollbar-width: thin;
+    scrollbar-color: #c8bec1 transparent;
+    font-variant-numeric: tabular-nums;
   }
   table {
     width: 100%;
-    border-collapse: collapse;
-    font-size: 0.87em;
-    line-height: 1.6;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.88em;
+    line-height: 1.55;
   }
-  td,
-  th {
-    padding: 0.7em 1em;
+  :is(td, th) {
+    min-width: 5.7em;
+    padding: 0.62em 0.9em;
+    vertical-align: top;
     text-align: start;
-    border-bottom: 1px solid var(--journal-rule);
-    min-width: 6em;
+    border-inline-end: 1px solid #e4dfda;
+    border-bottom: 1px solid #e4dfda;
   }
-  thead,
-  th {
-    background: var(--journal-wash);
-    color: var(--journal-ink);
-    font-weight: 650;
+  :is(td, th):last-child {
+    border-inline-end: 0;
   }
-  tbody tr:last-child td {
+  :is(tbody, tfoot):last-child > tr:last-child > :is(td, th) {
     border-bottom: 0;
   }
-  caption {
-    text-align: start;
+  :is(td, th).align-right {
+    text-align: right;
+  }
+  :is(td, th).align-center {
+    text-align: center;
+  }
+  :is(td, th).align-left {
+    text-align: left;
+  }
+  th {
+    background: #f0ece6;
+    color: #433c46;
     font-weight: 650;
-    padding: 0.7em 1em;
+  }
+  tbody tr:nth-child(even) > td {
+    background: #f8f6f2;
+  }
+  :is(td, th) > :first-child {
+    margin-top: 0;
+  }
+  :is(td, th) > :last-child {
+    margin-bottom: 0;
+  }
+  caption {
+    padding: 0.75em 0.9em;
+    text-align: start;
+    font-weight: 600;
+    color: var(--journal-muted);
+    border-bottom: 1px solid #e4dfda;
   }
   details {
     margin: 1em 0;
@@ -225,10 +307,6 @@
   summary {
     cursor: pointer;
   }
-}
-.copy-notice {
-  font-size: 13px;
-  color: var(--journal-accent);
 }
 @media (max-width: 1179px) {
   .article-reading {
@@ -249,4 +327,13 @@
   .article-reading {
     padding: 22px 0 34px;
   }
+}
+
+.copy-feedback {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }

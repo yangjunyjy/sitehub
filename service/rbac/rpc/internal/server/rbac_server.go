@@ -143,6 +143,21 @@ func (s *RbacServer) LoginMember(ctx context.Context, in *rbac.LoginMemberInput)
 	return l.LoginMember(in)
 }
 
+func (s *RbacServer) SendMemberResetCode(ctx context.Context, in *rbac.SendCodeRequest) (*rbac.Empty, error) {
+	l := logic.NewSendMemberResetCodeLogic(ctx, s.svcCtx)
+	return l.SendMemberResetCode(in)
+}
+
+func (s *RbacServer) ResetMemberPassword(ctx context.Context, in *rbac.ResetMemberPasswordInput) (*rbac.Empty, error) {
+	l := logic.NewResetMemberPasswordLogic(ctx, s.svcCtx)
+	return l.ResetMemberPassword(in)
+}
+
+func (s *RbacServer) UpdateMemberProfile(ctx context.Context, in *rbac.UpdateMemberProfileInput) (*rbac.MemberProfile, error) {
+	l := logic.NewUpdateMemberProfileLogic(ctx, s.svcCtx)
+	return l.UpdateMemberProfile(in)
+}
+
 func (s *RbacServer) CurrentMember(ctx context.Context, in *rbac.Empty) (*rbac.MemberProfile, error) {
 	l := logic.NewCurrentMemberLogic(ctx, s.svcCtx)
 	return l.CurrentMember(in)

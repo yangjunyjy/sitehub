@@ -11,9 +11,12 @@ import (
 	"fmt"
 	"math/big"
 	"net/mail"
+	"net/url"
+	"regexp"
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/go-redis/redis/v8"
 	"golang.org/x/crypto/bcrypt"
@@ -72,9 +75,9 @@ func memberDigest(value string) string {
 	sum := sha256.Sum256([]byte(value))
 	return hex.EncodeToString(sum[:])
 }
-func (s *MemberService) codeHash(email, code string) string {
+func (s *MemberService) codeHash(purpose, email, code string) string {
 	h := hmac.New(sha256.New, s.secret)
-	h.Write([]byte("product-register:" + email + ":" + code))
+	h.Write([]byte("product-" + purpose + ":" + email + ":" + code))
 	return hex.EncodeToString(h.Sum(nil))
 }
 
@@ -92,6 +95,12 @@ func (s *MemberService) limit(ctx context.Context, key string, maximum int64, tt
 	return nil
 }
 func (s *MemberService) SendRegistrationCode(ctx context.Context, email, ip string) error {
+	return s.sendCode(ctx, email, ip, "register")
+}
+func (s *MemberService) SendResetCode(ctx context.Context, email, ip string) error {
+	return s.sendCode(ctx, email, ip, "reset")
+}
+func (s *MemberService) sendCode(ctx context.Context, email, ip, purpose string) error {
 	email, err := normalizeMemberEmail(email)
 	if err != nil {
 		return err
@@ -108,17 +117,28 @@ func (s *MemberService) SendRegistrationCode(ctx context.Context, email, ip stri
 	if err = s.limit(ctx, "send-hour:"+email, 5, time.Hour); err != nil {
 		return err
 	}
+	action := "注册会员账号"
+	if purpose == "reset" {
+		_, err := s.repo.WithContext(ctx).MemberByEmail(email)
+		if errors.Is(err, rbacdomain.ErrMemberMissing) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		action = "重置会员密码"
+	}
 	number, err := rand.Int(rand.Reader, big.NewInt(1000000))
 	if err != nil {
 		return err
 	}
 	code := fmt.Sprintf("%06d", number.Int64())
-	v := rbacdomain.MemberVerification{Email: email, CodeHash: s.codeHash(email, code), ExpiresAt: time.Now().Add(10 * time.Minute)}
+	v := rbacdomain.MemberVerification{Email: email, CodeHash: s.codeHash(purpose, email, code), ExpiresAt: time.Now().Add(10 * time.Minute)}
 	if err = s.repo.WithContext(ctx).PutVerification(v); err != nil {
 		return err
 	}
 	// SMTP 在数据库事务外执行。失败时只撤销本次验证码，不能删掉后来的重发。
-	err = s.send(email, "会员账号 · 邮箱注册验证码", fmt.Sprintf("<!DOCTYPE html><html><body><p>你正在注册会员账号，注册后可以登录博客和产品站。</p><p>验证码：<strong>%s</strong></p><p>10 分钟内有效。请勿向他人透露验证码；如非本人操作，请忽略本邮件。</p></body></html>", code))
+	err = s.send(email, action+" · 邮箱验证码", fmt.Sprintf("<!DOCTYPE html><html><body><p>你正在%s。</p><p>验证码：<strong>%s</strong></p><p>10 分钟内有效。请勿向他人透露验证码；如非本人操作，请忽略本邮件。</p></body></html>", action, code))
 	if err != nil {
 		cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
@@ -126,67 +146,137 @@ func (s *MemberService) SendRegistrationCode(ctx context.Context, email, ip stri
 	}
 	return nil
 }
+
+var memberUsername = regexp.MustCompile(`^[a-z0-9_]{3,40}$`)
+
+func normalizeProfile(in rbacdomain.UpdateMemberProfileInput) (rbacdomain.UpdateMemberProfileInput, error) {
+	in.Username = strings.ToLower(strings.TrimSpace(in.Username))
+	in.Nickname = strings.TrimSpace(in.Nickname)
+	in.Avatar = strings.TrimSpace(in.Avatar)
+	if !memberUsername.MatchString(in.Username) {
+		return in, errorx.Invalid("用户名需为 3–40 位字母、数字或下划线")
+	}
+	if in.Nickname == "" || utf8.RuneCountInString(in.Nickname) > 40 || strings.IndexFunc(in.Nickname, unicode.IsControl) >= 0 {
+		return in, errorx.Invalid("昵称需为 1–40 个可显示字符")
+	}
+	if in.Avatar != "" {
+		u, err := url.ParseRequestURI(in.Avatar)
+		if len(in.Avatar) > 1024 || err != nil || u.Hostname() == "" || u.User != nil || (u.Scheme != "https" && u.Scheme != "http") {
+			return in, errorx.Invalid("请输入有效的 HTTP 或 HTTPS 头像图片地址")
+		}
+	}
+	return in, nil
+}
+
 func (s *MemberService) Register(ctx context.Context, in rbacdomain.RegisterMemberInput, ip string) (rbacdomain.MemberProfile, error) {
-	var empty rbacdomain.MemberProfile
-	email, err := normalizeMemberEmail(in.Email)
+	profile, err := normalizeProfile(rbacdomain.UpdateMemberProfileInput{Username: in.Username, Nickname: in.Nickname})
 	if err != nil {
-		return empty, err
+		return rbacdomain.MemberProfile{}, err
 	}
-	if !memberPasswordValid(in.Password) {
-		return empty, errorx.Invalid("密码需为 8–72 字节，并包含字母和数字")
+	var member rbacdomain.Member
+	err = s.withVerifiedPassword(ctx, "register", ip, in.Email, in.Code, in.Password, func(tx rbacrepository.MemberRepository, email, hash string) error {
+		member = rbacdomain.Member{Email: email, PasswordHash: hash, Username: &profile.Username, Nickname: profile.Nickname, CreatedAt: time.Now()}
+		return tx.CreateMember(&member)
+	})
+	if dberror.IsDuplicate(err) {
+		err = errorx.Conflicting("用户名或邮箱已被使用")
 	}
-	if len(in.Code) != 6 || strings.Trim(in.Code, "0123456789") != "" {
-		return empty, errorx.Invalid("请输入 6 位邮箱验证码")
-	}
-	if err = s.limit(ctx, "register-ip:"+ip, 30, 15*time.Minute); err != nil {
-		return empty, err
-	}
-	hash, err := bcrypt.GenerateFromPassword([]byte(in.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return empty, err
+		return rbacdomain.MemberProfile{}, err
 	}
-	member := rbacdomain.Member{Email: email, PasswordHash: string(hash), CreatedAt: time.Now()}
-	var rejection error
+	return member.Profile(), nil
+}
+
+func (s *MemberService) ResetPassword(ctx context.Context, in rbacdomain.ResetMemberPasswordInput, ip string) error {
+	return s.withVerifiedPassword(ctx, "reset", ip, in.Email, in.Code, in.Password, func(tx rbacrepository.MemberRepository, email, hash string) error {
+		m, err := tx.MemberByEmail(email)
+		if err != nil {
+			return err
+		}
+		if _, err = tx.LockMember(m.ID); err != nil {
+			return err
+		}
+		return tx.ResetPassword(m.ID, hash)
+	})
+}
+
+// 锁定验证码后校验用途、时效与次数，验证码消费和密码写入一起提交。
+func (s *MemberService) withVerifiedPassword(ctx context.Context, purpose, ip, address, code, password string, apply func(rbacrepository.MemberRepository, string, string) error) error {
+	email, err := normalizeMemberEmail(address)
+	if err != nil {
+		return err
+	}
+	if !memberPasswordValid(password) {
+		return errorx.Invalid("密码需为 8–72 字节，并包含字母和数字")
+	}
+	if len(code) != 6 || strings.Trim(code, "0123456789") != "" {
+		return errorx.Invalid("请输入 6 位邮箱验证码")
+	}
+	if err = s.limit(ctx, purpose+"-ip:"+ip, 30, 15*time.Minute); err != nil {
+		return err
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	var rejected bool
 	err = s.repo.WithContext(ctx).Transaction(func(tx rbacrepository.MemberRepository) error {
-		v, e := tx.Verification(email, true)
-		if errors.Is(e, rbacdomain.ErrMemberMissing) {
-			rejection = errorx.Invalid("验证码错误或已过期，请重新获取")
+		v, err := tx.Verification(email, true)
+		if errors.Is(err, rbacdomain.ErrMemberMissing) {
+			rejected = true
 			return nil
 		}
-		if e != nil {
-			return e
+		if err != nil {
+			return err
 		}
-		// 获取行锁后重新判断过期时间和尝试次数，错误次数必须提交，不能随业务拒绝回滚。
 		if !v.ExpiresAt.After(time.Now()) || v.Attempts >= 5 {
-			rejection = errorx.Invalid("验证码错误或已过期，请重新获取")
+			rejected = true
 			return nil
 		}
-		if subtle.ConstantTimeCompare([]byte(v.CodeHash), []byte(s.codeHash(email, in.Code))) != 1 {
+		if subtle.ConstantTimeCompare([]byte(v.CodeHash), []byte(s.codeHash(purpose, email, code))) != 1 {
+			rejected = true
 			v.Attempts++
-			rejection = errorx.Invalid("验证码错误或已过期，请重新获取")
 			return tx.PutVerification(v)
 		}
-		if _, e = tx.MemberByEmail(email); e == nil {
-			rejection = errorx.Conflicting("该邮箱已注册，请前往登录")
-			return tx.DeleteVerification(email, v.CodeHash)
-		} else if !errors.Is(e, rbacdomain.ErrMemberMissing) {
-			return e
-		}
-		if e = tx.CreateMember(&member); e != nil {
-			return e
+		if err = apply(tx, email, string(hash)); err != nil {
+			return err
 		}
 		return tx.DeleteVerification(email, v.CodeHash)
 	})
-	if dberror.IsDuplicate(err) {
-		return empty, errorx.Conflicting("该邮箱已注册，请前往登录")
-	}
 	if err != nil {
-		return empty, err
+		return err
 	}
-	if rejection != nil {
-		return empty, rejection
+	if rejected {
+		return errorx.Invalid("验证码错误或已过期，请重新获取")
 	}
-	return member.Profile(), nil
+	return nil
+}
+
+func (s *MemberService) UpdateProfile(ctx context.Context, token string, input rbacdomain.UpdateMemberProfileInput) (rbacdomain.MemberProfile, error) {
+	p, err := normalizeProfile(input)
+	if err != nil {
+		return rbacdomain.MemberProfile{}, err
+	}
+	var result rbacdomain.MemberProfile
+	err = s.repo.WithContext(ctx).Transaction(func(tx rbacrepository.MemberRepository) error {
+		m, err := tx.SessionMember(memberDigest(token), time.Now())
+		if errors.Is(err, rbacdomain.ErrMemberMissing) {
+			return rbacdomain.ErrMemberSession
+		}
+		if err != nil {
+			return err
+		}
+		if err = tx.SaveProfile(m.ID, p); err != nil {
+			return err
+		}
+		m.Username, m.Nickname, m.Avatar = &p.Username, p.Nickname, p.Avatar
+		result = m.Profile()
+		return nil
+	})
+	if dberror.IsDuplicate(err) {
+		return result, errorx.Conflicting("该用户名已被使用")
+	}
+	return result, err
 }
 
 // 未知邮箱也执行 bcrypt，避免用明显的时间差枚举账号。
@@ -194,21 +284,30 @@ var memberDummyHash, _ = bcrypt.GenerateFromPassword([]byte("dummy-member-passwo
 
 func (s *MemberService) Login(ctx context.Context, in rbacdomain.LoginMemberInput, ip string) (rbacdomain.MemberProfile, string, error) {
 	var empty rbacdomain.MemberProfile
-	email, err := normalizeMemberEmail(in.Email)
-	if err != nil {
+	account := strings.ToLower(strings.TrimSpace(in.Account))
+	if account == "" {
+		account = strings.ToLower(strings.TrimSpace(in.Email))
+	}
+	repo := s.repo.WithContext(ctx)
+	lookup := repo.MemberByUsername
+	if strings.Contains(account, "@") {
+		if _, err := normalizeMemberEmail(account); err != nil {
+			return empty, "", rbacdomain.ErrMemberCredentials
+		}
+		lookup = repo.MemberByEmail
+	} else if !memberUsername.MatchString(account) {
 		return empty, "", rbacdomain.ErrMemberCredentials
 	}
 	if len(in.Password) == 0 || len(in.Password) > 72 {
 		return empty, "", rbacdomain.ErrMemberCredentials
 	}
-	if err = s.limit(ctx, "login-ip:"+ip, 30, 15*time.Minute); err != nil {
+	if err := s.limit(ctx, "login-ip:"+ip, 30, 15*time.Minute); err != nil {
 		return empty, "", err
 	}
-	if err = s.limit(ctx, "login-email:"+email, 10, 15*time.Minute); err != nil {
+	if err := s.limit(ctx, "login-account:"+account, 10, 15*time.Minute); err != nil {
 		return empty, "", err
 	}
-	repo := s.repo.WithContext(ctx)
-	member, err := repo.MemberByEmail(email)
+	member, err := lookup(account)
 	if errors.Is(err, rbacdomain.ErrMemberMissing) {
 		bcrypt.CompareHashAndPassword(memberDummyHash, []byte(in.Password))
 		return empty, "", rbacdomain.ErrMemberCredentials
@@ -225,6 +324,15 @@ func (s *MemberService) Login(ctx context.Context, in rbacdomain.LoginMemberInpu
 	}
 	token := hex.EncodeToString(secret)
 	err = repo.Transaction(func(tx rbacrepository.MemberRepository) error {
+		// 与密码重置竞争时，以持锁后的密码版本决定能否签发会话。
+		current, e := tx.LockMember(member.ID)
+		if e != nil {
+			return e
+		}
+		if current.PasswordHash != member.PasswordHash {
+			return rbacdomain.ErrMemberCredentials
+		}
+		member = current
 		if e := tx.DeleteExpiredSessions(member.ID, time.Now()); e != nil {
 			return e
 		}

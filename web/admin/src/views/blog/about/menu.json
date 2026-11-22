@@ -1,0 +1,5 @@
+{
+  "name": "关于页设置",
+  "permission": "blog:settings:edit",
+  "sort": 11
+}

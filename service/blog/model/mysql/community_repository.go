@@ -17,6 +17,15 @@ func (repo *CommunityRepository) SaveHome(ctx context.Context, animation bool, v
 	}).Create(&profile).Error
 }
 
+// About and home settings share the single author row. Update only the columns owned by this form.
+func (repo *CommunityRepository) SaveAbout(ctx context.Context, profile entity.AuthorProfile) error {
+	profile.ID = 1
+	return repo.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"name", "title", "bio", "content", "avatar", "location", "email", "skills", "socials"}),
+	}).Create(&profile).Error
+}
+
 func NewCommunityRepository(db *gorm.DB) *CommunityRepository { return &CommunityRepository{db: db} }
 func (repo *CommunityRepository) Profile(ctx context.Context) (entity.AuthorProfile, error) {
 	var profile entity.AuthorProfile

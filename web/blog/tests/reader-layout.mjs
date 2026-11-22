@@ -36,11 +36,11 @@ const markdown = [
   "| " +
     columns.join(" | ") +
     " |\n| " +
-    columns.map(() => "---").join(" | ") +
+    columns.map((_, i) => i === 1 ? ":---:" : i === 2 ? "---:" : "---").join(" | ") +
     " |\n| " +
     columns.map(() => "树影").join(" | ") +
     " |",
-  '~~~go\ntrail := "' + "forest/".repeat(19) + '"\n~~~',
+  '~~~go\n// 记录本次观测\nfunc record() string {\n    trail := "' + "forest/".repeat(19) + '"\n    return trail\n}\n~~~',
   "## 山脊上的风",
   Array.from({ length: 40 }, () => lead).join("\n\n"),
 ].join("\n\n");
@@ -145,6 +145,32 @@ export async function checkReaderLayout({
     path: artifacts + "/reader-table-code.png",
     animations: "disabled",
   });
+  assert(await body.locator("pre .hljs-keyword").count() > 0);
+  assert.equal(await body.locator("th").nth(2).evaluate(el => getComputedStyle(el).textAlign), "right");
+  assert.equal(await body.locator("td").nth(1).evaluate(el => getComputedStyle(el).textAlign), "center");
+  const original = await body.locator("pre").innerText();
+  const wrap = body.getByRole("button", {name:"自动换行"});
+  await wrap.click();
+  assert.equal(await wrap.getAttribute("aria-pressed"),"true");
+  assert(await body.locator("pre").evaluate(el => el.scrollWidth === el.clientWidth));
+  assert.equal(await body.locator("pre").innerText(), original);
+  const copy = body.locator(".code-copy-btn");
+  const expectedCode = await body.locator("pre").innerText();
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], {origin});
+  await copy.click();
+  assert.equal((await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, "\n"), expectedCode);
+  await page.evaluate(() => navigator.clipboard.writeText("old contents"));
+  await page.evaluate(() => Object.defineProperty(navigator, "clipboard", {value:undefined, configurable:true}));
+  await copy.click();
+  await page.evaluate(() => delete navigator.clipboard);
+  assert.equal((await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, "\n"), expectedCode);
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {value:{writeText:async () => {throw new Error("denied");}}, configurable:true});
+    document.execCommand = () => false;
+  });
+  await copy.click();
+  await body.getByRole("button",{name:"已选中，请手动复制"}).waitFor();
+  assert(await body.locator("pre").evaluate(pre => window.getSelection().containsNode(pre.firstChild, true)));
   const touch = await browser.newContext({
     viewport: { width: 390, height: 844 },
     isMobile: true,
@@ -156,6 +182,11 @@ export async function checkReaderLayout({
     await touch.route("**" + picture, photo);
     const phone = await touch.newPage();
     await phone.goto(origin + "/article/3", { waitUntil: "networkidle" });
+    const menu = phone.getByRole("button",{name:"账号菜单"});
+    await menu.tap();
+    await phone.locator("#member-options").getByRole("link",{name:"个人中心"}).waitFor();
+    await menu.tap();
+    await phone.locator("#member-options").waitFor({state:"hidden"});
     const phoneBody = phone.locator(".markdown-body");
     assert.equal(
       await phoneBody.locator("figure figcaption").first().textContent(),

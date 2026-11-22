@@ -41,12 +41,27 @@ type SendMemberCodeRequest {
 }
 
 type RegisterMemberRequest {
+	Username string `json:"username"`
+	Nickname string `json:"nickname"`
 	Email    string `json:"email,optional"`
 	Password string `json:"password,optional"`
 	Code     string `json:"code,optional"`
 }
 
+type ResetMemberPasswordRequest {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Code     string `json:"code"`
+}
+
+type UpdateMemberProfileRequest {
+	Username string `json:"username"`
+	Nickname string `json:"nickname"`
+	Avatar   string `json:"avatar,optional"`
+}
+
 type LoginMemberRequest {
+	Account  string `json:"account,optional"`
 	Email    string `json:"email,optional"`
 	Password string `json:"password,optional"`
 }
@@ -332,6 +347,15 @@ service rbac-api {
 
 	@handler LoginMember
 	post /members/login (LoginMemberRequest) returns (Response)
+
+	@handler SendMemberResetCode
+	post /members/password/code (SendMemberCodeRequest) returns (Response)
+
+	@handler ResetMemberPassword
+	post /members/password/reset (ResetMemberPasswordRequest) returns (Response)
+
+	@handler UpdateMemberProfile
+	post /members/profile (UpdateMemberProfileRequest) returns (Response)
 
 	@handler CurrentMember
 	get /members/me returns (Response)

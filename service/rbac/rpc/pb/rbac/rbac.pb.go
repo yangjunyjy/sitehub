@@ -1813,6 +1813,7 @@ func (x *IDRequest) GetId() uint64 {
 
 type LoginMemberInput struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	Account       string                 `protobuf:"bytes,3,opt,name=account,proto3" json:"account,omitempty"`
 	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
 	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1849,6 +1850,13 @@ func (*LoginMemberInput) Descriptor() ([]byte, []int) {
 	return file_rbac_proto_rawDescGZIP(), []int{19}
 }
 
+func (x *LoginMemberInput) GetAccount() string {
+	if x != nil {
+		return x.Account
+	}
+	return ""
+}
+
 func (x *LoginMemberInput) GetEmail() string {
 	if x != nil {
 		return x.Email
@@ -1865,6 +1873,9 @@ func (x *LoginMemberInput) GetPassword() string {
 
 type MemberProfile struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	Username      string                 `protobuf:"bytes,4,opt,name=username,proto3" json:"username,omitempty"`
+	Nickname      string                 `protobuf:"bytes,5,opt,name=nickname,proto3" json:"nickname,omitempty"`
+	Avatar        string                 `protobuf:"bytes,6,opt,name=avatar,proto3" json:"avatar,omitempty"`
 	Id            uint64                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
@@ -1900,6 +1911,27 @@ func (x *MemberProfile) ProtoReflect() protoreflect.Message {
 // Deprecated: Use MemberProfile.ProtoReflect.Descriptor instead.
 func (*MemberProfile) Descriptor() ([]byte, []int) {
 	return file_rbac_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *MemberProfile) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *MemberProfile) GetNickname() string {
+	if x != nil {
+		return x.Nickname
+	}
+	return ""
+}
+
+func (x *MemberProfile) GetAvatar() string {
+	if x != nil {
+		return x.Avatar
+	}
+	return ""
 }
 
 func (x *MemberProfile) GetId() uint64 {
@@ -2555,8 +2587,130 @@ func (x *Principal) GetPermissions() []string {
 	return nil
 }
 
+type ResetMemberPasswordInput struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	Code          string                 `protobuf:"bytes,3,opt,name=code,proto3" json:"code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResetMemberPasswordInput) Reset() {
+	*x = ResetMemberPasswordInput{}
+	mi := &file_rbac_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResetMemberPasswordInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResetMemberPasswordInput) ProtoMessage() {}
+
+func (x *ResetMemberPasswordInput) ProtoReflect() protoreflect.Message {
+	mi := &file_rbac_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResetMemberPasswordInput.ProtoReflect.Descriptor instead.
+func (*ResetMemberPasswordInput) Descriptor() ([]byte, []int) {
+	return file_rbac_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *ResetMemberPasswordInput) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *ResetMemberPasswordInput) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+func (x *ResetMemberPasswordInput) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+type UpdateMemberProfileInput struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	Nickname      string                 `protobuf:"bytes,2,opt,name=nickname,proto3" json:"nickname,omitempty"`
+	Avatar        string                 `protobuf:"bytes,3,opt,name=avatar,proto3" json:"avatar,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateMemberProfileInput) Reset() {
+	*x = UpdateMemberProfileInput{}
+	mi := &file_rbac_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateMemberProfileInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateMemberProfileInput) ProtoMessage() {}
+
+func (x *UpdateMemberProfileInput) ProtoReflect() protoreflect.Message {
+	mi := &file_rbac_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateMemberProfileInput.ProtoReflect.Descriptor instead.
+func (*UpdateMemberProfileInput) Descriptor() ([]byte, []int) {
+	return file_rbac_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *UpdateMemberProfileInput) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *UpdateMemberProfileInput) GetNickname() string {
+	if x != nil {
+		return x.Nickname
+	}
+	return ""
+}
+
+func (x *UpdateMemberProfileInput) GetAvatar() string {
+	if x != nil {
+		return x.Avatar
+	}
+	return ""
+}
+
 type RegisterMemberInput struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	Username      string                 `protobuf:"bytes,4,opt,name=username,proto3" json:"username,omitempty"`
+	Nickname      string                 `protobuf:"bytes,5,opt,name=nickname,proto3" json:"nickname,omitempty"`
 	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
 	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
 	Code          string                 `protobuf:"bytes,3,opt,name=code,proto3" json:"code,omitempty"`
@@ -2566,7 +2720,7 @@ type RegisterMemberInput struct {
 
 func (x *RegisterMemberInput) Reset() {
 	*x = RegisterMemberInput{}
-	mi := &file_rbac_proto_msgTypes[31]
+	mi := &file_rbac_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2578,7 +2732,7 @@ func (x *RegisterMemberInput) String() string {
 func (*RegisterMemberInput) ProtoMessage() {}
 
 func (x *RegisterMemberInput) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[31]
+	mi := &file_rbac_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2591,7 +2745,21 @@ func (x *RegisterMemberInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterMemberInput.ProtoReflect.Descriptor instead.
 func (*RegisterMemberInput) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{31}
+	return file_rbac_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *RegisterMemberInput) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
+func (x *RegisterMemberInput) GetNickname() string {
+	if x != nil {
+		return x.Nickname
+	}
+	return ""
 }
 
 func (x *RegisterMemberInput) GetEmail() string {
@@ -2625,7 +2793,7 @@ type RoleAssignMenusRequest struct {
 
 func (x *RoleAssignMenusRequest) Reset() {
 	*x = RoleAssignMenusRequest{}
-	mi := &file_rbac_proto_msgTypes[32]
+	mi := &file_rbac_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2637,7 +2805,7 @@ func (x *RoleAssignMenusRequest) String() string {
 func (*RoleAssignMenusRequest) ProtoMessage() {}
 
 func (x *RoleAssignMenusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[32]
+	mi := &file_rbac_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2650,7 +2818,7 @@ func (x *RoleAssignMenusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RoleAssignMenusRequest.ProtoReflect.Descriptor instead.
 func (*RoleAssignMenusRequest) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{32}
+	return file_rbac_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *RoleAssignMenusRequest) GetRoleId() uint64 {
@@ -2677,7 +2845,7 @@ type RolePage struct {
 
 func (x *RolePage) Reset() {
 	*x = RolePage{}
-	mi := &file_rbac_proto_msgTypes[33]
+	mi := &file_rbac_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2689,7 +2857,7 @@ func (x *RolePage) String() string {
 func (*RolePage) ProtoMessage() {}
 
 func (x *RolePage) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[33]
+	mi := &file_rbac_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2702,7 +2870,7 @@ func (x *RolePage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RolePage.ProtoReflect.Descriptor instead.
 func (*RolePage) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{33}
+	return file_rbac_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *RolePage) GetItems() []*EntitySysRole {
@@ -2732,7 +2900,7 @@ type RoleSearchQueryRequest struct {
 
 func (x *RoleSearchQueryRequest) Reset() {
 	*x = RoleSearchQueryRequest{}
-	mi := &file_rbac_proto_msgTypes[34]
+	mi := &file_rbac_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2744,7 +2912,7 @@ func (x *RoleSearchQueryRequest) String() string {
 func (*RoleSearchQueryRequest) ProtoMessage() {}
 
 func (x *RoleSearchQueryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[34]
+	mi := &file_rbac_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2757,7 +2925,7 @@ func (x *RoleSearchQueryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RoleSearchQueryRequest.ProtoReflect.Descriptor instead.
 func (*RoleSearchQueryRequest) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{34}
+	return file_rbac_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *RoleSearchQueryRequest) GetRoleName() string {
@@ -2808,7 +2976,7 @@ type SearchSysUserQueryRequest struct {
 
 func (x *SearchSysUserQueryRequest) Reset() {
 	*x = SearchSysUserQueryRequest{}
-	mi := &file_rbac_proto_msgTypes[35]
+	mi := &file_rbac_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2820,7 +2988,7 @@ func (x *SearchSysUserQueryRequest) String() string {
 func (*SearchSysUserQueryRequest) ProtoMessage() {}
 
 func (x *SearchSysUserQueryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[35]
+	mi := &file_rbac_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2833,7 +3001,7 @@ func (x *SearchSysUserQueryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchSysUserQueryRequest.ProtoReflect.Descriptor instead.
 func (*SearchSysUserQueryRequest) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{35}
+	return file_rbac_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *SearchSysUserQueryRequest) GetUsername() string {
@@ -2881,7 +3049,7 @@ type SendCodeRequest struct {
 
 func (x *SendCodeRequest) Reset() {
 	*x = SendCodeRequest{}
-	mi := &file_rbac_proto_msgTypes[36]
+	mi := &file_rbac_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2893,7 +3061,7 @@ func (x *SendCodeRequest) String() string {
 func (*SendCodeRequest) ProtoMessage() {}
 
 func (x *SendCodeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[36]
+	mi := &file_rbac_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2906,7 +3074,7 @@ func (x *SendCodeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendCodeRequest.ProtoReflect.Descriptor instead.
 func (*SendCodeRequest) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{36}
+	return file_rbac_proto_rawDescGZIP(), []int{38}
 }
 
 func (x *SendCodeRequest) GetEmail() string {
@@ -2939,7 +3107,7 @@ type SliderCaptchaResult struct {
 
 func (x *SliderCaptchaResult) Reset() {
 	*x = SliderCaptchaResult{}
-	mi := &file_rbac_proto_msgTypes[37]
+	mi := &file_rbac_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2951,7 +3119,7 @@ func (x *SliderCaptchaResult) String() string {
 func (*SliderCaptchaResult) ProtoMessage() {}
 
 func (x *SliderCaptchaResult) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[37]
+	mi := &file_rbac_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2964,7 +3132,7 @@ func (x *SliderCaptchaResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SliderCaptchaResult.ProtoReflect.Descriptor instead.
 func (*SliderCaptchaResult) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{37}
+	return file_rbac_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *SliderCaptchaResult) GetCaptchaKey() string {
@@ -3032,7 +3200,7 @@ type StringList struct {
 
 func (x *StringList) Reset() {
 	*x = StringList{}
-	mi := &file_rbac_proto_msgTypes[38]
+	mi := &file_rbac_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3044,7 +3212,7 @@ func (x *StringList) String() string {
 func (*StringList) ProtoMessage() {}
 
 func (x *StringList) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[38]
+	mi := &file_rbac_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3057,7 +3225,7 @@ func (x *StringList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StringList.ProtoReflect.Descriptor instead.
 func (*StringList) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{38}
+	return file_rbac_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *StringList) GetItems() []string {
@@ -3079,7 +3247,7 @@ type SysLoginRequest struct {
 
 func (x *SysLoginRequest) Reset() {
 	*x = SysLoginRequest{}
-	mi := &file_rbac_proto_msgTypes[39]
+	mi := &file_rbac_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3091,7 +3259,7 @@ func (x *SysLoginRequest) String() string {
 func (*SysLoginRequest) ProtoMessage() {}
 
 func (x *SysLoginRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[39]
+	mi := &file_rbac_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3104,7 +3272,7 @@ func (x *SysLoginRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SysLoginRequest.ProtoReflect.Descriptor instead.
 func (*SysLoginRequest) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{39}
+	return file_rbac_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *SysLoginRequest) GetUsername() string {
@@ -3145,7 +3313,7 @@ type SysVerifyEmailCaptchaRequest struct {
 
 func (x *SysVerifyEmailCaptchaRequest) Reset() {
 	*x = SysVerifyEmailCaptchaRequest{}
-	mi := &file_rbac_proto_msgTypes[40]
+	mi := &file_rbac_proto_msgTypes[42]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3157,7 +3325,7 @@ func (x *SysVerifyEmailCaptchaRequest) String() string {
 func (*SysVerifyEmailCaptchaRequest) ProtoMessage() {}
 
 func (x *SysVerifyEmailCaptchaRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[40]
+	mi := &file_rbac_proto_msgTypes[42]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3170,7 +3338,7 @@ func (x *SysVerifyEmailCaptchaRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SysVerifyEmailCaptchaRequest.ProtoReflect.Descriptor instead.
 func (*SysVerifyEmailCaptchaRequest) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{40}
+	return file_rbac_proto_rawDescGZIP(), []int{42}
 }
 
 func (x *SysVerifyEmailCaptchaRequest) GetEmail() string {
@@ -3199,7 +3367,7 @@ type TOTPInfo struct {
 
 func (x *TOTPInfo) Reset() {
 	*x = TOTPInfo{}
-	mi := &file_rbac_proto_msgTypes[41]
+	mi := &file_rbac_proto_msgTypes[43]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3211,7 +3379,7 @@ func (x *TOTPInfo) String() string {
 func (*TOTPInfo) ProtoMessage() {}
 
 func (x *TOTPInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[41]
+	mi := &file_rbac_proto_msgTypes[43]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3224,7 +3392,7 @@ func (x *TOTPInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TOTPInfo.ProtoReflect.Descriptor instead.
 func (*TOTPInfo) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{41}
+	return file_rbac_proto_rawDescGZIP(), []int{43}
 }
 
 func (x *TOTPInfo) GetEnabled() bool {
@@ -3265,7 +3433,7 @@ type TokenReply struct {
 
 func (x *TokenReply) Reset() {
 	*x = TokenReply{}
-	mi := &file_rbac_proto_msgTypes[42]
+	mi := &file_rbac_proto_msgTypes[44]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3277,7 +3445,7 @@ func (x *TokenReply) String() string {
 func (*TokenReply) ProtoMessage() {}
 
 func (x *TokenReply) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[42]
+	mi := &file_rbac_proto_msgTypes[44]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3290,7 +3458,7 @@ func (x *TokenReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TokenReply.ProtoReflect.Descriptor instead.
 func (*TokenReply) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{42}
+	return file_rbac_proto_rawDescGZIP(), []int{44}
 }
 
 func (x *TokenReply) GetToken() string {
@@ -3321,7 +3489,7 @@ type UpdateEmailSettingsRequest struct {
 
 func (x *UpdateEmailSettingsRequest) Reset() {
 	*x = UpdateEmailSettingsRequest{}
-	mi := &file_rbac_proto_msgTypes[43]
+	mi := &file_rbac_proto_msgTypes[45]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3333,7 +3501,7 @@ func (x *UpdateEmailSettingsRequest) String() string {
 func (*UpdateEmailSettingsRequest) ProtoMessage() {}
 
 func (x *UpdateEmailSettingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[43]
+	mi := &file_rbac_proto_msgTypes[45]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3346,7 +3514,7 @@ func (x *UpdateEmailSettingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateEmailSettingsRequest.ProtoReflect.Descriptor instead.
 func (*UpdateEmailSettingsRequest) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{43}
+	return file_rbac_proto_rawDescGZIP(), []int{45}
 }
 
 func (x *UpdateEmailSettingsRequest) GetSmtpHost() string {
@@ -3402,7 +3570,7 @@ type UpdatePasswordRequest struct {
 
 func (x *UpdatePasswordRequest) Reset() {
 	*x = UpdatePasswordRequest{}
-	mi := &file_rbac_proto_msgTypes[44]
+	mi := &file_rbac_proto_msgTypes[46]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3414,7 +3582,7 @@ func (x *UpdatePasswordRequest) String() string {
 func (*UpdatePasswordRequest) ProtoMessage() {}
 
 func (x *UpdatePasswordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[44]
+	mi := &file_rbac_proto_msgTypes[46]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3427,7 +3595,7 @@ func (x *UpdatePasswordRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePasswordRequest.ProtoReflect.Descriptor instead.
 func (*UpdatePasswordRequest) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{44}
+	return file_rbac_proto_rawDescGZIP(), []int{46}
 }
 
 func (x *UpdatePasswordRequest) GetEmail() string {
@@ -3464,7 +3632,7 @@ type UpdateRoleRequest struct {
 
 func (x *UpdateRoleRequest) Reset() {
 	*x = UpdateRoleRequest{}
-	mi := &file_rbac_proto_msgTypes[45]
+	mi := &file_rbac_proto_msgTypes[47]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3476,7 +3644,7 @@ func (x *UpdateRoleRequest) String() string {
 func (*UpdateRoleRequest) ProtoMessage() {}
 
 func (x *UpdateRoleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[45]
+	mi := &file_rbac_proto_msgTypes[47]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3489,7 +3657,7 @@ func (x *UpdateRoleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateRoleRequest.ProtoReflect.Descriptor instead.
 func (*UpdateRoleRequest) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{45}
+	return file_rbac_proto_rawDescGZIP(), []int{47}
 }
 
 func (x *UpdateRoleRequest) GetId() uint64 {
@@ -3551,7 +3719,7 @@ type UpdateSysMenuRequest struct {
 
 func (x *UpdateSysMenuRequest) Reset() {
 	*x = UpdateSysMenuRequest{}
-	mi := &file_rbac_proto_msgTypes[46]
+	mi := &file_rbac_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3563,7 +3731,7 @@ func (x *UpdateSysMenuRequest) String() string {
 func (*UpdateSysMenuRequest) ProtoMessage() {}
 
 func (x *UpdateSysMenuRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[46]
+	mi := &file_rbac_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3576,7 +3744,7 @@ func (x *UpdateSysMenuRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSysMenuRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSysMenuRequest) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{46}
+	return file_rbac_proto_rawDescGZIP(), []int{48}
 }
 
 func (x *UpdateSysMenuRequest) GetId() uint64 {
@@ -3706,7 +3874,7 @@ type UpdateSysUserRequest struct {
 
 func (x *UpdateSysUserRequest) Reset() {
 	*x = UpdateSysUserRequest{}
-	mi := &file_rbac_proto_msgTypes[47]
+	mi := &file_rbac_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3718,7 +3886,7 @@ func (x *UpdateSysUserRequest) String() string {
 func (*UpdateSysUserRequest) ProtoMessage() {}
 
 func (x *UpdateSysUserRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[47]
+	mi := &file_rbac_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3731,7 +3899,7 @@ func (x *UpdateSysUserRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSysUserRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSysUserRequest) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{47}
+	return file_rbac_proto_rawDescGZIP(), []int{49}
 }
 
 func (x *UpdateSysUserRequest) GetId() uint64 {
@@ -3801,7 +3969,7 @@ type UserListResponse struct {
 
 func (x *UserListResponse) Reset() {
 	*x = UserListResponse{}
-	mi := &file_rbac_proto_msgTypes[48]
+	mi := &file_rbac_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3813,7 +3981,7 @@ func (x *UserListResponse) String() string {
 func (*UserListResponse) ProtoMessage() {}
 
 func (x *UserListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[48]
+	mi := &file_rbac_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3826,7 +3994,7 @@ func (x *UserListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserListResponse.ProtoReflect.Descriptor instead.
 func (*UserListResponse) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{48}
+	return file_rbac_proto_rawDescGZIP(), []int{50}
 }
 
 func (x *UserListResponse) GetId() uint64 {
@@ -3909,7 +4077,7 @@ type UserPage struct {
 
 func (x *UserPage) Reset() {
 	*x = UserPage{}
-	mi := &file_rbac_proto_msgTypes[49]
+	mi := &file_rbac_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3921,7 +4089,7 @@ func (x *UserPage) String() string {
 func (*UserPage) ProtoMessage() {}
 
 func (x *UserPage) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[49]
+	mi := &file_rbac_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3934,7 +4102,7 @@ func (x *UserPage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserPage.ProtoReflect.Descriptor instead.
 func (*UserPage) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{49}
+	return file_rbac_proto_rawDescGZIP(), []int{51}
 }
 
 func (x *UserPage) GetItems() []*UserListResponse {
@@ -3960,7 +4128,7 @@ type ConsumeTokenRequest struct {
 
 func (x *ConsumeTokenRequest) Reset() {
 	*x = ConsumeTokenRequest{}
-	mi := &file_rbac_proto_msgTypes[50]
+	mi := &file_rbac_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3972,7 +4140,7 @@ func (x *ConsumeTokenRequest) String() string {
 func (*ConsumeTokenRequest) ProtoMessage() {}
 
 func (x *ConsumeTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[50]
+	mi := &file_rbac_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3985,7 +4153,7 @@ func (x *ConsumeTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConsumeTokenRequest.ProtoReflect.Descriptor instead.
 func (*ConsumeTokenRequest) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{50}
+	return file_rbac_proto_rawDescGZIP(), []int{52}
 }
 
 func (x *ConsumeTokenRequest) GetToken() string {
@@ -4008,7 +4176,7 @@ type IconRecord struct {
 
 func (x *IconRecord) Reset() {
 	*x = IconRecord{}
-	mi := &file_rbac_proto_msgTypes[51]
+	mi := &file_rbac_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4020,7 +4188,7 @@ func (x *IconRecord) String() string {
 func (*IconRecord) ProtoMessage() {}
 
 func (x *IconRecord) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[51]
+	mi := &file_rbac_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4033,7 +4201,7 @@ func (x *IconRecord) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IconRecord.ProtoReflect.Descriptor instead.
 func (*IconRecord) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{51}
+	return file_rbac_proto_rawDescGZIP(), []int{53}
 }
 
 func (x *IconRecord) GetId() uint64 {
@@ -4080,7 +4248,7 @@ type IconName struct {
 
 func (x *IconName) Reset() {
 	*x = IconName{}
-	mi := &file_rbac_proto_msgTypes[52]
+	mi := &file_rbac_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4092,7 +4260,7 @@ func (x *IconName) String() string {
 func (*IconName) ProtoMessage() {}
 
 func (x *IconName) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[52]
+	mi := &file_rbac_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4105,7 +4273,7 @@ func (x *IconName) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IconName.ProtoReflect.Descriptor instead.
 func (*IconName) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{52}
+	return file_rbac_proto_rawDescGZIP(), []int{54}
 }
 
 func (x *IconName) GetName() string {
@@ -4124,7 +4292,7 @@ type IconPage struct {
 
 func (x *IconPage) Reset() {
 	*x = IconPage{}
-	mi := &file_rbac_proto_msgTypes[53]
+	mi := &file_rbac_proto_msgTypes[55]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4136,7 +4304,7 @@ func (x *IconPage) String() string {
 func (*IconPage) ProtoMessage() {}
 
 func (x *IconPage) ProtoReflect() protoreflect.Message {
-	mi := &file_rbac_proto_msgTypes[53]
+	mi := &file_rbac_proto_msgTypes[55]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4149,7 +4317,7 @@ func (x *IconPage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IconPage.ProtoReflect.Descriptor instead.
 func (*IconPage) Descriptor() ([]byte, []int) {
-	return file_rbac_proto_rawDescGZIP(), []int{53}
+	return file_rbac_proto_rawDescGZIP(), []int{55}
 }
 
 func (x *IconPage) GetItems() []*IconRecord {
@@ -4352,11 +4520,15 @@ const file_rbac_proto_rawDesc = "" +
 	"\aservice\x18\x01 \x01(\tR\aservice\x12\x16\n" +
 	"\x06status\x18\x02 \x01(\tR\x06status\"\x1b\n" +
 	"\tIDRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x04R\x02id\"D\n" +
-	"\x10LoginMemberInput\x12\x14\n" +
+	"\x02id\x18\x01 \x01(\x04R\x02id\"^\n" +
+	"\x10LoginMemberInput\x12\x18\n" +
+	"\aaccount\x18\x03 \x01(\tR\aaccount\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\"p\n" +
-	"\rMemberProfile\x12\x0e\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\"\xc0\x01\n" +
+	"\rMemberProfile\x12\x1a\n" +
+	"\busername\x18\x04 \x01(\tR\busername\x12\x1a\n" +
+	"\bnickname\x18\x05 \x01(\tR\bnickname\x12\x16\n" +
+	"\x06avatar\x18\x06 \x01(\tR\x06avatar\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x129\n" +
 	"\n" +
@@ -4413,8 +4585,18 @@ const file_rbac_proto_rawDesc = "" +
 	"\vsuper_admin\x18\x04 \x01(\bR\n" +
 	"superAdmin\x12\x16\n" +
 	"\x06member\x18\x05 \x01(\bR\x06member\x12 \n" +
-	"\vpermissions\x18\x06 \x03(\tR\vpermissions\"[\n" +
-	"\x13RegisterMemberInput\x12\x14\n" +
+	"\vpermissions\x18\x06 \x03(\tR\vpermissions\"`\n" +
+	"\x18ResetMemberPasswordInput\x12\x14\n" +
+	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x12\n" +
+	"\x04code\x18\x03 \x01(\tR\x04code\"j\n" +
+	"\x18UpdateMemberProfileInput\x12\x1a\n" +
+	"\busername\x18\x01 \x01(\tR\busername\x12\x1a\n" +
+	"\bnickname\x18\x02 \x01(\tR\bnickname\x12\x16\n" +
+	"\x06avatar\x18\x03 \x01(\tR\x06avatar\"\x93\x01\n" +
+	"\x13RegisterMemberInput\x12\x1a\n" +
+	"\busername\x18\x04 \x01(\tR\busername\x12\x1a\n" +
+	"\bnickname\x18\x05 \x01(\tR\bnickname\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x12\n" +
 	"\x04code\x18\x03 \x01(\tR\x04code\"N\n" +
@@ -4554,7 +4736,7 @@ const file_rbac_proto_rawDesc = "" +
 	"\bIconName\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"2\n" +
 	"\bIconPage\x12&\n" +
-	"\x05items\x18\x01 \x03(\v2\x10.rbac.IconRecordR\x05items2\xa6\x15\n" +
+	"\x05items\x18\x01 \x03(\v2\x10.rbac.IconRecordR\x05items2\xf1\x16\n" +
 	"\x04Rbac\x12(\n" +
 	"\tListIcons\x12\v.rbac.Empty\x1a\x0e.rbac.IconPage\x12/\n" +
 	"\vIconContent\x12\x0e.rbac.IconName\x1a\x10.rbac.IconRecord\x122\n" +
@@ -4583,7 +4765,10 @@ const file_rbac_proto_rawDesc = "" +
 	"\x0eChangePassword\x12\x1b.rbac.UpdatePasswordRequest\x1a\v.rbac.Empty\x124\n" +
 	"\x0eSendMemberCode\x12\x15.rbac.SendCodeRequest\x1a\v.rbac.Empty\x12@\n" +
 	"\x0eRegisterMember\x12\x19.rbac.RegisterMemberInput\x1a\x13.rbac.MemberProfile\x12?\n" +
-	"\vLoginMember\x12\x16.rbac.LoginMemberInput\x1a\x18.rbac.MemberSessionReply\x121\n" +
+	"\vLoginMember\x12\x16.rbac.LoginMemberInput\x1a\x18.rbac.MemberSessionReply\x129\n" +
+	"\x13SendMemberResetCode\x12\x15.rbac.SendCodeRequest\x1a\v.rbac.Empty\x12B\n" +
+	"\x13ResetMemberPassword\x12\x1e.rbac.ResetMemberPasswordInput\x1a\v.rbac.Empty\x12J\n" +
+	"\x13UpdateMemberProfile\x12\x1e.rbac.UpdateMemberProfileInput\x1a\x13.rbac.MemberProfile\x121\n" +
 	"\rCurrentMember\x12\v.rbac.Empty\x1a\x13.rbac.MemberProfile\x12(\n" +
 	"\fLogoutMember\x12\v.rbac.Empty\x1a\v.rbac.Empty\x12<\n" +
 	"\tListUsers\x12\x1f.rbac.SearchSysUserQueryRequest\x1a\x0e.rbac.UserPage\x12/\n" +
@@ -4636,7 +4821,7 @@ func file_rbac_proto_rawDescGZIP() []byte {
 	return file_rbac_proto_rawDescData
 }
 
-var file_rbac_proto_msgTypes = make([]protoimpl.MessageInfo, 54)
+var file_rbac_proto_msgTypes = make([]protoimpl.MessageInfo, 56)
 var file_rbac_proto_goTypes = []any{
 	(*AdminSession)(nil),                 // 0: rbac.AdminSession
 	(*AssignRolesRequest)(nil),           // 1: rbac.AssignRolesRequest
@@ -4669,171 +4854,179 @@ var file_rbac_proto_goTypes = []any{
 	(*PageRequest)(nil),                  // 28: rbac.PageRequest
 	(*PermissionRequest)(nil),            // 29: rbac.PermissionRequest
 	(*Principal)(nil),                    // 30: rbac.Principal
-	(*RegisterMemberInput)(nil),          // 31: rbac.RegisterMemberInput
-	(*RoleAssignMenusRequest)(nil),       // 32: rbac.RoleAssignMenusRequest
-	(*RolePage)(nil),                     // 33: rbac.RolePage
-	(*RoleSearchQueryRequest)(nil),       // 34: rbac.RoleSearchQueryRequest
-	(*SearchSysUserQueryRequest)(nil),    // 35: rbac.SearchSysUserQueryRequest
-	(*SendCodeRequest)(nil),              // 36: rbac.SendCodeRequest
-	(*SliderCaptchaResult)(nil),          // 37: rbac.SliderCaptchaResult
-	(*StringList)(nil),                   // 38: rbac.StringList
-	(*SysLoginRequest)(nil),              // 39: rbac.SysLoginRequest
-	(*SysVerifyEmailCaptchaRequest)(nil), // 40: rbac.SysVerifyEmailCaptchaRequest
-	(*TOTPInfo)(nil),                     // 41: rbac.TOTPInfo
-	(*TokenReply)(nil),                   // 42: rbac.TokenReply
-	(*UpdateEmailSettingsRequest)(nil),   // 43: rbac.UpdateEmailSettingsRequest
-	(*UpdatePasswordRequest)(nil),        // 44: rbac.UpdatePasswordRequest
-	(*UpdateRoleRequest)(nil),            // 45: rbac.UpdateRoleRequest
-	(*UpdateSysMenuRequest)(nil),         // 46: rbac.UpdateSysMenuRequest
-	(*UpdateSysUserRequest)(nil),         // 47: rbac.UpdateSysUserRequest
-	(*UserListResponse)(nil),             // 48: rbac.UserListResponse
-	(*UserPage)(nil),                     // 49: rbac.UserPage
-	(*ConsumeTokenRequest)(nil),          // 50: rbac.ConsumeTokenRequest
-	(*IconRecord)(nil),                   // 51: rbac.IconRecord
-	(*IconName)(nil),                     // 52: rbac.IconName
-	(*IconPage)(nil),                     // 53: rbac.IconPage
-	(*timestamppb.Timestamp)(nil),        // 54: google.protobuf.Timestamp
+	(*ResetMemberPasswordInput)(nil),     // 31: rbac.ResetMemberPasswordInput
+	(*UpdateMemberProfileInput)(nil),     // 32: rbac.UpdateMemberProfileInput
+	(*RegisterMemberInput)(nil),          // 33: rbac.RegisterMemberInput
+	(*RoleAssignMenusRequest)(nil),       // 34: rbac.RoleAssignMenusRequest
+	(*RolePage)(nil),                     // 35: rbac.RolePage
+	(*RoleSearchQueryRequest)(nil),       // 36: rbac.RoleSearchQueryRequest
+	(*SearchSysUserQueryRequest)(nil),    // 37: rbac.SearchSysUserQueryRequest
+	(*SendCodeRequest)(nil),              // 38: rbac.SendCodeRequest
+	(*SliderCaptchaResult)(nil),          // 39: rbac.SliderCaptchaResult
+	(*StringList)(nil),                   // 40: rbac.StringList
+	(*SysLoginRequest)(nil),              // 41: rbac.SysLoginRequest
+	(*SysVerifyEmailCaptchaRequest)(nil), // 42: rbac.SysVerifyEmailCaptchaRequest
+	(*TOTPInfo)(nil),                     // 43: rbac.TOTPInfo
+	(*TokenReply)(nil),                   // 44: rbac.TokenReply
+	(*UpdateEmailSettingsRequest)(nil),   // 45: rbac.UpdateEmailSettingsRequest
+	(*UpdatePasswordRequest)(nil),        // 46: rbac.UpdatePasswordRequest
+	(*UpdateRoleRequest)(nil),            // 47: rbac.UpdateRoleRequest
+	(*UpdateSysMenuRequest)(nil),         // 48: rbac.UpdateSysMenuRequest
+	(*UpdateSysUserRequest)(nil),         // 49: rbac.UpdateSysUserRequest
+	(*UserListResponse)(nil),             // 50: rbac.UserListResponse
+	(*UserPage)(nil),                     // 51: rbac.UserPage
+	(*ConsumeTokenRequest)(nil),          // 52: rbac.ConsumeTokenRequest
+	(*IconRecord)(nil),                   // 53: rbac.IconRecord
+	(*IconName)(nil),                     // 54: rbac.IconName
+	(*IconPage)(nil),                     // 55: rbac.IconPage
+	(*timestamppb.Timestamp)(nil),        // 56: google.protobuf.Timestamp
 }
 var file_rbac_proto_depIdxs = []int32{
 	15, // 0: rbac.AdminSession.user:type_name -> rbac.EntitySysUser
-	54, // 1: rbac.EntitySysDept.create_time:type_name -> google.protobuf.Timestamp
-	54, // 2: rbac.EntitySysDept.update_time:type_name -> google.protobuf.Timestamp
+	56, // 1: rbac.EntitySysDept.create_time:type_name -> google.protobuf.Timestamp
+	56, // 2: rbac.EntitySysDept.update_time:type_name -> google.protobuf.Timestamp
 	11, // 3: rbac.EntitySysDept.children:type_name -> rbac.EntitySysDept
 	15, // 4: rbac.EntitySysDept.users:type_name -> rbac.EntitySysUser
-	54, // 5: rbac.EntitySysMenu.create_time:type_name -> google.protobuf.Timestamp
-	54, // 6: rbac.EntitySysMenu.update_time:type_name -> google.protobuf.Timestamp
+	56, // 5: rbac.EntitySysMenu.create_time:type_name -> google.protobuf.Timestamp
+	56, // 6: rbac.EntitySysMenu.update_time:type_name -> google.protobuf.Timestamp
 	12, // 7: rbac.EntitySysMenu.children:type_name -> rbac.EntitySysMenu
 	14, // 8: rbac.EntitySysMenu.roles:type_name -> rbac.EntitySysRole
 	15, // 9: rbac.EntitySysPost.users:type_name -> rbac.EntitySysUser
-	54, // 10: rbac.EntitySysRole.create_time:type_name -> google.protobuf.Timestamp
-	54, // 11: rbac.EntitySysRole.update_time:type_name -> google.protobuf.Timestamp
+	56, // 10: rbac.EntitySysRole.create_time:type_name -> google.protobuf.Timestamp
+	56, // 11: rbac.EntitySysRole.update_time:type_name -> google.protobuf.Timestamp
 	15, // 12: rbac.EntitySysRole.users:type_name -> rbac.EntitySysUser
 	12, // 13: rbac.EntitySysRole.menus:type_name -> rbac.EntitySysMenu
-	54, // 14: rbac.EntitySysUser.create_time:type_name -> google.protobuf.Timestamp
-	54, // 15: rbac.EntitySysUser.update_time:type_name -> google.protobuf.Timestamp
-	54, // 16: rbac.EntitySysUser.last_login_time:type_name -> google.protobuf.Timestamp
+	56, // 14: rbac.EntitySysUser.create_time:type_name -> google.protobuf.Timestamp
+	56, // 15: rbac.EntitySysUser.update_time:type_name -> google.protobuf.Timestamp
+	56, // 16: rbac.EntitySysUser.last_login_time:type_name -> google.protobuf.Timestamp
 	11, // 17: rbac.EntitySysUser.dept:type_name -> rbac.EntitySysDept
 	14, // 18: rbac.EntitySysUser.roles:type_name -> rbac.EntitySysRole
 	13, // 19: rbac.EntitySysUser.posts:type_name -> rbac.EntitySysPost
-	54, // 20: rbac.MemberProfile.created_at:type_name -> google.protobuf.Timestamp
+	56, // 20: rbac.MemberProfile.created_at:type_name -> google.protobuf.Timestamp
 	20, // 21: rbac.MemberSessionReply.user:type_name -> rbac.MemberProfile
 	12, // 22: rbac.MenuPage.items:type_name -> rbac.EntitySysMenu
 	24, // 23: rbac.SystemPage.items:type_name -> rbac.SystemEntry
 	26, // 24: rbac.PublicMenu.children:type_name -> rbac.PublicMenu
 	26, // 25: rbac.PublicMenuPage.items:type_name -> rbac.PublicMenu
 	14, // 26: rbac.RolePage.items:type_name -> rbac.EntitySysRole
-	54, // 27: rbac.UserListResponse.create_time:type_name -> google.protobuf.Timestamp
+	56, // 27: rbac.UserListResponse.create_time:type_name -> google.protobuf.Timestamp
 	14, // 28: rbac.UserListResponse.roles:type_name -> rbac.EntitySysRole
-	48, // 29: rbac.UserPage.items:type_name -> rbac.UserListResponse
-	51, // 30: rbac.IconPage.items:type_name -> rbac.IconRecord
+	50, // 29: rbac.UserPage.items:type_name -> rbac.UserListResponse
+	53, // 30: rbac.IconPage.items:type_name -> rbac.IconRecord
 	10, // 31: rbac.Rbac.ListIcons:input_type -> rbac.Empty
-	52, // 32: rbac.Rbac.IconContent:input_type -> rbac.IconName
-	51, // 33: rbac.Rbac.ValidateIcon:input_type -> rbac.IconRecord
-	51, // 34: rbac.Rbac.CreateIcon:input_type -> rbac.IconRecord
-	51, // 35: rbac.Rbac.UpdateIcon:input_type -> rbac.IconRecord
+	54, // 32: rbac.Rbac.IconContent:input_type -> rbac.IconName
+	53, // 33: rbac.Rbac.ValidateIcon:input_type -> rbac.IconRecord
+	53, // 34: rbac.Rbac.CreateIcon:input_type -> rbac.IconRecord
+	53, // 35: rbac.Rbac.UpdateIcon:input_type -> rbac.IconRecord
 	18, // 36: rbac.Rbac.DeleteIcon:input_type -> rbac.IDRequest
 	10, // 37: rbac.Rbac.CheckClient:input_type -> rbac.Empty
-	50, // 38: rbac.Rbac.ConsumeToken:input_type -> rbac.ConsumeTokenRequest
+	52, // 38: rbac.Rbac.ConsumeToken:input_type -> rbac.ConsumeTokenRequest
 	16, // 39: rbac.Rbac.Health:input_type -> rbac.HealthRequest
 	2,  // 40: rbac.Rbac.Authorize:input_type -> rbac.AuthorizeRequest
 	10, // 41: rbac.Rbac.Captcha:input_type -> rbac.Empty
 	5,  // 42: rbac.Rbac.VerifyCaptcha:input_type -> rbac.CaptchaVerifyRequest
-	36, // 43: rbac.Rbac.SendAdminCode:input_type -> rbac.SendCodeRequest
-	39, // 44: rbac.Rbac.Login:input_type -> rbac.SysLoginRequest
+	38, // 43: rbac.Rbac.SendAdminCode:input_type -> rbac.SendCodeRequest
+	41, // 44: rbac.Rbac.Login:input_type -> rbac.SysLoginRequest
 	10, // 45: rbac.Rbac.Logout:input_type -> rbac.Empty
 	10, // 46: rbac.Rbac.CurrentUser:input_type -> rbac.Empty
 	10, // 47: rbac.Rbac.CurrentPermissions:input_type -> rbac.Empty
 	10, // 48: rbac.Rbac.CurrentMenus:input_type -> rbac.Empty
 	10, // 49: rbac.Rbac.OnceToken:input_type -> rbac.Empty
 	10, // 50: rbac.Rbac.TOTPStatus:input_type -> rbac.Empty
-	44, // 51: rbac.Rbac.ChangePassword:input_type -> rbac.UpdatePasswordRequest
-	36, // 52: rbac.Rbac.SendMemberCode:input_type -> rbac.SendCodeRequest
-	31, // 53: rbac.Rbac.RegisterMember:input_type -> rbac.RegisterMemberInput
+	46, // 51: rbac.Rbac.ChangePassword:input_type -> rbac.UpdatePasswordRequest
+	38, // 52: rbac.Rbac.SendMemberCode:input_type -> rbac.SendCodeRequest
+	33, // 53: rbac.Rbac.RegisterMember:input_type -> rbac.RegisterMemberInput
 	19, // 54: rbac.Rbac.LoginMember:input_type -> rbac.LoginMemberInput
-	10, // 55: rbac.Rbac.CurrentMember:input_type -> rbac.Empty
-	10, // 56: rbac.Rbac.LogoutMember:input_type -> rbac.Empty
-	35, // 57: rbac.Rbac.ListUsers:input_type -> rbac.SearchSysUserQueryRequest
-	18, // 58: rbac.Rbac.GetUser:input_type -> rbac.IDRequest
-	8,  // 59: rbac.Rbac.CreateUser:input_type -> rbac.CreateSysUserRequest
-	47, // 60: rbac.Rbac.UpdateUser:input_type -> rbac.UpdateSysUserRequest
-	18, // 61: rbac.Rbac.DeleteUser:input_type -> rbac.IDRequest
-	1,  // 62: rbac.Rbac.AssignRoles:input_type -> rbac.AssignRolesRequest
-	34, // 63: rbac.Rbac.ListRoles:input_type -> rbac.RoleSearchQueryRequest
-	18, // 64: rbac.Rbac.GetRole:input_type -> rbac.IDRequest
-	6,  // 65: rbac.Rbac.CreateRole:input_type -> rbac.CreateRoleRequest
-	45, // 66: rbac.Rbac.UpdateRole:input_type -> rbac.UpdateRoleRequest
-	18, // 67: rbac.Rbac.DeleteRole:input_type -> rbac.IDRequest
-	32, // 68: rbac.Rbac.AssignMenus:input_type -> rbac.RoleAssignMenusRequest
-	18, // 69: rbac.Rbac.RoleMenus:input_type -> rbac.IDRequest
-	23, // 70: rbac.Rbac.MenuTree:input_type -> rbac.SystemRequest
-	23, // 71: rbac.Rbac.PublicMenus:input_type -> rbac.SystemRequest
-	10, // 72: rbac.Rbac.ListSystems:input_type -> rbac.Empty
-	24, // 73: rbac.Rbac.SaveSystem:input_type -> rbac.SystemEntry
-	18, // 74: rbac.Rbac.DeleteSystem:input_type -> rbac.IDRequest
-	18, // 75: rbac.Rbac.GetMenu:input_type -> rbac.IDRequest
-	7,  // 76: rbac.Rbac.CreateMenu:input_type -> rbac.CreateSysMenuRequest
-	46, // 77: rbac.Rbac.UpdateMenu:input_type -> rbac.UpdateSysMenuRequest
-	18, // 78: rbac.Rbac.DeleteMenu:input_type -> rbac.IDRequest
-	10, // 79: rbac.Rbac.GetEmailSettings:input_type -> rbac.Empty
-	43, // 80: rbac.Rbac.SaveEmailSettings:input_type -> rbac.UpdateEmailSettingsRequest
-	10, // 81: rbac.Rbac.Blacklist:input_type -> rbac.Empty
-	3,  // 82: rbac.Rbac.BlockIP:input_type -> rbac.BlacklistInput
-	3,  // 83: rbac.Rbac.UnblockIP:input_type -> rbac.BlacklistInput
-	53, // 84: rbac.Rbac.ListIcons:output_type -> rbac.IconPage
-	51, // 85: rbac.Rbac.IconContent:output_type -> rbac.IconRecord
-	51, // 86: rbac.Rbac.ValidateIcon:output_type -> rbac.IconRecord
-	51, // 87: rbac.Rbac.CreateIcon:output_type -> rbac.IconRecord
-	51, // 88: rbac.Rbac.UpdateIcon:output_type -> rbac.IconRecord
-	10, // 89: rbac.Rbac.DeleteIcon:output_type -> rbac.Empty
-	10, // 90: rbac.Rbac.CheckClient:output_type -> rbac.Empty
-	10, // 91: rbac.Rbac.ConsumeToken:output_type -> rbac.Empty
-	17, // 92: rbac.Rbac.Health:output_type -> rbac.HealthResponse
-	30, // 93: rbac.Rbac.Authorize:output_type -> rbac.Principal
-	37, // 94: rbac.Rbac.Captcha:output_type -> rbac.SliderCaptchaResult
-	4,  // 95: rbac.Rbac.VerifyCaptcha:output_type -> rbac.BoolReply
-	10, // 96: rbac.Rbac.SendAdminCode:output_type -> rbac.Empty
-	0,  // 97: rbac.Rbac.Login:output_type -> rbac.AdminSession
-	10, // 98: rbac.Rbac.Logout:output_type -> rbac.Empty
-	15, // 99: rbac.Rbac.CurrentUser:output_type -> rbac.EntitySysUser
-	38, // 100: rbac.Rbac.CurrentPermissions:output_type -> rbac.StringList
-	22, // 101: rbac.Rbac.CurrentMenus:output_type -> rbac.MenuPage
-	42, // 102: rbac.Rbac.OnceToken:output_type -> rbac.TokenReply
-	41, // 103: rbac.Rbac.TOTPStatus:output_type -> rbac.TOTPInfo
-	10, // 104: rbac.Rbac.ChangePassword:output_type -> rbac.Empty
-	10, // 105: rbac.Rbac.SendMemberCode:output_type -> rbac.Empty
-	20, // 106: rbac.Rbac.RegisterMember:output_type -> rbac.MemberProfile
-	21, // 107: rbac.Rbac.LoginMember:output_type -> rbac.MemberSessionReply
-	20, // 108: rbac.Rbac.CurrentMember:output_type -> rbac.MemberProfile
-	10, // 109: rbac.Rbac.LogoutMember:output_type -> rbac.Empty
-	49, // 110: rbac.Rbac.ListUsers:output_type -> rbac.UserPage
-	15, // 111: rbac.Rbac.GetUser:output_type -> rbac.EntitySysUser
-	10, // 112: rbac.Rbac.CreateUser:output_type -> rbac.Empty
-	10, // 113: rbac.Rbac.UpdateUser:output_type -> rbac.Empty
-	10, // 114: rbac.Rbac.DeleteUser:output_type -> rbac.Empty
-	10, // 115: rbac.Rbac.AssignRoles:output_type -> rbac.Empty
-	33, // 116: rbac.Rbac.ListRoles:output_type -> rbac.RolePage
-	14, // 117: rbac.Rbac.GetRole:output_type -> rbac.EntitySysRole
-	10, // 118: rbac.Rbac.CreateRole:output_type -> rbac.Empty
-	10, // 119: rbac.Rbac.UpdateRole:output_type -> rbac.Empty
-	10, // 120: rbac.Rbac.DeleteRole:output_type -> rbac.Empty
-	10, // 121: rbac.Rbac.AssignMenus:output_type -> rbac.Empty
-	22, // 122: rbac.Rbac.RoleMenus:output_type -> rbac.MenuPage
-	22, // 123: rbac.Rbac.MenuTree:output_type -> rbac.MenuPage
-	27, // 124: rbac.Rbac.PublicMenus:output_type -> rbac.PublicMenuPage
-	25, // 125: rbac.Rbac.ListSystems:output_type -> rbac.SystemPage
-	10, // 126: rbac.Rbac.SaveSystem:output_type -> rbac.Empty
-	10, // 127: rbac.Rbac.DeleteSystem:output_type -> rbac.Empty
-	12, // 128: rbac.Rbac.GetMenu:output_type -> rbac.EntitySysMenu
-	10, // 129: rbac.Rbac.CreateMenu:output_type -> rbac.Empty
-	10, // 130: rbac.Rbac.UpdateMenu:output_type -> rbac.Empty
-	10, // 131: rbac.Rbac.DeleteMenu:output_type -> rbac.Empty
-	9,  // 132: rbac.Rbac.GetEmailSettings:output_type -> rbac.EmailSettingsView
-	9,  // 133: rbac.Rbac.SaveEmailSettings:output_type -> rbac.EmailSettingsView
-	38, // 134: rbac.Rbac.Blacklist:output_type -> rbac.StringList
-	10, // 135: rbac.Rbac.BlockIP:output_type -> rbac.Empty
-	10, // 136: rbac.Rbac.UnblockIP:output_type -> rbac.Empty
-	84, // [84:137] is the sub-list for method output_type
-	31, // [31:84] is the sub-list for method input_type
+	38, // 55: rbac.Rbac.SendMemberResetCode:input_type -> rbac.SendCodeRequest
+	31, // 56: rbac.Rbac.ResetMemberPassword:input_type -> rbac.ResetMemberPasswordInput
+	32, // 57: rbac.Rbac.UpdateMemberProfile:input_type -> rbac.UpdateMemberProfileInput
+	10, // 58: rbac.Rbac.CurrentMember:input_type -> rbac.Empty
+	10, // 59: rbac.Rbac.LogoutMember:input_type -> rbac.Empty
+	37, // 60: rbac.Rbac.ListUsers:input_type -> rbac.SearchSysUserQueryRequest
+	18, // 61: rbac.Rbac.GetUser:input_type -> rbac.IDRequest
+	8,  // 62: rbac.Rbac.CreateUser:input_type -> rbac.CreateSysUserRequest
+	49, // 63: rbac.Rbac.UpdateUser:input_type -> rbac.UpdateSysUserRequest
+	18, // 64: rbac.Rbac.DeleteUser:input_type -> rbac.IDRequest
+	1,  // 65: rbac.Rbac.AssignRoles:input_type -> rbac.AssignRolesRequest
+	36, // 66: rbac.Rbac.ListRoles:input_type -> rbac.RoleSearchQueryRequest
+	18, // 67: rbac.Rbac.GetRole:input_type -> rbac.IDRequest
+	6,  // 68: rbac.Rbac.CreateRole:input_type -> rbac.CreateRoleRequest
+	47, // 69: rbac.Rbac.UpdateRole:input_type -> rbac.UpdateRoleRequest
+	18, // 70: rbac.Rbac.DeleteRole:input_type -> rbac.IDRequest
+	34, // 71: rbac.Rbac.AssignMenus:input_type -> rbac.RoleAssignMenusRequest
+	18, // 72: rbac.Rbac.RoleMenus:input_type -> rbac.IDRequest
+	23, // 73: rbac.Rbac.MenuTree:input_type -> rbac.SystemRequest
+	23, // 74: rbac.Rbac.PublicMenus:input_type -> rbac.SystemRequest
+	10, // 75: rbac.Rbac.ListSystems:input_type -> rbac.Empty
+	24, // 76: rbac.Rbac.SaveSystem:input_type -> rbac.SystemEntry
+	18, // 77: rbac.Rbac.DeleteSystem:input_type -> rbac.IDRequest
+	18, // 78: rbac.Rbac.GetMenu:input_type -> rbac.IDRequest
+	7,  // 79: rbac.Rbac.CreateMenu:input_type -> rbac.CreateSysMenuRequest
+	48, // 80: rbac.Rbac.UpdateMenu:input_type -> rbac.UpdateSysMenuRequest
+	18, // 81: rbac.Rbac.DeleteMenu:input_type -> rbac.IDRequest
+	10, // 82: rbac.Rbac.GetEmailSettings:input_type -> rbac.Empty
+	45, // 83: rbac.Rbac.SaveEmailSettings:input_type -> rbac.UpdateEmailSettingsRequest
+	10, // 84: rbac.Rbac.Blacklist:input_type -> rbac.Empty
+	3,  // 85: rbac.Rbac.BlockIP:input_type -> rbac.BlacklistInput
+	3,  // 86: rbac.Rbac.UnblockIP:input_type -> rbac.BlacklistInput
+	55, // 87: rbac.Rbac.ListIcons:output_type -> rbac.IconPage
+	53, // 88: rbac.Rbac.IconContent:output_type -> rbac.IconRecord
+	53, // 89: rbac.Rbac.ValidateIcon:output_type -> rbac.IconRecord
+	53, // 90: rbac.Rbac.CreateIcon:output_type -> rbac.IconRecord
+	53, // 91: rbac.Rbac.UpdateIcon:output_type -> rbac.IconRecord
+	10, // 92: rbac.Rbac.DeleteIcon:output_type -> rbac.Empty
+	10, // 93: rbac.Rbac.CheckClient:output_type -> rbac.Empty
+	10, // 94: rbac.Rbac.ConsumeToken:output_type -> rbac.Empty
+	17, // 95: rbac.Rbac.Health:output_type -> rbac.HealthResponse
+	30, // 96: rbac.Rbac.Authorize:output_type -> rbac.Principal
+	39, // 97: rbac.Rbac.Captcha:output_type -> rbac.SliderCaptchaResult
+	4,  // 98: rbac.Rbac.VerifyCaptcha:output_type -> rbac.BoolReply
+	10, // 99: rbac.Rbac.SendAdminCode:output_type -> rbac.Empty
+	0,  // 100: rbac.Rbac.Login:output_type -> rbac.AdminSession
+	10, // 101: rbac.Rbac.Logout:output_type -> rbac.Empty
+	15, // 102: rbac.Rbac.CurrentUser:output_type -> rbac.EntitySysUser
+	40, // 103: rbac.Rbac.CurrentPermissions:output_type -> rbac.StringList
+	22, // 104: rbac.Rbac.CurrentMenus:output_type -> rbac.MenuPage
+	44, // 105: rbac.Rbac.OnceToken:output_type -> rbac.TokenReply
+	43, // 106: rbac.Rbac.TOTPStatus:output_type -> rbac.TOTPInfo
+	10, // 107: rbac.Rbac.ChangePassword:output_type -> rbac.Empty
+	10, // 108: rbac.Rbac.SendMemberCode:output_type -> rbac.Empty
+	20, // 109: rbac.Rbac.RegisterMember:output_type -> rbac.MemberProfile
+	21, // 110: rbac.Rbac.LoginMember:output_type -> rbac.MemberSessionReply
+	10, // 111: rbac.Rbac.SendMemberResetCode:output_type -> rbac.Empty
+	10, // 112: rbac.Rbac.ResetMemberPassword:output_type -> rbac.Empty
+	20, // 113: rbac.Rbac.UpdateMemberProfile:output_type -> rbac.MemberProfile
+	20, // 114: rbac.Rbac.CurrentMember:output_type -> rbac.MemberProfile
+	10, // 115: rbac.Rbac.LogoutMember:output_type -> rbac.Empty
+	51, // 116: rbac.Rbac.ListUsers:output_type -> rbac.UserPage
+	15, // 117: rbac.Rbac.GetUser:output_type -> rbac.EntitySysUser
+	10, // 118: rbac.Rbac.CreateUser:output_type -> rbac.Empty
+	10, // 119: rbac.Rbac.UpdateUser:output_type -> rbac.Empty
+	10, // 120: rbac.Rbac.DeleteUser:output_type -> rbac.Empty
+	10, // 121: rbac.Rbac.AssignRoles:output_type -> rbac.Empty
+	35, // 122: rbac.Rbac.ListRoles:output_type -> rbac.RolePage
+	14, // 123: rbac.Rbac.GetRole:output_type -> rbac.EntitySysRole
+	10, // 124: rbac.Rbac.CreateRole:output_type -> rbac.Empty
+	10, // 125: rbac.Rbac.UpdateRole:output_type -> rbac.Empty
+	10, // 126: rbac.Rbac.DeleteRole:output_type -> rbac.Empty
+	10, // 127: rbac.Rbac.AssignMenus:output_type -> rbac.Empty
+	22, // 128: rbac.Rbac.RoleMenus:output_type -> rbac.MenuPage
+	22, // 129: rbac.Rbac.MenuTree:output_type -> rbac.MenuPage
+	27, // 130: rbac.Rbac.PublicMenus:output_type -> rbac.PublicMenuPage
+	25, // 131: rbac.Rbac.ListSystems:output_type -> rbac.SystemPage
+	10, // 132: rbac.Rbac.SaveSystem:output_type -> rbac.Empty
+	10, // 133: rbac.Rbac.DeleteSystem:output_type -> rbac.Empty
+	12, // 134: rbac.Rbac.GetMenu:output_type -> rbac.EntitySysMenu
+	10, // 135: rbac.Rbac.CreateMenu:output_type -> rbac.Empty
+	10, // 136: rbac.Rbac.UpdateMenu:output_type -> rbac.Empty
+	10, // 137: rbac.Rbac.DeleteMenu:output_type -> rbac.Empty
+	9,  // 138: rbac.Rbac.GetEmailSettings:output_type -> rbac.EmailSettingsView
+	9,  // 139: rbac.Rbac.SaveEmailSettings:output_type -> rbac.EmailSettingsView
+	40, // 140: rbac.Rbac.Blacklist:output_type -> rbac.StringList
+	10, // 141: rbac.Rbac.BlockIP:output_type -> rbac.Empty
+	10, // 142: rbac.Rbac.UnblockIP:output_type -> rbac.Empty
+	87, // [87:143] is the sub-list for method output_type
+	31, // [31:87] is the sub-list for method input_type
 	31, // [31:31] is the sub-list for extension type_name
 	31, // [31:31] is the sub-list for extension extendee
 	0,  // [0:31] is the sub-list for field type_name
@@ -4845,17 +5038,17 @@ func file_rbac_proto_init() {
 		return
 	}
 	file_rbac_proto_msgTypes[7].OneofWrappers = []any{}
-	file_rbac_proto_msgTypes[34].OneofWrappers = []any{}
-	file_rbac_proto_msgTypes[35].OneofWrappers = []any{}
-	file_rbac_proto_msgTypes[43].OneofWrappers = []any{}
-	file_rbac_proto_msgTypes[46].OneofWrappers = []any{}
+	file_rbac_proto_msgTypes[36].OneofWrappers = []any{}
+	file_rbac_proto_msgTypes[37].OneofWrappers = []any{}
+	file_rbac_proto_msgTypes[45].OneofWrappers = []any{}
+	file_rbac_proto_msgTypes[48].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_rbac_proto_rawDesc), len(file_rbac_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   54,
+			NumMessages:   56,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

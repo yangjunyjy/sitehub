@@ -1,6 +1,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
+import MemberAvatar from "@/components/member/MemberAvatar.vue";
 import BlogIcon from "@/components/BlogIcon.vue";
 import { useMember } from "@/composables/useMember";
 
@@ -15,10 +16,37 @@ const root = ref(null),
   trigger = ref(null),
   first = ref(null),
   signin = ref(null);
+let leaveTimer;
 function close() {
+  clearTimeout(leaveTimer);
   open.value = false;
 }
-function toggle() {
+function show() {
+  clearTimeout(leaveTimer);
+  if (member.user && !open.value) {
+    open.value = true;
+    emit("open");
+  }
+}
+function hover(event) {
+  if (event.pointerType === "mouse") show();
+}
+function leave(event) {
+  if (event.pointerType !== "mouse") return;
+  clearTimeout(leaveTimer);
+  leaveTimer = setTimeout(() => {
+    if (
+      !root.value?.contains(document.activeElement) ||
+      document.activeElement === trigger.value
+    )
+      close();
+  }, 160);
+}
+function toggle(event) {
+  if (event?.pointerType === "mouse") {
+    show();
+    return;
+  }
   open.value = !open.value;
   if (open.value) emit("open");
 }
@@ -60,12 +88,17 @@ watch(
   },
 );
 onMounted(() => document.addEventListener("pointerdown", outside));
-onBeforeUnmount(() => document.removeEventListener("pointerdown", outside));
+onBeforeUnmount(() => {
+  clearTimeout(leaveTimer);
+  document.removeEventListener("pointerdown", outside);
+});
 </script>
 <template>
   <div
     ref="root"
     class="member-menu"
+    @pointerenter="hover"
+    @pointerleave="leave"
     @focusout="root && !root.contains($event.relatedTarget) && close()"
     @keydown.esc.stop="escape"
   >
@@ -94,9 +127,14 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", outside));
         @click="toggle"
         @keydown.down.prevent="enter"
       >
-        <BlogIcon name="user" :size="18" /><span class="trigger-label"
-          >我的账号</span
-        ><BlogIcon class="caret" name="chevron" :size="12" />
+        <MemberAvatar :user="member.user" />
+        <span class="member-name">{{
+          member.user.nickname ||
+          member.user.username ||
+          member.user.email?.split("@")[0] ||
+          "读者"
+        }}</span>
+        <BlogIcon class="caret" name="chevron" :size="12" />
       </button>
       <div v-show="open" id="member-options" class="member-options">
         <RouterLink ref="first" :to="{ name: 'account' }" @click="close"
@@ -128,6 +166,12 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", outside));
   color: inherit;
   border: 0;
 }
+.member-name {
+  max-width: clamp(46px, 12vw, 116px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .caret {
   transform: rotate(90deg);
   transition: transform 0.18s;
@@ -141,10 +185,11 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", outside));
   right: 0;
   width: 154px;
   padding: 6px;
-  background: #fffdfa;
-  color: var(--journal-ink);
-  border: 1px solid var(--journal-rule);
-  border-radius: 7px;
+  background: var(--menu-surface);
+  backdrop-filter: blur(18px) saturate(130%);
+  color: var(--menu-ink);
+  border: 1px solid var(--menu-edge);
+  border-radius: 12px;
   box-shadow: 0 8px 28px #29232d20;
 }
 .member-options a,
@@ -162,8 +207,8 @@ onBeforeUnmount(() => document.removeEventListener("pointerdown", outside));
   border-radius: 3px;
 }
 .member-options :is(a, button):is(:hover, :focus-visible) {
-  background: var(--journal-wash);
-  color: var(--journal-accent);
+  background: var(--menu-row);
+  color: var(--menu-ink);
 }
 .member-options p {
   font-size: 12px;

@@ -10,6 +10,10 @@ import (
 type MemberRepository interface {
 	WithContext(context.Context) MemberRepository
 	Transaction(func(MemberRepository) error) error
+	LockMember(uint64) (rbacdomain.Member, error)
+	SaveProfile(uint64, rbacdomain.UpdateMemberProfileInput) error
+	ResetPassword(uint64, string) error
+	MemberByUsername(string) (rbacdomain.Member, error)
 	MemberByEmail(string) (rbacdomain.Member, error)
 	CreateMember(*rbacdomain.Member) error
 	Verification(string, bool) (rbacdomain.MemberVerification, error)

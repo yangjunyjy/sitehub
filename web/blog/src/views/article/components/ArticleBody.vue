@@ -72,17 +72,61 @@ onBeforeUnmount(() => {
   window.removeEventListener("resize", positions);
   cancelAnimationFrame(scrollFrame);
 });
-async function copyCode(event) {
+async function handleCodeAction(event) {
+  const wrap = event.target.closest(".code-wrap-btn");
+  if (wrap) {
+    const wrapped = wrap
+      .closest(".code-block-wrapper")
+      .classList.toggle("is-wrapped");
+    wrap.setAttribute("aria-pressed", String(wrapped));
+    return;
+  }
   const button = event.target.closest(".code-copy-btn");
   if (!button) return;
   const code = button.closest(".code-block-wrapper")?.querySelector("pre");
   if (!code) return;
+  const copied = await copyBlock(code);
+  const message = copied ? "已复制" : "已选中，请手动复制";
+  button.textContent = message;
+  notice.value = message;
+}
+
+async function copyBlock(code) {
+  const text = code.innerText;
   try {
-    await navigator.clipboard.writeText(code.textContent);
-    button.textContent = "已复制";
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
   } catch {
-    notice.value = "复制未完成，请选择代码手动复制";
+    // HTTP 页面或被浏览器拒绝的剪贴板请求仍可通过选区复制。
   }
+  const selection = window.getSelection();
+  if (!selection) return false;
+  const previous = Array.from({ length: selection.rangeCount }, (_, i) =>
+    selection.getRangeAt(i).cloneRange(),
+  );
+  const range = document.createRange();
+  range.selectNodeContents(code);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  // Supply plain text explicitly so native selection serialization preserves the final newline.
+  function copyPlainText(event) {
+    if (!event.clipboardData) return;
+    event.clipboardData.setData("text/plain", text);
+    event.preventDefault();
+  }
+  document.addEventListener("copy", copyPlainText);
+  try {
+    if (!document.execCommand("copy")) return false;
+  } catch {
+    return false;
+  } finally {
+    document.removeEventListener("copy", copyPlainText);
+  }
+  selection.removeAllRanges();
+  previous.forEach((item) => selection.addRange(item));
+  return true;
 }
 </script>
 <template>
@@ -103,9 +147,9 @@ async function copyCode(event) {
       :headings="rendered.headings"
       :active="activeHeading"
     />
-    <article ref="body" class="article-body" @click="copyCode">
+    <article ref="body" class="article-body" @click="handleCodeAction">
       <div class="markdown-body" v-html="rendered.html"></div>
-      <p v-if="notice" role="status" class="copy-notice">{{ notice }}</p>
+      <p role="status" class="copy-feedback">{{ notice }}</p>
     </article>
   </div>
 </template>

@@ -1,5 +1,5 @@
 import { reactive, readonly } from "vue";
-import { loginMember, memberProfile, logoutMember } from "@/api/member";
+import { loginMember, memberProfile, logoutMember, updateMemberProfile } from "@/api/member";
 const state = reactive({ user: null, ready: false });
 let pending;
 let version = 0;
@@ -36,6 +36,11 @@ export function useMember() {
     },
     async login(values) {
       assign(await loginMember(values));
+    },
+    async saveProfile(values) {
+      const owner = state.user?.id;
+      const updated = await updateMemberProfile(values);
+      if (owner && state.user?.id === owner) assign(updated);
     },
     async logout() {
       await logoutMember();

@@ -165,7 +165,7 @@ bash start.sh
 
 发布包包含八个 Linux 二进制、三套前端产物及 Node 页面服务 bundle、运行镜像定义、Compose、配置和脚本。云机不需要项目源码、Go 或 npm，镜像构建只复制已有编译产物。`.env` 复用虚拟机中已生成的业务库、Redis 密码及可选 etcd 凭据，填写业务密钥、管理员及邮件配置。
 
-编译脚本不填写域名，前端默认使用当前浏览器访问地址。官网与后台入口不同时，在云机 `.env` 设置运行时 `WEB_SITE_URL`；后续 Nginx 的域名和 HTTPS、网关的 Host 路由与会话 Origin 均通过运行配置调整，无需重编译前端。现有网关示例仍区分 `product.sitehub.local`、`blog.sitehub.local` 和 `admin.sitehub.local`（`sitehub.local` 仍进入产品端），IP 访问前需先调整路由。
+前端默认使用当前浏览器访问地址，跨站链接可在云机 `.env` 中配置。使用同一公网 IP 访问三个站点时，可让宿主机 Nginx 按端口转发，网关保留三个内部 Host，同时将浏览器登录 Origin 切换到实际 IP 地址。见[公网 IP 部署步骤](gateway/README.md#线上通过同一个公网-ip-访问三个站点)。
 
 `init.sh` 显式初始化四个 MySQL 逻辑库的业务表、超级管理员和 etcd 中缺失的四份配置键；可用 `init.sh database`、`init.sh config` 分别执行。已有管理员密码和用户配置保持原值，显式更新远端配置使用 `init.sh config --overwrite`。`start.sh` 仅启动应用，不建表或构建。`-ConfigOnly` 仅生成缺少编译产物的模板预览包，不能用于完整部署。
 

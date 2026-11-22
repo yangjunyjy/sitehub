@@ -9,6 +9,7 @@ const route = useRoute(),
   router = useRouter();
 const { login } = useMember();
 const registering = computed(() => route.name === "register");
+const username = ref(""), nickname = ref("");
 const email = ref(""),
   password = ref(""),
   confirm = ref(""),
@@ -96,7 +97,7 @@ async function submit() {
   try {
     const values = { email: email.value.trim(), password: password.value };
     if (registering.value) {
-      await registerMember({ ...values, code: code.value });
+      await registerMember({ ...values, code: code.value, username: username.value.trim(), nickname: nickname.value.trim() });
       completed.value = true;
       password.value = "";
       confirm.value = "";
@@ -172,6 +173,12 @@ async function submit() {
             >邮箱注册</router-link
           >
         </div>
+        <template v-if="registering">
+          <label for="member-username">用户名</label>
+          <input id="member-username" v-model.trim="username" required autocomplete="username" maxlength="40" pattern="[A-Za-z0-9_]{3,40}" placeholder="3–40 位字母、数字或下划线" />
+          <label for="member-nickname">昵称</label>
+          <input id="member-nickname" v-model.trim="nickname" required autocomplete="nickname" maxlength="40" />
+        </template>
         <label for="member-email">邮箱地址</label>
         <input
           id="member-email"
