@@ -1,4 +1,5 @@
 <script setup>
+import MemberMenu from "./MemberMenu.vue";
 import MenuBranch from "@shared/navigation/MenuBranch.vue";
 import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
@@ -8,9 +9,9 @@ const navigation = inject('navigation');
 const reload = () => window.location.reload();
 const route = useRoute(), menu = ref(false), scrolled = ref(false), hidden = ref(false);
 const header = ref(null);
-const { member, restore } = useMember();
+const { restore } = useMember();
 const overContent = ref(false);
-const solid = computed(() => ['article','login','register','account'].includes(route.meta.page) || overContent.value || menu.value);
+const solid = computed(() => ['article','login','register','account','about'].includes(route.meta.page) || overContent.value || menu.value);
 let anchor = 0,
   frame = 0,
   compactLayout;
@@ -103,13 +104,11 @@ onBeforeUnmount(() => {
       <MenuBranch v-for="item in navigation.links" :key="item.id" :item="item" />
     </nav>
     <div class="header-actions">
-      <router-link :to="{name:'search'}" aria-label="搜索文章"
-        ><BlogIcon name="search" :size="18" /></router-link
-      ><router-link
-        :to="member.user ? {name:'account'} : {name:'login', query:['login','register'].includes(route.meta.page) ? route.query : {redirect:route.fullPath}}"
-        :aria-label="member.user ? '个人中心' : '会员登录'"
-        ><BlogIcon name="user" :size="18" /><span class="member-label">{{ member.user ? '个人中心' : '登录' }}</span></router-link
-      ><button
+      <router-link :to="{ name: 'search' }" aria-label="搜索文章">
+        <BlogIcon name="search" :size="18" />
+      </router-link>
+      <MemberMenu :mobile-nav-open="menu" @open="menu = false" />
+      <button
         class="menu-toggle"
         :aria-expanded="menu"
         aria-controls="mobile-navigation"

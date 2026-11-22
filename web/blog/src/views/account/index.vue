@@ -7,10 +7,9 @@ import MemberCard from "./components/MemberCard.vue";
 import { useMember } from "@/composables/useMember";
 const router = useRouter(),
   route = useRoute(),
-  { member, restore, logout } = useMember(),
+  { member, restore } = useMember(),
   loading = ref(true),
-  error = ref(""),
-  busy = ref(false);
+  error = ref("");
 async function load() {
   loading.value = true;
   error.value = "";
@@ -23,25 +22,13 @@ async function load() {
     loading.value = false;
   }
 }
-async function signOut() {
-  busy.value = true;
-  error.value = "";
-  try {
-    await logout();
-    await router.replace({ name: "home" });
-  } catch (failure) {
-    error.value = failure.message;
-  } finally {
-    busy.value = false;
-  }
-}
 function toLogin() {
   return router.replace({ name: "login", query: { redirect: route.fullPath } });
 }
 watch(
   () => member.user,
   (current, previous) => {
-    if (previous && !current && !busy.value) toLogin();
+    if (previous && !current) toLogin();
   },
 );
 onMounted(load);
@@ -54,25 +41,20 @@ onMounted(load);
         :loading="loading"
         :error="error"
         @retry="load"
-      /><MemberCard
-        v-else-if="member.user"
-        :user="member.user"
-        :busy="busy"
-        @logout="signOut"
-      />
+      /><MemberCard v-else-if="member.user" :user="member.user" />
       <FavoriteLibrary v-if="!loading && !error && member.user" />
     </section>
   </div>
 </template>
 <style scoped>
 .account-page {
-  min-height: 84vh;
-  padding: 106px 18px 64px;
-  background: #f8f9f5;
-  color: #233027;
+  min-height: 80vh;
+  padding: clamp(92px, 8vw, 122px) 20px 68px;
+  background: var(--journal-paper);
+  color: var(--journal-ink);
 }
 .account-shell {
-  width: min(100%, 960px);
+  width: min(100%, 1000px);
   margin: auto;
 }
 </style>

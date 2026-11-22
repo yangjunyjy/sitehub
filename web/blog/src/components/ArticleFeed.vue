@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { articles, searchArticles } from "@/api";
 import ArticleList from "./ArticleList.vue";
+import BlogPagination from "./BlogPagination.vue";
 import BlogSidebar from "./BlogSidebar.vue";
 import ContentState from "./ContentState.vue";
 const props = defineProps({
@@ -21,7 +22,8 @@ const page = computed(() =>
     ? Math.max(1, Math.min(100000, Number(route.query.page)))
     : 1,
 );
-const pages = computed(() => Math.max(1, Math.ceil(total.value / 8)));
+const pageSize = 8;
+const pages = computed(() => Math.max(1, Math.ceil(total.value / pageSize)));
 let generation = 0,
   controller;
 async function load() {
@@ -33,7 +35,7 @@ async function load() {
   try {
     const params = {
       page: page.value,
-      pageSize: 8,
+      pageSize,
       sort: route.query.sort === "hot" ? "hot" : "latest",
     };
     if (/^[1-9]\d*$/.test(String(route.query.category)))
@@ -62,6 +64,7 @@ async function load() {
     if (page.value > pages.value)
       await router.replace({
         path: route.path,
+        hash: route.hash,
         query: {
           ...route.query,
           page: pages.value === 1 ? undefined : pages.value,
@@ -84,123 +87,106 @@ const changePage = (next) => {
     hash: "#articles",
   });
 };
-watch(() => route.fullPath, load, { immediate: true });
+watch(() => route.query, load, { immediate: true });
 onBeforeUnmount(() => {
   generation++;
   controller?.abort();
 });
 </script>
 <template>
-  <section id="articles" class="content-shell feed-shell">
-    <div class="feed-main glass-panel">
-      <header class="section-heading">
-        <div>
+  <section id="articles" class="feed-paper">
+    <div class="content-shell feed-shell">
+      <div class="feed-main" :aria-busy="loading">
+        <header class="section-heading">
           <h2>
             {{ heading }}
             <small v-if="!loading && !error">{{ total }} 篇</small>
           </h2>
-        </div>
-        <button
-          v-if="!search"
-          class="sort-button"
-          :class="{ active: route.query.sort === 'hot' }"
-          @click="
-            router.push({
-              path: route.path,
-              query: {
-                ...route.query,
-                sort: route.query.sort === 'hot' ? undefined : 'hot',
-                page: undefined,
-              },
-            })
-          "
-        >
-          {{ route.query.sort === "hot" ? "热门优先 ↓" : "最新发布 ↓" }}
-        </button>
-      </header>
-      <ContentState
-        v-if="loading || error"
-        :loading="loading"
-        :error="error"
-        @retry="load"
-      /><ArticleList v-else-if="items.length" :items="items" /><ContentState
-        v-else
-        :title="search ? '没有找到相关的文章' : undefined"
-        :description="search ? '换一个关键词，再试试看吧。' : undefined"
-      />
-      <nav v-if="pages > 1 && !error" class="pagination" aria-label="文章分页">
-        <button :disabled="page <= 1 || loading" @click="changePage(page - 1)">
-          ←</button
-        ><span>{{ page }} / {{ pages }}</span
-        ><button
-          :disabled="page >= pages || loading"
-          @click="changePage(page + 1)"
-        >
-          →
-        </button>
-      </nav>
+          <button
+            v-if="!search"
+            class="sort-button"
+            :class="{ active: route.query.sort === 'hot' }"
+            @click="
+              router.push({
+                path: route.path,
+                query: {
+                  ...route.query,
+                  sort: route.query.sort === 'hot' ? undefined : 'hot',
+                  page: undefined,
+                },
+              })
+            "
+          >
+            {{ route.query.sort === "hot" ? "热门优先 ↓" : "最新发布 ↓" }}
+          </button>
+        </header>
+        <ContentState
+          v-if="error || (loading && !items.length)"
+          :loading="loading"
+          :error="error"
+          @retry="load"
+        />
+        <ArticleList v-else-if="items.length" :items="items" />
+        <ContentState
+          v-else
+          :title="search ? '没有找到相关的文章' : undefined"
+          :description="search ? '换一个关键词，再试试看吧。' : undefined"
+        />
+        <BlogPagination
+          v-if="total && !error"
+          label="文章分页"
+          :page="page"
+          :pages="pages"
+          :busy="loading"
+          @change="changePage"
+        />
+      </div>
+      <BlogSidebar v-if="sidebar" />
     </div>
-    <BlogSidebar v-if="sidebar" />
   </section>
 </template>
 <style lang="scss" scoped>
+.feed-paper {
+  background: var(--journal-paper);
+  color: var(--journal-ink);
+}
 .feed-shell {
   display: flex;
-  gap: 28px;
   align-items: flex-start;
-  padding-top: 32px;
-  padding-bottom: 80px;
+  gap: clamp(36px, 5.5vw, 86px);
+  padding-block: clamp(32px, 5vw, 68px);
 }
 .feed-main {
   flex: 1;
   min-width: 0;
-  padding: clamp(16px, 3vw, 38px);
 }
 .section-heading {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  padding-bottom: 4px;
-  h2 {
-    margin: 8px 0;
-    font-size: 23px;
-    font-weight: 500;
-    small {
-      margin-left: 10px;
-      color: var(--muted);
-      font-size: 10px;
-      font-weight: 400;
-    }
-  }
+  gap: 12px;
+  border-bottom: 2px solid var(--journal-ink);
+  padding-bottom: 12px;
 }
-.section-eyebrow {
-  font-size: 8px;
-  letter-spacing: 2.5px;
-  color: #aaa2b7;
+h2 {
+  margin: 0;
+  font: 600 clamp(24px, 3vw, 34px)/1.3 var(--journal-serif);
+}
+h2 small {
+  color: var(--journal-muted);
+  font: 12px var(--font-sans);
+  display: inline-block;
+  margin-left: 6px;
 }
 .sort-button {
-  font-size: 10px;
+  color: var(--journal-muted);
+  font-size: 12px;
   border: 0;
-  background: none;
-  color: var(--muted);
-  cursor: pointer;
-  padding: 8px 0;
-  &.active {
-    color: var(--accent);
-  }
+  background: transparent;
+  padding: 5px 0 5px 8px;
 }
-@media (max-width: 1050px) {
-  .feed-shell {
-    gap: 35px;
-  }
-}
-@media (max-width: 640px) {
-  .feed-shell {
-    padding-top: 35px;
-    padding-bottom: 45px;
-  }
-  .section-heading h2 {
-    font-size: 20px;
-  }
+.sort-button:hover,
+.sort-button.active {
+  color: var(--journal-accent);
 }
 </style>

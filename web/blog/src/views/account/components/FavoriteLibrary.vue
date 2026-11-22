@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { useRouter, useRoute } from "vue-router";
+import BlogPagination from "@/components/BlogPagination.vue";
 import BlogIcon from "@/components/BlogIcon.vue";
 import NewFolderForm from "@/components/member/NewFolderForm.vue";
 import { getFolders, getFavorites } from "@/api/library";
@@ -14,9 +14,7 @@ const folders = ref([]),
 const creating = ref(false),
   busy = ref(true),
   error = ref("");
-const router = useRouter(),
-  route = useRoute(),
-  { expired } = useMember();
+const { expired } = useMember();
 const pageSize = 20,
   pages = computed(() => Math.max(1, Math.ceil(total.value / pageSize)));
 const selected = computed(() =>
@@ -26,7 +24,6 @@ let revision = 0;
 function failed(err) {
   if (err.status === 401) {
     expired();
-    router.replace({ name: "login", query: { redirect: route.fullPath } });
   } else error.value = err.message;
 }
 async function load(folderId = active.value, current = 1) {
@@ -77,7 +74,7 @@ onMounted(init);
           :aria-expanded="creating"
           @click="creating = !creating"
         >
-          ＋
+          <span aria-hidden="true">＋</span> 新建
         </button>
       </div>
       <NewFolderForm v-if="creating" @created="created" />
@@ -98,158 +95,192 @@ onMounted(init);
         <h2>{{ selected?.name || "收藏的文章" }}</h2>
         <small v-if="selected">{{ selected.count }} 篇文章</small>
       </header>
-      <p v-if="busy" role="status">正在读取收藏…</p>
-      <p v-else-if="error" role="alert">
+      <p v-if="busy" class="library-state" role="status">正在读取收藏…</p>
+      <p v-else-if="error" class="library-state" role="alert">
         {{ error }} <button @click="init">重试</button>
       </p>
       <ul v-else-if="articles.length">
         <li v-for="article in articles" :key="article.id">
           <RouterLink :to="{ name: 'article', params: { id: article.id } }">
-            <strong>{{ article.title }}</strong
-            ><small v-if="article.savedAt"
-              >收藏于
-              {{ new Date(article.savedAt).toLocaleDateString("zh-CN") }}</small
-            ></RouterLink
-          >
+            <span class="book-mark" aria-hidden="true"
+              ><BlogIcon name="bookmark" :size="17"
+            /></span>
+            <span class="saved-entry"
+              ><strong>{{ article.title }}</strong>
+              <small v-if="article.savedAt"
+                >收藏于
+                <time :datetime="article.savedAt">{{
+                  new Date(article.savedAt).toLocaleDateString("zh-CN")
+                }}</time></small
+              >
+            </span>
+            <BlogIcon class="read-arrow" name="chevron" :size="15" />
+          </RouterLink>
         </li>
       </ul>
       <div v-else class="empty">
         <BlogIcon name="bookmark" :size="24" />
         <p>这个收藏夹还没有文章</p>
-        <RouterLink :to="{ name: 'home' }">浏览文章 →</RouterLink>
+        <RouterLink :to="{ name: 'home', hash: '#articles' }"
+          >浏览文章 →</RouterLink
+        >
       </div>
-      <nav v-if="!busy && pages > 1" class="pager" aria-label="收藏分页">
-        <button :disabled="page <= 1" @click="load(active, page - 1)">
-          上一页
-        </button>
-        <span>{{ page }} / {{ pages }}</span
-        ><button :disabled="page >= pages" @click="load(active, page + 1)">
-          下一页
-        </button>
-      </nav>
+      <BlogPagination
+        v-if="!error && pages > 1"
+        label="收藏分页"
+        :page="page"
+        :pages="pages"
+        :busy="busy"
+        @change="load(active, $event)"
+      />
     </div>
   </section>
 </template>
-<style scoped>
+<style lang="scss" scoped>
 .library {
   display: grid;
-  grid-template-columns: minmax(170px, 235px) minmax(0, 1fr);
-  gap: clamp(20px, 5vw, 50px);
-  margin-top: 30px;
-  color: #27362b;
+  grid-template-columns: minmax(180px, 225px) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(24px, 4vw, 58px);
+  padding-top: 28px;
 }
 .aside-title,
 .saved header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: baseline;
   gap: 12px;
 }
-h2 {
+h2,
+ul,
+p {
   margin: 0;
-  font-size: 19px;
 }
 .aside-title h2 {
   font-size: 14px;
 }
-button {
-  border: 1px solid #c7d2c7;
-  border-radius: 6px;
-  background: white;
-  color: #35533c;
+.aside-title button,
+.library-state button {
+  border: none;
+  background: transparent;
+  padding: 4px;
+  color: var(--journal-accent);
+  font-size: 12px;
 }
-.aside-title button {
-  font-size: 19px;
-  line-height: 1;
-  padding: 3px 6px;
+aside form,
+aside nav {
+  margin-top: 12px;
 }
 aside nav {
   display: grid;
   gap: 4px;
-  margin-top: 12px;
-}
-aside form {
-  margin-top: 12px;
 }
 aside nav button {
-  border-color: transparent;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   text-align: left;
-  padding: 9px;
-  font-size: 14px;
+  padding: 9px 12px;
+  border: 0;
+  border-left: 2px solid transparent;
+  background: transparent;
+  color: var(--journal-muted);
 }
 aside nav button[aria-pressed="true"] {
-  background: #e6eee3;
-  color: #284b32;
+  background: var(--journal-wash);
+  border-color: var(--journal-accent);
+  color: var(--journal-accent);
 }
 aside nav button span {
   flex: 1;
+  font-size: 14px;
   overflow-wrap: anywhere;
 }
 .saved {
-  background: #fff;
-  border: 1px solid #dce3da;
-  border-radius: 9px;
-  padding: clamp(18px, 3vw, 28px);
+  position: relative;
+  background: #fffefd;
+  padding: clamp(20px, 3vw, 36px);
+  border: 1px solid var(--journal-rule);
+  box-shadow: 3px 4px 0 #ede9e2;
 }
-small {
-  color: #647168;
+.saved header {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--journal-rule);
+}
+.saved header h2 {
+  font: 600 clamp(21px, 2.2vw, 28px)/1.35 var(--journal-serif);
+}
+small,
+.library-state {
+  color: var(--journal-muted);
   font-size: 12px;
+}
+.saved header small {
+  flex: none;
+}
+.library-state {
+  padding: 20px 0;
 }
 ul {
   list-style: none;
   padding: 0;
-  margin-bottom: 0;
 }
-li {
-  padding: 14px 0;
-  border-top: 1px solid #dfe6dc;
+li + li {
+  border-top: 1px solid var(--journal-rule);
 }
 li a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+}
+.book-mark {
+  color: var(--journal-accent);
+}
+.saved-entry {
   display: grid;
-  gap: 4px;
+  gap: 3px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.saved-entry strong {
+  font: 600 18px/1.45 var(--journal-serif);
+}
+.read-arrow {
+  margin-left: auto;
+  flex: none;
+  color: var(--journal-muted);
 }
 li a:hover,
-.empty a:hover {
-  text-decoration: underline;
+.empty a {
+  color: var(--journal-accent);
 }
 .empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
   text-align: center;
-  padding: 40px 0;
-  color: #526257;
-}
-.empty svg {
-  color: #8b9d8c;
-}
-.empty p {
-  margin: 8px 0;
+  padding: 32px 0 12px;
+  color: var(--journal-muted);
+  font-size: 14px;
 }
 .empty a {
   font-size: 13px;
-  color: #30563c;
-}
-.pager {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 @media (max-width: 680px) {
   .library {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 18px;
   }
   aside nav {
     display: flex;
-    overflow: auto;
+    overflow-x: auto;
   }
   aside nav button {
-    white-space: nowrap;
-  }
-  .saved header {
-    flex-wrap: wrap;
+    flex: none;
+    max-width: 90%;
   }
 }
 </style>

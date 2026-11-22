@@ -8,7 +8,7 @@
 .reading-progress span {
   display: block;
   height: 100%;
-  background: #497958;
+  background: var(--journal-accent);
   transform-origin: left;
 }
 .article-reading {
@@ -21,7 +21,7 @@
 .article-body {
   grid-area: article;
   min-width: 0;
-  color: #2c322e;
+  color: var(--journal-ink);
 }
 .markdown-body {
   font-size: clamp(16px, 1.35vw, 18px);
@@ -40,7 +40,7 @@
     font-weight: 650;
     line-height: 1.4;
     letter-spacing: -0.025em;
-    color: #1e2923;
+    color: var(--journal-ink);
     margin: 1.7em 0 0.55em;
     scroll-margin-top: 86px;
   }
@@ -58,16 +58,16 @@
     margin-top: 0.65em;
   }
   a {
-    color: #2f5d45;
+    color: var(--journal-accent);
     text-decoration: underline;
-    text-decoration-color: #8ba695;
+    text-decoration-color: #b99580;
     text-underline-offset: 0.2em;
   }
   blockquote {
     margin: 1.6em 0;
     padding: 0.2em 0 0.2em 1.2em;
-    border-left: 3px solid #77a188;
-    color: #405c4b;
+    border-left: 2px solid #b99580;
+    color: var(--journal-accent);
     font-family: Georgia, "Songti SC", serif;
     font-size: 1.05em;
   }
@@ -89,7 +89,7 @@
     margin: 0.2em 0;
   }
   li::marker {
-    color: #53665a;
+    color: var(--journal-muted);
   }
   dl {
     margin: 1.4em 0;
@@ -116,12 +116,12 @@
   figcaption {
     margin-top: 0.55em;
     font-size: 0.8em;
-    color: #65736a;
+    color: var(--journal-muted);
     text-align: center;
   }
   hr {
     border: 0;
-    border-top: 1px solid #dce4dd;
+    border-top: 1px solid var(--journal-rule);
     margin: 2.6em 0;
   }
   code,
@@ -132,27 +132,27 @@
   }
   code,
   kbd {
-    background: #f0f3ee;
-    color: #345441;
+    background: var(--journal-wash);
+    color: var(--journal-accent);
     border-radius: 4px;
     padding: 0.12em 0.32em;
     font-size: 0.87em;
   }
   .code-block-wrapper {
-    border: 1px solid #cfdbd2;
+    border: 1px solid var(--journal-rule);
     border-radius: 8px;
     overflow: hidden;
-    background: #f6f8f5;
+    background: #f4f2f0;
   }
   .code-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #d7dfd7;
+    border-bottom: 1px solid var(--journal-rule);
     padding: 6px 14px;
     margin: 0;
-    background: #edf2eb;
-    color: #46594c;
+    background: #383640;
+    color: #faf6f2;
     font: 12px/1.5 var(--font-sans);
   }
   .code-header span {
@@ -161,13 +161,13 @@
   .code-header button {
     background: transparent;
     border: 0;
-    color: #395640;
+    color: inherit;
     font-size: 12px;
     padding: 4px 7px;
     border-radius: 4px;
   }
   .code-header button:hover {
-    background: #e0e9de;
+    background: #514d58;
   }
   pre {
     overflow: auto;
@@ -177,7 +177,7 @@
     margin: 0;
     font-size: 14px;
     line-height: 1.75;
-    color: #24372b;
+    color: var(--journal-ink);
   }
   pre code {
     padding: 0;
@@ -187,7 +187,7 @@
   }
   .article-table {
     overflow-x: auto;
-    border: 1px solid #d3dcd5;
+    border: 1px solid var(--journal-rule);
     border-radius: 7px;
     margin: 1.6em 0;
     scrollbar-width: thin;
@@ -202,13 +202,13 @@
   th {
     padding: 0.7em 1em;
     text-align: start;
-    border-bottom: 1px solid #dce3dc;
+    border-bottom: 1px solid var(--journal-rule);
     min-width: 6em;
   }
   thead,
   th {
-    background: #f1f4ef;
-    color: #334736;
+    background: var(--journal-wash);
+    color: var(--journal-ink);
     font-weight: 650;
   }
   tbody tr:last-child td {
@@ -228,7 +228,7 @@
 }
 .copy-notice {
   font-size: 13px;
-  color: #435f4a;
+  color: var(--journal-accent);
 }
 @media (max-width: 1179px) {
   .article-reading {

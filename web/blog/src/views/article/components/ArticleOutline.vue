@@ -62,7 +62,7 @@ nav {
 }
 nav strong,
 summary {
-  color: #293d32;
+  color: var(--journal-ink);
   font-size: 13px;
   font-weight: 650;
 }
@@ -70,20 +70,20 @@ nav strong {
   margin: 0 0 12px 11px;
 }
 nav a {
-  border-left: 1px solid #d9e0da;
+  border-left: 1px solid var(--journal-rule);
   padding: 5px 9px 5px calc(10px + 10px * var(--depth));
   font-size: 13px;
   line-height: 1.55;
-  color: #627269;
+  color: var(--journal-muted);
   overflow-wrap: anywhere;
 }
 a[aria-current] {
-  border-left: 2px solid #38684c;
-  color: #244e36;
-  background: #f2f5f1;
+  border-left: 2px solid var(--journal-accent);
+  color: var(--journal-accent);
+  background: var(--journal-wash);
 }
 a:hover {
-  color: #244e36;
+  color: var(--journal-accent);
 }
 @media (max-width: 1179px) {
   .article-outline {
@@ -91,7 +91,7 @@ a:hover {
     max-height: none;
     padding: 0;
     margin: 0 0 26px;
-    border-block: 1px solid #e1e7e1;
+    border-block: 1px solid var(--journal-rule);
   }
   details {
     display: block;

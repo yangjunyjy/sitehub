@@ -149,7 +149,7 @@ async function submit() {
   margin: 20px 0 24px;
 }
 form {
-  border: 1px solid #bdc9c1;
+  border: 1px solid var(--discussion-rule, #bdc9c1);
   border-radius: 9px;
   background: #fff;
   padding: 14px;
@@ -157,7 +157,7 @@ form {
 label {
   font-weight: 600;
   font-size: 13px;
-  color: #324239;
+  color: var(--discussion-ink, #324239);
 }
 textarea {
   width: 100%;
@@ -165,7 +165,7 @@ textarea {
   min-height: 84px;
   margin: 8px 0;
   border: 0;
-  color: #25342c;
+  color: var(--discussion-ink, #25342c);
   resize: vertical;
   line-height: 1.7;
 }
@@ -178,12 +178,12 @@ textarea {
   gap: 8px;
 }
 .tools {
-  border-top: 1px solid #e2e6df;
+  border-top: 1px solid var(--discussion-rule, #e2e6df);
   padding-top: 10px;
 }
 small {
   margin-right: auto;
-  color: #69776f;
+  color: var(--discussion-muted, #69776f);
   font-size: 11px;
 }
 button {
@@ -196,7 +196,7 @@ button {
 }
 .send,
 .start {
-  background: #294c3c;
+  background: var(--discussion-accent, #294c3c);
   color: white;
 }
 .start {
@@ -204,14 +204,14 @@ button {
 }
 .signin {
   padding: 14px;
-  background: #f4f6f2;
-  border: 1px solid #e0e5de;
+  background: var(--discussion-wash, #f4f6f2);
+  border: 1px solid var(--discussion-rule, #e0e5de);
   border-radius: 7px;
-  color: #395b48;
+  color: var(--discussion-accent, #395b48);
   font-size: 14px;
 }
 .palette {
-  border-top: 1px solid #e1e5df;
+  border-top: 1px solid var(--discussion-rule, #e1e5df);
   padding: 12px 0 0;
   display: grid;
   grid-template-columns: repeat(6, 36px);
@@ -224,18 +224,18 @@ button {
 .palette button:hover,
 .emoji-button:hover,
 .cancel:hover {
-  background: #edf3ec;
+  background: var(--discussion-wash, #edf3ec);
 }
 .palette a {
   grid-column: 1/-1;
   font-size: 10px;
-  color: #68776e;
+  color: var(--discussion-muted, #68776e);
   margin-top: 5px;
 }
 .success,
 .error {
   font-size: 13px;
-  color: #376646;
+  color: var(--discussion-accent, #376646);
 }
 .error {
   color: #993f31;

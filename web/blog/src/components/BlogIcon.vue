@@ -1,6 +1,7 @@
 <script setup>
 defineProps({ name: String, size: { type: [String, Number], default: 20 } });
 const paths = {
+  logout: "M10 4H4v16h6m4-12 4 4-4 4m-6-4h12",
   bookmark: "M6 3h12v18l-6-4-6 4z",
   smile: "M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0ZM7.5 14a5 5 0 0 0 9 0M8.5 9h.1m6.9 0h.1",
   pause: "M8 5v14m8-14v14",

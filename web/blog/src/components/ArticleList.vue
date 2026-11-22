@@ -1,197 +1,213 @@
 <script setup>
-import { ref } from "vue";
-import BlogIcon from "./BlogIcon.vue";
+import { onBeforeUnmount, ref } from "vue";
 import { articleDate, safeURL } from "@/utils/format";
 defineProps({ items: { type: Array, default: () => [] } });
-const brokenImages = ref(new Set());
-const failImage = (id) => {
-  brokenImages.value = new Set([...brokenImages.value, String(id)]);
+
+const brokenCovers = ref(new Set());
+let observer;
+const vReveal = {
+  mounted(row) {
+    if (
+      !("IntersectionObserver" in window) ||
+      matchMedia("(prefers-reduced-motion: reduce)").matches
+    )
+      return;
+    observer ??= new IntersectionObserver(
+      (entries) => {
+        const entering = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        entering.forEach(({ target }, index) => {
+          target.style.setProperty("--delay", Math.min(index, 4) * 55 + "ms");
+          target.classList.add("arrived");
+          observer.unobserve(target);
+        });
+      },
+      { threshold: 0.06 },
+    );
+    row.classList.add("awaiting-entry");
+    observer.observe(row);
+  },
+  beforeUnmount(row) {
+    observer?.unobserve(row);
+  },
 };
+onBeforeUnmount(() => observer?.disconnect());
 </script>
+
 <template>
   <div class="article-list">
     <article
       v-for="article in items"
-      :key="String(article.id)"
+      :key="article.id"
+      v-reveal
       class="article-row"
     >
-      <div class="article-row__body">
-        <div class="article-row__meta">
-          <span>{{ articleDate(article) }}</span
-          ><span v-if="article.category?.name" class="article-row__category">{{
-            article.category.name
-          }}</span
-          ><span v-if="article.is_top || article.isTop" class="pinned"
-            >置顶</span
-          >
-        </div>
-        <h2>
-          <router-link :to="{ name: 'article', params: { id: article.id } }">{{
+      <time
+        v-if="articleDate(article) !== '日期待补充'"
+        :datetime="articleDate(article)"
+      >
+        <span>{{ articleDate(article).slice(5).replace("-", ".") }}</span>
+        <small>{{ articleDate(article).slice(0, 4) }}</small>
+      </time>
+      <div class="entry">
+        <h3>
+          <RouterLink :to="{ name: 'article', params: { id: article.id } }">{{
             article.title
-          }}</router-link>
-        </h2>
-        <p v-if="article.summary" class="article-row__summary">{{ article.summary }}</p>
-        <div class="article-row__bottom">
-          <span
-            ><BlogIcon name="clock" :size="13" />
-            {{ article.views || 0 }} 次阅读</span
+          }}</RouterLink>
+          <span v-if="article.is_top || article.isTop" class="pin">置顶</span>
+        </h3>
+        <p v-if="article.summary">{{ article.summary }}</p>
+        <div class="entry-meta">
+          <RouterLink
+            v-if="article.category?.id"
+            :to="{
+              name: 'categories',
+              query: { category: String(article.category.id) },
+            }"
+            >{{ article.category.name }}</RouterLink
           >
-          <div class="article-row__tags">
-            <router-link
-              v-for="tag in (article.tags || []).slice(0, 2)"
-              :key="tag.id"
-              :to="{ name: 'tags', query: { tags: String(tag.id) } }"
-              ># {{ tag.name }}</router-link
-            >
-          </div>
+          <span>{{ article.views || 0 }} 次阅读</span>
+          <RouterLink
+            v-for="tag in (article.tags || []).slice(0, 2)"
+            :key="tag.id"
+            :to="{ name: 'tags', query: { tags: String(tag.id) } }"
+            >#{{ tag.name }}</RouterLink
+          >
         </div>
       </div>
-      <router-link
-        class="article-row__cover"
+      <RouterLink
+        v-if="safeURL(article.cover) && !brokenCovers.has(article.cover)"
+        class="thumbnail"
         :to="{ name: 'article', params: { id: article.id } }"
-        :aria-label="'阅读：' + article.title"
-        ><img
-          v-if="safeURL(article.cover) && !brokenImages.has(String(article.id))"
+        tabindex="-1"
+        aria-hidden="true"
+      >
+        <img
           :src="safeURL(article.cover)"
           alt=""
           loading="lazy"
-          @error="failImage(article.id)" />
-        <div v-else class="cover-placeholder">
-          <BlogIcon name="feather" :size="34" /><i></i></div
-      ></router-link>
+          @error="brokenCovers.add(article.cover)"
+        />
+      </RouterLink>
     </article>
   </div>
 </template>
-<style lang="scss" scoped>
+
+<style scoped lang="scss">
 .article-row {
-  display: flex;
-  gap: 35px;
+  display: grid;
+  grid-template-columns: 4.4rem minmax(0, 1fr) auto;
   align-items: center;
-  padding: 32px 0;
-  border-bottom: 1px solid var(--line);
-  &__body {
-    flex: 1;
-    min-width: 0;
+  column-gap: clamp(14px, 2vw, 28px);
+  border-bottom: 1px solid var(--journal-rule);
+  padding: 14px 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .awaiting-entry:not(.arrived):not(:focus-within) {
+    opacity: 0;
   }
-  &__meta {
-    display: flex;
-    gap: 14px;
-    font-size: 11px;
-    color: var(--muted);
-    align-items: center;
+  .arrived {
+    animation: article-rise 540ms cubic-bezier(0.2, 0.75, 0.22, 1)
+      var(--delay, 0ms) backwards;
   }
-  &__category {
-    color: var(--accent);
-  }
-  .pinned {
-    color: #bf8f75;
-    background: #f8efe8;
-    border-radius: 3px;
-    padding: 1px 5px;
-  }
-  h2 {
-    font-size: 22px;
-    font-weight: 500;
-    line-height: 1.7;
-    margin: 11px 0 10px;
-    a:hover {
-      color: var(--accent);
+  @keyframes article-rise {
+    from {
+      opacity: 0;
+      transform: perspective(800px) translateY(22px) rotateX(-5deg);
+    }
+    to {
+      opacity: 1;
+      transform: none;
     }
   }
-  &__summary {
+}
+.article-row:not(:has(time)) .entry {
+  grid-column: 1 / 3;
+}
+time {
+  display: grid;
+  font:
+    22px/1.15 Georgia,
+    serif;
+  color: var(--journal-ink);
+  font-variant-numeric: tabular-nums;
+  small {
+    margin-top: 4px;
+    color: var(--journal-muted);
+    font: 11px/1.2 var(--font-sans);
+    letter-spacing: 0.08em;
+  }
+}
+.entry {
+  grid-column: 2;
+  min-width: 0;
+  h3 {
+    margin: 0;
+    font: 600 clamp(18px, 2vw, 23px)/1.35 var(--journal-serif);
+  }
+  h3 a:hover {
+    color: var(--journal-accent);
+  }
+  p {
+    margin: 4px 0 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
     font-size: 13px;
-    line-height: 2;
-    color: #676775;
-    margin: 0 0 18px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  &__bottom {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 12px;
-    font-size: 10px;
-    color: var(--muted);
-    > span {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-  }
-  &__tags {
-    display: flex;
-    gap: 12px;
-  }
-  &__cover {
-    display: block;
-    width: 215px;
-    height: 143px;
-    flex-shrink: 0;
-    overflow: hidden;
-    border-radius: 5px;
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform 0.6s;
-    }
-    &:hover img {
-      transform: scale(1.06);
-    }
+    color: var(--journal-muted);
   }
 }
-.cover-placeholder {
-  position: relative;
-  height: 100%;
+.pin {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 7px;
+  border: 1px solid #d6b6a7;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font: 11px/1.25 var(--font-sans);
+  color: var(--journal-accent);
+}
+.entry-meta {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 0 12px;
   align-items: center;
-  justify-content: center;
-  gap: 15px;
-  color: #ffffffc9;
-  background: linear-gradient(145deg, #b4c5d6, #d9cbdc 55%, #eed6d7);
-  overflow: hidden;
-  span {
-    font-size: 8px;
-    letter-spacing: 0.3em;
-  }
-  i {
-    position: absolute;
-    bottom: -45px;
-    width: 280px;
-    height: 90px;
-    border-radius: 50%;
-    background: #ffffff55;
-    transform: rotate(-8deg);
-  }
+  margin-top: 4px;
+  color: var(--journal-muted);
+  font-size: 12px;
 }
-@media (max-width: 640px) {
+.entry-meta a:hover {
+  color: var(--journal-accent);
+  text-decoration: underline;
+}
+.thumbnail {
+  display: block;
+  width: 88px;
+  height: 58px;
+}
+.thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 3px;
+}
+@media (max-width: 600px) {
   .article-row {
-    gap: 18px;
-    padding: 25px 0;
-    h2 {
-      font-size: 18px;
-      margin: 8px 0;
-    }
-    &__cover {
-      width: 110px;
-      height: 110px;
-    }
-    &__summary {
-      -webkit-line-clamp: 2;
-      font-size: 12px;
-      margin-bottom: 10px;
-    }
-    &__meta {
-      gap: 8px;
-      font-size: 10px;
-    }
-    &__tags {
-      display: none;
-    }
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    gap: 9px;
+    padding: 12px 0;
+  }
+  time {
+    font-size: 16px;
+  }
+  .thumbnail {
+    width: 54px;
+    height: 48px;
+  }
+  .entry-meta {
+    font-size: 11px;
+    gap: 0 7px;
   }
 }
 </style>

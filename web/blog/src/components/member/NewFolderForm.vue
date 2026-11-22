@@ -53,11 +53,11 @@ async function submit() {
   min-width: 120px;
   flex: 1;
   font-size: 12px;
-  color: #516058;
+  color: var(--journal-muted);
 }
 .new-folder input,
 .new-folder button {
-  border: 1px solid #c6d0c5;
+  border: 1px solid var(--journal-rule);
   border-radius: 6px;
   padding: 8px 10px;
   background: white;
@@ -65,7 +65,7 @@ async function submit() {
   min-width: 0;
 }
 .new-folder button {
-  color: #294c3c;
+  color: var(--journal-accent);
   font-weight: 600;
 }
 .new-folder p {

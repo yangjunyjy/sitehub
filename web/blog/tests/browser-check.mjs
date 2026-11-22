@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
+import { checkJournalLayout } from "./journal-layout.mjs";
 import { readerArticle, checkReaderLayout } from "./reader-layout.mjs";
 import { createFrontendServer } from "../server/server.mjs";
 
@@ -49,7 +50,21 @@ const apiFixture = async (route) => {
       { name: '关于', component: 'about/index', path: '/about' },
       { name: '留言', component: 'messages/index', path: '/messages' },
     ];
-  if (path.endsWith("/about")) data = { name: '云间小记', bio: '记录生活的光与热', homeVerse: '在文字的星河里，记录生活的光与热', homeAnimation: true };
+  if (path.endsWith("/articles")) {
+    const params = new URL(route.request().url()).searchParams;
+    const pageSize = Number(params.get("pageSize")), page = Number(params.get("page"));
+    const titles = ["deploy 工具简介", "Go 模块的版本管理", "博客启程", "秋天的山路", "终端里的日常", "一次慢查询的排查", "写在雨过天晴之后", "为小站搭一间书房", "部署手记", "在命令行里听雨"];
+    const records = titles.map((title, index) => ({
+      id: String(index + 1), title, publishedAt: "2026-11-" + (21 - index), views: 12 - index,
+      isTop: index === 0, category: {id:"1", name:index % 2 ? "随笔" : "开发手记"},
+      tags: index % 2 ? [] : [{id:"2", name:"golang"}],
+      summary: index === 1 ? "从一个 go.mod 文件开始，整理项目的依赖和版本。" : "",
+    }));
+    const matching = params.has("categoryID") ? records.slice(0, 3) : records;
+    data = { items: matching.slice((page - 1) * pageSize, page * pageSize), total: matching.length };
+  }
+  if (path.endsWith("/members/logout") && route.request().method() === "POST") signedIn = false;
+  if (path.endsWith("/about")) data = { name: '云间小记', bio: '这里放着开发笔记，也放着周末沿河散步时记下的小事。', skills: ['Go', '运维', '摄影'], location: '杭州', homeVerse: '在文字的星河里，记录生活的光与热', homeAnimation: true };
   if (path.endsWith('/friends')) data.items = [
     ['夏末的猫', '记录开发日常和窗边的小事。'], ['工具小记', '分享每天用到的小工具。'],
     ['空白之地', '在代码和文字之间寻找平衡。'], ['山间木屋', '写点技术，也记四季的风景。'],
@@ -497,6 +512,8 @@ try {
   await page.reload({waitUntil:"networkidle"});
   await page.getByRole("link",{name:/Isolated article fixture/}).click();
   await page.waitForURL("**/read/1");
+  await checkJournalLayout({page, origin, artifacts});
+  assert.equal(signedIn, false);
   assert.deepEqual(errors, []);
   console.log(
     "Blog browser checks passed: dynamic page paths, registration and login, folder creation and saved articles, emoji, moderated submissions and responsive layouts",

@@ -213,8 +213,8 @@ onMounted(load);
 <style scoped>
 button {
   background: white;
-  color: #32473b;
-  border: 1px solid #c9d2c8;
+  color: var(--journal-ink);
+  border: 1px solid var(--journal-rule);
   border-radius: 6px;
   font-size: 14px;
   padding: 7px 13px;
@@ -234,25 +234,25 @@ button[aria-pressed] span {
   margin-left: auto;
 }
 button[aria-pressed="true"] {
-  background: #e8f1e7;
-  border-color: #adc7ad;
-  color: #264f30;
+  background: var(--journal-wash);
+  border-color: #b99580;
+  color: var(--journal-accent);
 }
 span,
 small {
   font-variant-numeric: tabular-nums;
-  color: #5d6c61;
+  color: var(--journal-muted);
 }
 dialog {
-  color: #28352c;
-  border: 1px solid #c9d2c8;
+  color: var(--journal-ink);
+  border: 1px solid var(--journal-rule);
   border-radius: 13px;
   padding: 24px;
   width: min(400px, calc(100% - 32px));
   max-height: 82dvh;
 }
 dialog::backdrop {
-  background: #14251a63;
+  background: #24212a66;
 }
 header,
 footer {
@@ -281,14 +281,14 @@ header h2 {
   display: flex;
   align-items: center;
   gap: 10px;
-  border-bottom: 1px solid #e1e7df;
+  border-bottom: 1px solid var(--journal-rule);
   cursor: pointer;
 }
 .choices label:has(:checked) {
-  background: #f2f6ef;
+  background: var(--journal-wash);
 }
 input {
-  accent-color: #31593f;
+  accent-color: var(--journal-accent);
 }
 .choices strong {
   flex: 1;
@@ -296,15 +296,15 @@ input {
   font-size: 14px;
 }
 footer {
-  border-top: 1px solid #dce4d9;
+  border-top: 1px solid var(--journal-rule);
   margin-top: 18px;
   padding-top: 16px;
 }
 .save {
   margin-left: auto;
-  background: #284d38;
+  background: var(--journal-accent);
   color: white;
-  border-color: #284d38;
+  border-color: var(--journal-accent);
 }
 [role="alert"] {
   width: 100%;
@@ -319,7 +319,7 @@ button {
 }
 button[aria-pressed]:hover:enabled,
 .choices label:hover {
-  background: #f0f5ed;
+  background: var(--journal-wash);
 }
 dialog[open] {
   animation: folder-enter 0.17s ease-out;

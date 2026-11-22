@@ -1,155 +1,166 @@
 <script setup>
+import { computed, ref } from "vue";
+import BlogIcon from "@/components/BlogIcon.vue";
 import { safeURL } from "@/utils/format";
-defineProps({ profile: { type: Object, required: true } });
+import forest from "@/assets/skies/forest.webp";
+const props = defineProps({ profile: { type: Object, required: true } });
+const broken = ref("");
+const portrait = computed(() => safeURL(props.profile.avatar));
+const socials = computed(() =>
+  (props.profile.socials || []).filter((social) => safeURL(social.url)),
+);
 </script>
 <template>
-  <div class="about-grid">
-    <figure class="about-photo glass-panel">
-      <img v-if="safeURL(profile.avatar)" :src="safeURL(profile.avatar)" :alt="profile.name || '博主照片'" />
-      <img v-else src="../../../assets/skies/forest.webp" alt="松林上空的云霞" />
-      <figcaption>{{ profile.name || "云间小记" }}</figcaption>
-    </figure>
-    <div class="about-details">
-    <article class="about-story glass-panel">
-      <h2>{{ profile.title || "关于我，和这个小小的世界" }}</h2>
-      <p class="about-bio">
-        {{ profile.bio || "博主还没有留下自我介绍，欢迎先看看文章。" }}
-      </p>
-      <div v-if="profile.content" class="about-content">
-        {{ profile.content }}
-      </div>
-    </article>
-    <aside v-if="profile.location || profile.email || profile.skills?.length || profile.socials?.length" class="about-profile glass-panel">
-      <p v-if="profile.location" class="profile-location">
-        ⌖ {{ profile.location }}
-      </p>
-      <p v-if="profile.email" class="profile-email">
-        <a :href="'mailto:' + profile.email">{{ profile.email }}</a>
-      </p>
-      <div v-if="profile.skills?.length" class="about-skills">
-        <h4>喜欢与擅长</h4>
-        <span
-          v-for="skill in profile.skills"
-          :key="typeof skill === 'string' ? skill : skill.name"
-          >{{ typeof skill === "string" ? skill : skill.name }}</span
+  <article class="author">
+    <div class="author-intro">
+      <div class="intro-copy">
+        <h1>关于{{ profile.name || "云间小记" }}</h1>
+        <p v-if="profile.title" class="byline">{{ profile.title }}</p>
+        <p v-if="profile.bio || profile.homeVerse" class="bio">
+          {{ profile.bio || profile.homeVerse }}
+        </p>
+        <div
+          v-if="profile.location || profile.email || socials.length"
+          class="contact"
         >
+          <span v-if="profile.location">{{ profile.location }}</span>
+          <a v-if="profile.email" :href="'mailto:' + profile.email"
+            ><BlogIcon name="mail" :size="15" />{{ profile.email }}</a
+          >
+          <a
+            v-for="social in socials"
+            :key="social.url"
+            :href="safeURL(social.url)"
+            target="_blank"
+            rel="noopener noreferrer"
+            >{{ social.label || social.url }} ↗</a
+          >
+        </div>
       </div>
-      <div v-if="profile.socials?.length" class="about-socials">
-        <a
-          v-for="social in profile.socials"
-          :key="social.url"
-          :href="safeURL(social.url) || undefined"
-          target="_blank"
-          rel="noopener noreferrer"
-          >{{ social.label }} ↗</a
-        >
+      <div class="author-photo">
+        <img
+          v-if="portrait && broken !== portrait"
+          :src="portrait"
+          :alt="(profile.name || '博主') + '的头像'"
+          @error="broken = portrait"
+        />
+        <img v-else :src="forest" alt="" />
       </div>
-    </aside>
     </div>
-  </div>
+    <div v-if="profile.content" class="chapter">
+      <h2>自述</h2>
+      <p>{{ profile.content }}</p>
+    </div>
+    <div v-if="profile.skills?.length" class="chapter">
+      <h2>喜欢与擅长</h2>
+      <ul>
+        <li v-for="skill in profile.skills" :key="skill.name || skill">
+          {{ skill.name || skill }}
+        </li>
+      </ul>
+    </div>
+  </article>
 </template>
-<style lang="scss" scoped>
-.about-grid {
+<style scoped>
+.author-intro {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
-  padding: 70px 0 90px;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  gap: clamp(24px, 5vw, 74px);
+  align-items: center;
+  padding: 8px 4px 30px 0;
 }
-.about-details {
-  display: grid;
-  gap: 16px;
+.intro-copy {
+  min-width: 0;
+}
+h1 {
+  margin: 0;
+  max-width: 15em;
+  font: 600 clamp(32px, 4.4vw, 56px)/1.22 var(--journal-serif);
+  letter-spacing: -0.03em;
+}
+.byline {
+  font-size: 14px;
+  color: var(--journal-accent);
+}
+.bio {
+  white-space: pre-line;
+  margin: 16px 0 0;
+  color: var(--journal-muted);
+  font: 17px/1.9 var(--journal-serif);
+}
+.contact,
+ul {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+.contact {
+  margin-top: 18px;
+  color: var(--journal-muted);
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
-.about-story, .about-profile { padding: clamp(20px, 3vw, 36px); }
-.about-story {
-  h2 {
-    font-size: 27px;
-    font-weight: 400;
-    line-height: 1.8;
-    margin: 19px 0 27px;
-  }
-  .about-bio,
-  .about-content {
-    font-size: 14px;
-    line-height: 2.5;
-    color: #8c8291;
-    white-space: pre-wrap;
-  }
-  .about-content {
-    margin-top: 30px;
-  }
+.contact a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--journal-accent);
 }
-.about-profile {
-  text-align: center;
-  .profile-location,
-  .profile-email {
-    font-size: 11px;
-    color: var(--muted);
-    margin: 7px 0;
-  }
+.author-photo {
+  padding: 7px;
+  background: white;
+  border: 1px solid var(--journal-rule);
+  box-shadow: 3px 4px 0 #e8e3db;
+  transform: rotate(1.5deg);
 }
-.about-photo {
+.author-photo img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+}
+.chapter {
+  display: grid;
+  grid-template-columns: 115px minmax(0, 1fr);
+  gap: 18px;
+  border-top: 1px solid var(--journal-rule);
+  padding: 18px 0;
+}
+h2 {
   margin: 0;
-  padding: 12px;
-  img {
-    display: block;
-    width: 100%;
-    aspect-ratio: 4/3;
-    object-fit: cover;
-    border-radius: 9px;
-  }
-  figcaption { margin: 12px 4px 2px; color: var(--muted); }
+  font: 600 17px/1.8 var(--journal-serif);
 }
-.about-skills {
-  text-align: left;
-  margin-top: 32px;
-  border-top: 1px solid var(--line);
-  padding-top: 24px;
-  h4 {
-    font-size: 12px;
-    font-weight: 400;
-    margin: 0 0 17px;
-    span {
-      float: right;
-      font-size: 8px;
-      letter-spacing: 2px;
-      color: var(--muted);
-    }
-  }
-  > span {
-    display: inline-block;
-    font-size: 10px;
-    padding: 5px 9px;
-    background: #f7f0f5;
-    border-radius: 3px;
-    margin: 0 7px 9px 0;
-    color: #ab8eaa;
-  }
+.chapter p {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 15px;
+  line-height: 1.9;
 }
-.about-socials {
-  display: flex;
-  gap: 15px;
-  flex-wrap: wrap;
-  font-size: 11px;
-  margin-top: 20px;
-  color: var(--accent);
+ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
-@media (max-width: 850px) {
-  .about-grid {
-    gap: 35px;
-    grid-template-columns: 1fr 230px;
-  }
+li {
+  color: var(--journal-accent);
+  font-size: 13px;
 }
-@media (max-width: 640px) {
-  .about-grid {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    padding: 40px 0 55px;
+@media (max-width: 600px) {
+  .author-intro {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding-bottom: 20px;
   }
-  .about-story h2 {
-    font-size: 23px;
+  .author-photo {
+    max-width: 96%;
+  }
+  .author-photo img {
+    aspect-ratio: 2.7;
+  }
+  .chapter {
+    grid-template-columns: 1fr;
+    gap: 5px;
   }
 }
 </style>

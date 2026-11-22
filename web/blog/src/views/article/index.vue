@@ -6,7 +6,9 @@ import ContentState from "@/components/ContentState.vue";
 import ArticleBody from "./components/ArticleBody.vue";
 import DiscussionFeed from "@/components/DiscussionFeed.vue";
 import { articleDetail, recordView } from "@/api";
+import { useMember } from "@/composables/useMember";
 import { articleDate } from "@/utils/format";
+const { member } = useMember();
 const route = useRoute(),
   article = ref(null),
   loading = ref(true),
@@ -118,7 +120,7 @@ onBeforeUnmount(() => {
       </div>
       <template v-if="article">
         <ArticleActions
-          :key="String(route.params.id)"
+          :key="[route.params.id, member.user?.id].join(':')"
           :article-id="String(route.params.id)"
         />
       </template>
@@ -135,12 +137,17 @@ onBeforeUnmount(() => {
 </template>
 <style scoped lang="scss">
 .reader-page {
+  --discussion-ink: var(--journal-ink);
+  --discussion-rule: var(--journal-rule);
+  --discussion-muted: var(--journal-muted);
+  --discussion-accent: var(--journal-accent);
+  --discussion-wash: var(--journal-wash);
   --reader-measure: 710px;
   --reader-gap: clamp(24px, 3.4vw, 55px);
   --reader-grid: minmax(0, 1fr) minmax(0, var(--reader-measure)) minmax(0, 1fr);
   min-height: 80vh;
-  background: #fff;
-  color: #25312b;
+  background: var(--journal-paper);
+  color: var(--journal-ink);
   padding: clamp(90px, 9vw, 128px) clamp(20px, 3vw, 46px) 32px;
 }
 .reader-shell {
@@ -154,7 +161,7 @@ onBeforeUnmount(() => {
   margin-inline: auto;
 }
 .reader-title {
-  border-bottom: 1px solid #dbe3dc;
+  border-bottom: 1px solid var(--journal-rule);
   padding: 0 0 clamp(24px, 3.3vw, 41px);
 }
 .reader-crumb,
@@ -164,18 +171,18 @@ onBeforeUnmount(() => {
   gap: 10px;
   flex-wrap: wrap;
   font-size: 13px;
-  color: #5c7063;
+  color: var(--journal-muted);
 }
 .reader-crumb a:hover,
 .article-back a:hover {
   text-decoration: underline;
 }
 .reader-crumb span {
-  color: #a2afa5;
+  color: #99919c;
 }
 .reader-title h1 {
   margin: 18px 0 14px;
-  color: #202b24;
+  color: var(--journal-ink);
   font:
     650 clamp(32px, 4.1vw, 54px) / 1.26 Georgia,
     "Songti SC",
@@ -188,13 +195,13 @@ onBeforeUnmount(() => {
   margin: 0;
   line-height: 1.75;
   font-size: clamp(16px, 1.65vw, 20px);
-  color: #55675b;
+  color: var(--journal-muted);
 }
 .reader-byline:not(:empty) {
   margin-top: 20px;
 }
 .reader-byline strong {
-  color: #344b3a;
+  color: var(--journal-ink);
 }
 .reader-byline time {
   font-variant-numeric: tabular-nums;
@@ -208,7 +215,7 @@ onBeforeUnmount(() => {
   align-items: center;
   flex-wrap: wrap;
   gap: 14px;
-  border-top: 1px solid #dbe3dc;
+  border-top: 1px solid var(--journal-rule);
   padding: 18px 0 30px;
 }
 .article-bottom > div {
@@ -218,14 +225,14 @@ onBeforeUnmount(() => {
 }
 .article-bottom a {
   font-size: 13px;
-  color: #47614f;
+  color: var(--journal-accent);
   text-decoration: underline;
   text-underline-offset: 0.22em;
 }
 .article-bottom button {
   margin-left: auto;
   font-size: 13px;
-  color: #47614f;
+  color: var(--journal-accent);
 }
 .article-bottom p {
   width: 100%;
@@ -240,7 +247,7 @@ onBeforeUnmount(() => {
   text-align: center;
   font-size: 13px;
   padding: 30px 0 45px;
-  color: #526959;
+  color: var(--journal-accent);
 }
 @media (max-width: 640px) {
   .reader-page {

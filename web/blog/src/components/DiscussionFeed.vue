@@ -101,8 +101,8 @@ onMounted(() => feed.load());
   margin: 0 auto;
   padding: clamp(20px, 4vw, 40px);
   background: #fff;
-  color: #26332a;
-  border: 1px solid #dce1da;
+  color: var(--discussion-ink, #26332a);
+  border: 1px solid var(--discussion-rule, #dce1da);
   border-radius: 12px;
 }
 header,
@@ -122,13 +122,13 @@ header span,
 time,
 nav span,
 .empty {
-  color: #657169;
+  color: var(--discussion-muted, #657169);
   font-size: 13px;
 }
 .empty {
   margin: 22px 0 0;
   padding-top: 15px;
-  border-top: 1px solid #e5e8e2;
+  border-top: 1px solid var(--discussion-rule, #e5e8e2);
 }
 ol {
   padding: 0;
@@ -138,19 +138,19 @@ li {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  border-top: 1px solid #e5e8e2;
+  border-top: 1px solid var(--discussion-rule, #e5e8e2);
   padding: 18px 0;
 }
 .avatar {
   flex: none;
   display: grid;
   place-items: center;
-  background: #e7eee5;
+  background: var(--discussion-wash, #e7eee5);
   border-radius: 50%;
   width: 34px;
   height: 34px;
   font-size: 13px;
-  color: #365749;
+  color: var(--discussion-accent, #365749);
 }
 .byline {
   justify-content: flex-start;
@@ -175,7 +175,7 @@ nav {
 nav button,
 [role="alert"] button {
   padding: 5px 12px;
-  border: 1px solid #cdd6cb;
+  border: 1px solid var(--discussion-rule, #cdd6cb);
   background: #fff;
   border-radius: 5px;
 }

@@ -1,6 +1,13 @@
 @use "sass:color";
 $accent: #695b99;
 :root {
+  --journal-paper: #fcfaf6;
+  --journal-ink: #272a35;
+  --journal-muted: #625f69;
+  --journal-rule: #ddd8d1;
+  --journal-accent: #87432e;
+  --journal-wash: #f4eae3;
+  --journal-serif: Georgia, "Songti SC", "Noto Serif CJK SC", SimSun, serif;
   --font-sans: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   --ink: #494653;
   --muted: #6c6779;

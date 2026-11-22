@@ -118,21 +118,21 @@ onBeforeUnmount(() => {
   border: 0;
   border-radius: 8px 0 0 8px;
   background: transparent;
-  color: #3a6348;
+  color: var(--journal-accent);
 }
 .dock-mark {
   position: absolute;
   right: 0;
   top: 50%;
   transform: translateY(-50%);
-  background: #9cb1a1;
+  background: #b99580;
   width: 4px;
   height: 38px;
   border-radius: 4px 0 0 4px;
 }
 .dock-trigger:focus-visible {
   outline-offset: -2px;
-  background: #edf4ed;
+  background: var(--journal-wash);
 }
 .dock-trigger svg {
   display: none;
@@ -145,9 +145,9 @@ onBeforeUnmount(() => {
   overflow-y: auto;
   padding: 5px;
   background: #fff;
-  border: 1px solid #d4dfd6;
+  border: 1px solid var(--journal-rule);
   border-radius: 10px;
-  box-shadow: 0 4px 18px #183d211a;
+  box-shadow: 0 4px 18px #30273519;
 }
 .dock-enter-active,
 .dock-leave-active {
@@ -172,10 +172,10 @@ onBeforeUnmount(() => {
     height: 46px;
     display: grid;
     place-items: center;
-    border: 1px solid #cad6cd;
+    border: 1px solid var(--journal-rule);
     border-right: 0;
-    background: #f9fbf7;
-    box-shadow: 0 2px 8px #274c3712;
+    background: var(--journal-paper);
+    box-shadow: 0 2px 8px #30273519;
   }
   .dock-trigger svg {
     display: block;
