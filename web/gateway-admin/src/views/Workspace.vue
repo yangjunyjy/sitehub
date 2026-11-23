@@ -7,6 +7,8 @@ import { pages } from "../layout/pages";
 import { columns, describe, describeChange } from "../rule-display";
 import Dialog from "../components/Dialog.vue";
 import EditorFields from "../components/EditorFields.vue";
+import RouteMatch from "../components/RouteMatch.vue";
+import FieldChanges from "../components/FieldChanges.vue";
 
 const props = defineProps({
   section: String,
@@ -25,8 +27,26 @@ const busy = ref(false),
   dialog = shallowRef(null),
   password = ref("");
 const current = computed(() => pages.find((p) => p.id === props.section));
+const history = ref({ items: [], total: 0 }),
+  historyBusy = ref(false);
+const showingActive = ref(false);
+const diverged = computed(
+  () =>
+    !props.workspace.state.desired_unavailable &&
+    props.workspace.state.revision !== props.workspace.state.applied_revision,
+);
+const activeView = computed(
+  () =>
+    showingActive.value &&
+    diverged.value &&
+    props.workspace.state.applied_manifest &&
+    props.section !== "releases",
+);
+const editable = computed(() => props.workspace.publish && !activeView.value);
 const records = computed(() => {
-  const doc = props.draft,
+  const doc = activeView.value
+      ? props.workspace.state.applied_manifest || {}
+      : props.draft,
     section = props.section;
   let entries;
   switch (section) {
@@ -44,7 +64,7 @@ const records = computed(() => {
       ];
       break;
     case "releases":
-      entries = props.workspace.history.map((r) => [r.generation, r]);
+      entries = (history.value.items || []).map((r) => [r.generation, r]);
       break;
   }
   return entries.map(([id, value]) => ({
@@ -63,17 +83,20 @@ const filtered = computed(() => {
     ),
   );
 });
-const pagesCount = computed(() =>
-  Math.max(1, Math.ceil(filtered.value.length / limit)),
+const total = computed(() =>
+  props.section === "releases" ? history.value.total : filtered.value.length,
 );
+const pagesCount = computed(() => Math.max(1, Math.ceil(total.value / limit)));
 const visible = computed(() =>
-  filtered.value.slice((page.value - 1) * limit, page.value * limit),
+  props.section === "releases"
+    ? filtered.value
+    : filtered.value.slice((page.value - 1) * limit, page.value * limit),
 );
 watch(pagesCount, (n) => {
   page.value = Math.min(n, page.value);
 });
 watch(search, () => {
-  page.value = 1;
+  if (props.section !== "releases") page.value = 1;
 });
 watch(
   () => props.section,
@@ -82,6 +105,33 @@ watch(
     page.value = 1;
     close();
   },
+);
+watch(
+  [() => props.section, page, () => props.workspace],
+  async ([section, index], _, onCleanup) => {
+    if (section !== "releases") {
+      historyBusy.value = false;
+      return;
+    }
+    let active = true;
+    onCleanup(() => {
+      active = false;
+    });
+    historyBusy.value = true;
+    error.value = "";
+    try {
+      const data = await api("history?page=" + index + "&limit=" + limit);
+      if (active) history.value = data;
+    } catch (e) {
+      if (active) {
+        error.value = e.message;
+        history.value = { items: [], total: 0 };
+      }
+    } finally {
+      if (active) historyBusy.value = false;
+    }
+  },
+  { immediate: true },
 );
 
 function close() {
@@ -142,64 +192,61 @@ function reload() {
   if (props.dirty)
     open({
       title: "重新载入配置",
-      confirm: "放弃草稿并载入",
-      text: "尚未发布的修改会被丢弃。",
-      submit: () => emit("reload"),
+      confirm: "合并最新配置",
+      text: "保留草稿并核对最新修订。双方同时修改的资源需要逐项确认。",
+      discard: true,
+      submit: () => emit("reload", true),
     });
   else emit("reload");
 }
-async function preview() {
+async function preview(record) {
   if (busy.value) return;
   busy.value = true;
   const payload = {
     revision: props.workspace.state.revision,
-    manifest: JSON.parse(JSON.stringify(props.draft)),
+    ...(record
+      ? { generation: record.generation }
+      : { manifest: JSON.parse(JSON.stringify(props.draft)) }),
   };
   try {
-    const { changes } = await api("preview", payload);
+    const { changes, manifest } = await api("preview", payload);
     if (!changes?.length) {
       error.value = "没有待发布的变更";
       return;
     }
     open({
-      title: "审阅配置变更",
-      confirm: "确认发布",
+      title: record ? "审阅回滚变更" : "审阅配置变更",
+      confirm: record ? "确认回滚" : "确认发布",
+      danger: !!record,
+      text: record
+        ? "将修订 " +
+          record.applied_revision +
+          " 恢复为修订 " +
+          record.previous_revision +
+          " 的配置，确认后生成新修订。"
+        : "",
       secure: true,
       changes: changes.map((key) =>
-        describeChange(key, props.workspace.state.manifest, payload.manifest),
+        describeChange(
+          key,
+          props.workspace.state.manifest,
+          payload.manifest || manifest,
+        ),
       ),
       submit: async () => {
-        await api("publish", { ...payload, password: password.value });
+        await api(record ? "rollback" : "publish", {
+          ...payload,
+          password: password.value,
+        });
         emit("reload");
       },
     });
   } catch (e) {
     error.value = e.message;
+    if (e.status === 409) emit("reload", true);
   } finally {
     busy.value = false;
   }
-}
-function rollback(record) {
-  open({
-    title: "回滚当前发布",
-    confirm: "确认回滚",
-    secure: true,
-    danger: true,
-    text:
-      "将当前修订 " +
-      record.applied_revision +
-      " 的全部配置恢复为修订 " +
-      record.previous_revision +
-      "。这次回滚会生成新的发布记录。",
-    submit: async () => {
-      await api("rollback", {
-        revision: props.workspace.state.revision,
-        generation: record.generation,
-        password: password.value,
-      });
-      emit("reload");
-    },
-  });
 }
 async function submit() {
   if (busy.value) return;
@@ -211,6 +258,11 @@ async function submit() {
   } catch (e) {
     dialogError.value = e.message;
     password.value = "";
+    if (e.status === 409 && dialog.value?.secure) {
+      close();
+      error.value = e.message;
+      emit("reload", true);
+    }
   } finally {
     busy.value = false;
   }
@@ -227,12 +279,12 @@ async function submit() {
         v-if="dirty && workspace.publish"
         class="publish"
         :disabled="busy || loading"
-        @click="preview"
+        @click="preview()"
       >
         <Upload />审阅并发布
       </button>
       <button
-        v-if="section !== 'releases' && workspace.publish"
+        v-if="section !== 'releases' && editable"
         class="primary"
         :disabled="busy || loading"
         @click="edit()"
@@ -241,6 +293,101 @@ async function submit() {
       </button>
     </div>
   </header>
+  <RouteMatch
+    v-if="section === 'routes'"
+    :listen="workspace.state.runtime?.http_listen"
+  />
+  <details
+    v-if="
+      section === 'routes' && workspace.state.runtime?.path_warnings?.length
+    "
+    class="card runtime-panel"
+  >
+    <summary>
+      路径匹配提示（{{ workspace.state.runtime.path_warnings.length }}）
+    </summary>
+    <ul>
+      <li
+        v-for="warning in workspace.state.runtime.path_warnings"
+        :key="warning"
+      >
+        {{ warning }}
+      </li>
+    </ul>
+  </details>
+  <section
+    v-if="
+      diverged ||
+      workspace.state.desired_unavailable ||
+      workspace.state.last_error
+    "
+    class="card runtime-alert"
+    role="status"
+  >
+    <strong v-if="workspace.state.desired_unavailable"
+      >期望配置暂不可用 · 本机生效修订
+      {{ workspace.state.applied_revision }}（只读）</strong
+    >
+    <strong v-else
+      >配置修订 {{ workspace.state.revision }} · 本机生效修订
+      {{ workspace.state.applied_revision }}</strong
+    >
+    <p v-if="workspace.state.last_error">{{ workspace.state.last_error }}</p>
+    <p v-if="diverged && !workspace.state.applied_manifest">
+      本机生效配置暂不可用。
+    </p>
+    <label
+      v-if="
+        diverged && section !== 'releases' && workspace.state.applied_manifest
+      "
+    >
+      查看配置<select aria-label="查看配置" v-model="showingActive">
+        <option :value="false">期望配置与草稿</option>
+        <option :value="true">本机生效配置（只读）</option>
+      </select>
+    </label>
+  </section>
+  <details
+    v-if="section === 'upstreams' && workspace.state.runtime"
+    open
+    class="card runtime-panel"
+  >
+    <summary>本机上游健康状态</summary>
+    <div
+      v-for="(nodes, id) in workspace.state.runtime.upstreams"
+      :key="id"
+      class="runtime-row"
+    >
+      <strong>{{ id }}</strong>
+      <span v-for="n in nodes" :key="n.url" :class="{ unhealthy: !n.healthy }"
+        >{{ n.url }} · {{ n.healthy ? "健康" : "不可用" }} · 权重
+        {{ n.weight }}</span
+      >
+      <span v-if="!nodes?.length">暂无节点</span>
+    </div>
+    <p v-if="!Object.keys(workspace.state.runtime.upstreams || {}).length">
+      本机暂无 HTTP 上游。
+    </p>
+  </details>
+  <details
+    v-if="section === 'streams' && workspace.state.runtime"
+    open
+    class="card runtime-panel"
+  >
+    <summary>本机正在监听的端口</summary>
+    <div
+      class="runtime-row"
+      v-for="s in workspace.state.runtime.streams"
+      :key="s.id"
+    >
+      <strong>{{ s.id }}</strong
+      ><span
+        >{{ s.protocol.toUpperCase() }} · {{ s.address || s.listen }} →
+        {{ s.target }}</span
+      >
+    </div>
+    <p v-if="!workspace.state.runtime.streams?.length">本机暂无四层监听。</p>
+  </details>
   <section
     class="card listing"
     :aria-label="current.name"
@@ -255,7 +402,9 @@ async function submit() {
             v-model="search"
             type="search"
             :aria-label="'搜索' + current.name"
-            :placeholder="'搜索' + current.name"
+            :placeholder="
+              section === 'releases' ? '搜索本页记录' : '搜索' + current.name
+            "
           /> </span
       ></label>
       <span class="revision"
@@ -265,8 +414,13 @@ async function submit() {
               workspace.state.revision !== workspace.state.applied_revision,
           }"
         ></i>
-        配置修订 {{ workspace.state.revision }} · 已应用
-        {{ workspace.state.applied_revision }}</span
+        <template v-if="workspace.state.desired_unavailable"
+          >本机生效修订 {{ workspace.state.applied_revision }}</template
+        >
+        <template v-else
+          >配置修订 {{ workspace.state.revision }} · 已应用
+          {{ workspace.state.applied_revision }}</template
+        ></span
       >
       <span v-if="dirty" class="tag">有草稿</span>
       <button
@@ -316,16 +470,16 @@ async function submit() {
                   v-if="
                     workspace.rollback &&
                     !dirty &&
-                    row.value.status === 'applied' &&
+                    ['applied', 'committed'].includes(row.value.status) &&
                     row.value.applied_revision === workspace.state.revision
                   "
-                  @click="rollback(row.value)"
+                  @click="preview(row.value)"
                 >
                   回滚
                 </button>
-                <span v-else>—</span>
+                <button @click="view(row)">查看</button>
               </template>
-              <template v-else-if="workspace.publish">
+              <template v-else-if="editable">
                 <button @click="edit(row)">编辑</button
                 ><button
                   v-if="row.id !== null"
@@ -340,14 +494,20 @@ async function submit() {
           </tr>
           <tr v-if="!visible.length">
             <td class="empty" :colspan="columns[section].length + 1">
-              {{ search ? "没有匹配的记录" : "暂无" + current.name }}
+              {{
+                historyBusy
+                  ? "正在载入发布记录…"
+                  : search
+                    ? "没有匹配的记录"
+                    : "暂无" + current.name
+              }}
             </td>
           </tr>
         </tbody>
       </table>
     </div>
     <footer class="pagination">
-      <span>共 {{ filtered.length }} 条</span>
+      <span>共 {{ total }} 条</span>
       <button :disabled="page <= 1" aria-label="上一页" @click="page--">
         ‹
       </button>
@@ -373,6 +533,22 @@ async function submit() {
     @close="close"
   >
     <p v-if="dialog.text">{{ dialog.text }}</p>
+    <button
+      v-if="dialog.discard"
+      type="button"
+      class="remove"
+      @click="
+        open({
+          title: '放弃草稿',
+          text: '确认丢弃所有未发布修改并载入最新配置？',
+          confirm: '放弃草稿',
+          danger: true,
+          submit: () => emit('reload'),
+        })
+      "
+    >
+      放弃草稿…
+    </button>
     <dl v-if="dialog.values" class="field-list">
       <template v-for="([value, note], i) in dialog.values" :key="i"
         ><dt>{{ dialog.labels[i] }}</dt>
@@ -388,17 +564,10 @@ async function submit() {
     <EditorFields v-if="dialog.fields" :fields="dialog.fields" />
     <div v-for="change in dialog.changes" :key="change.key" class="change">
       <strong>{{ change.title }}</strong>
-      <p>{{ change.summary }}</p>
-      <details>
-        <summary>配置差异</summary>
-        <template v-if="change.before !== undefined"
-          ><small>当前配置</small>
-          <pre>{{ JSON.stringify(change.before, null, 2) }}</pre>
-        </template>
-        <template v-if="change.after !== undefined"
-          ><small>待发布</small>
-          <pre>{{ JSON.stringify(change.after, null, 2) }}</pre>
-        </template>
+      <FieldChanges :changes="change.fields" />
+      <details v-if="change.affected.length">
+        <summary>关联路由（{{ change.affected.length }}）</summary>
+        <p>{{ change.affected.join("、") }}</p>
       </details>
     </div>
     <label v-if="dialog.secure" class="confirm-password"

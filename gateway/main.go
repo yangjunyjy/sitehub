@@ -15,6 +15,7 @@ import (
 	"sitehub/common/configloader"
 	"sitehub/gateway/internal/app"
 	"sitehub/gateway/internal/config"
+	"sitehub/gateway/manifest"
 	"sitehub/gateway/plugin"
 
 	"github.com/spf13/cobra"
@@ -68,8 +69,12 @@ func newCommandWithRegistry(plugins *plugin.Registry) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		if _, err = app.Check(c, plugins); err != nil {
+		d, err := app.Check(c, plugins)
+		if err != nil {
 			return err
+		}
+		for _, warning := range manifest.PathWarnings(d.Routes) {
+			fmt.Fprintln(cmd.OutOrStdout(), warning)
 		}
 		fmt.Fprintln(cmd.OutOrStdout(), "gateway configuration, proxy routes and plugins are valid")
 		return nil

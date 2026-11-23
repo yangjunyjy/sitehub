@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"net"
 	"net/http"
 	"strconv"
 	"sync"
 	"time"
 
 	"golang.org/x/time/rate"
+	"sitehub/gateway/internal/clientaddr"
 )
 
 type rateConfig struct {
@@ -31,11 +31,7 @@ type tokenLimits struct {
 }
 
 func remoteIP(r *http.Request) string {
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return ip
+	return clientaddr.From(r).Client
 }
 
 func rateLimit(raw json.RawMessage) (Middleware, error) {

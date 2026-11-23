@@ -97,6 +97,11 @@ func (s *streamSocket) serve() {
 }
 
 func (e *Engine) startFlow() bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.streamDraining || e.closed {
+		return false
+	}
 	select {
 	case e.streamSlots <- struct{}{}:
 		e.streamWorkers.Add(1)
@@ -107,8 +112,44 @@ func (e *Engine) startFlow() bool {
 }
 
 func (e *Engine) finishFlow() {
+	e.mu.Lock()
 	<-e.streamSlots
+	if e.streamDraining && len(e.streamSlots) == 0 && e.streamDrainDone != nil {
+		close(e.streamDrainDone)
+		e.streamDrainDone = nil
+	}
+	e.mu.Unlock()
 	e.streamWorkers.Done()
+}
+
+// DrainStreams closes TCP listeners and stops admitting UDP associations.
+// UDP sockets stay available for replies and traffic on existing associations.
+func (e *Engine) DrainStreams(ctx context.Context) {
+	e.mu.Lock()
+	e.streamDraining = true
+	for _, socket := range e.streamSockets {
+		if socket.listener != nil {
+			socket.listener.Close()
+		}
+	}
+	if len(e.streamSlots) != 0 {
+		if e.streamDrainDone == nil {
+			e.streamDrainDone = make(chan struct{})
+		}
+		done := e.streamDrainDone
+		e.mu.Unlock()
+		select {
+		case <-ctx.Done():
+		case <-done:
+		}
+		e.mu.Lock()
+	}
+	e.stopStreams()
+	for _, socket := range e.streamSockets {
+		socket.close()
+	}
+	e.mu.Unlock()
+	e.streamWorkers.Wait()
 }
 
 // Both directions stay open independently so request/response protocols using

@@ -8,62 +8,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
-	"sort"
-	"strings"
-	"time"
-
-	"sitehub/gateway/manifest"
 
 	"sitehub/common/rpcx"
+	"sitehub/gateway/manifest"
 	"sitehub/gateway/publisher"
 )
-
-var generationID = regexp.MustCompile("^[0-9a-f]{24}$")
-
-type historyItem struct {
-	Generation       string    `json:"generation"`
-	Actor            string    `json:"actor"`
-	Status           string    `json:"status"`
-	CreatedAt        time.Time `json:"created_at"`
-	PreviousRevision int64     `json:"previous_revision"`
-	AppliedRevision  int64     `json:"applied_revision"`
-	RollbackOf       string    `json:"rollback_of,omitempty"`
-}
-
-func releaseHistory(dir string) ([]historyItem, error) {
-	items := []historyItem{}
-	files, err := os.ReadDir(dir)
-	if errors.Is(err, os.ErrNotExist) {
-		return items, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	for _, file := range files {
-		if !strings.HasSuffix(file.Name(), ".json") || !generationID.MatchString(strings.TrimSuffix(file.Name(), ".json")) {
-			continue
-		}
-		data, err := os.ReadFile(filepath.Join(dir, file.Name()))
-		if err != nil {
-			return nil, err
-		}
-		var row historyItem
-		if err = json.Unmarshal(data, &row); err != nil {
-			return nil, err
-		}
-		if row.CreatedAt.IsZero() {
-			info, err := file.Info()
-			if err != nil {
-				return nil, err
-			}
-			row.CreatedAt = info.ModTime()
-		}
-		items = append(items, row)
-	}
-	sort.Slice(items, func(i, j int) bool { return items[i].CreatedAt.After(items[j].CreatedAt) })
-	return items, nil
-}
 
 type changeRequest struct {
 	Password   string          `json:"password,omitempty"`
@@ -103,23 +52,30 @@ func (c *console) change(w http.ResponseWriter, r *http.Request, actor account) 
 		return
 	}
 	var desired manifest.Document
-	if r.URL.Path == "/api/rollback" {
-		if !generationID.MatchString(req.Generation) || len(req.Manifest) > 0 {
+	if r.URL.Path == "/api/rollback" || (preview && req.Generation != "") {
+		if !actor.allows(rollbackConfig) {
+			problem(w, 403, "当前网关账号没有回滚权限")
+			return
+		}
+		if !publisher.GenerationID.MatchString(req.Generation) || len(req.Manifest) > 0 {
 			problem(w, 400, "请选择发布记录")
 			return
 		}
-		data, err := os.ReadFile(filepath.Join(c.dir, req.Generation+".json"))
+		saved, err := publisher.LoadRelease(filepath.Join(c.dir, req.Generation+".json"))
 		if errors.Is(err, os.ErrNotExist) {
 			problem(w, 404, "找不到这次发布")
 			return
 		}
-		var saved publisher.Release
-		if err != nil || json.Unmarshal(data, &saved) != nil {
+		if err != nil || saved.Generation != req.Generation {
 			problem(w, 500, "无法读取发布记录")
 			return
 		}
-		if saved.Generation != req.Generation || saved.Status != "applied" || saved.AppliedRevision != state.Revision || manifest.Revision(saved.Desired) != manifest.Revision(state.Manifest) {
-			problem(w, 409, "仅可回滚当前生效的发布")
+		if err := c.client.Reconcile(r.Context(), &saved, state); err != nil {
+			problem(w, 502, "无法核对网关发布记录，请稍后重试")
+			return
+		}
+		if !saved.Current(state) {
+			problem(w, 409, "仅可回滚网关当前修订对应的发布")
 			return
 		}
 		desired = saved.Previous
@@ -140,7 +96,7 @@ func (c *console) change(w http.ResponseWriter, r *http.Request, actor account) 
 	}
 	changes := publisher.Diff(desired, state.Manifest)
 	if preview {
-		reply(w, 200, map[string]any{"changes": changes})
+		reply(w, 200, map[string]any{"changes": changes, "manifest": desired})
 		return
 	}
 	if len(changes) == 0 {
@@ -149,13 +105,27 @@ func (c *console) change(w http.ResponseWriter, r *http.Request, actor account) 
 	}
 	record, err := publisher.ApplyRelease(r.Context(), c.client, c.dir, actor.Name, req.Generation, state, desired)
 	if err != nil {
+		code, message := 502, "发布结果待确认，请刷新发布记录核对网关修订"
 		var upstream *publisher.ControlError
-		if errors.As(err, &upstream) && upstream.Status == 409 {
-			problem(w, 409, "其他发布已生效，请重新载入当前修订")
-			return
+		switch {
+		case record.Generation == "":
+			code, message = 500, "无法保存发布记录，请检查 StateDir"
+		case record.Status == "applied" || record.Status == "committed":
+			code, message = 500, "网关已提交配置，发布记录写入失败，请按发布编号核对"
+		case errors.As(err, &upstream) && record.Status == "conflict":
+			code, message = 409, "其他发布已生效，请重新载入当前修订"
+		case errors.As(err, &upstream) && record.Status == "rejected":
+			message = upstream.Message
+			if upstream.Status != 401 && upstream.Status != 403 {
+				code = upstream.Status
+			}
 		}
-		problem(w, 502, "发布未确认，请刷新并核对网关修订和发布记录")
+		reply(w, code, map[string]string{"message": message, "generation": record.Generation, "status": record.Status})
 		return
 	}
-	reply(w, 200, map[string]any{"revision": record.AppliedRevision, "generation": record.Generation})
+	code := http.StatusOK
+	if record.Status == "committed" {
+		code = http.StatusAccepted
+	}
+	reply(w, code, map[string]any{"revision": record.AppliedRevision, "generation": record.Generation, "status": record.Status})
 }

@@ -19,6 +19,76 @@
 body {
   margin: 0;
 }
+.runtime-panel,
+.runtime-alert,
+.conflict-panel {
+  margin: 0 0 16px;
+  padding: 14px 18px;
+  overflow-wrap: anywhere;
+}
+.runtime-panel summary {
+  cursor: pointer;
+  font-weight: 650;
+}
+.runtime-panel[open] summary {
+  margin-bottom: 12px;
+}
+.runtime-panel p,
+.runtime-alert p {
+  margin: 6px 0 10px;
+}
+.runtime-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 7px 0;
+  border-top: 1px solid var(--border);
+}
+.runtime-row .unhealthy {
+  color: #a02f39;
+}
+.card.runtime-alert {
+  border-left: 4px solid #a86916;
+}
+.runtime-alert label,
+.conflict-panel label {
+  max-width: 260px;
+}
+.match-form fieldset {
+  display: grid;
+  grid-template-columns: 90px 108px 1fr 1fr auto;
+  align-items: end;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+.match-result {
+  margin-top: 12px;
+  padding: 10px;
+  background: #f2f6fb;
+}
+#app .field-diff {
+  table-layout: fixed;
+  min-width: 0;
+  width: 100%;
+  margin: 8px 0;
+}
+#app .field-diff th,
+#app .field-diff td {
+  padding: 6px 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.change details summary {
+  cursor: pointer;
+}
+@media (max-width: 850px) {
+  .match-form fieldset {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 button,
 input,
 textarea,

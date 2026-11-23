@@ -105,22 +105,28 @@ func (r *Registry) ValidateOverrides(configs map[string]json.RawMessage) error {
 // plugin. It checks registration metadata only; parameter validation is done by
 // Validate or Build. At most one terminal plugin may be active on a route.
 func (r *Registry) Terminal(configs map[string]json.RawMessage) (bool, error) {
+	name, err := r.TerminalName(configs)
+	return name != "", err
+}
+
+// TerminalName identifies the effective response handler for route inspection.
+func (r *Registry) TerminalName(configs map[string]json.RawMessage) (string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	count := 0
+	var terminal string
 	for name, raw := range configs {
 		entry, exists := r.plugins[name]
 		if !exists {
-			return false, fmt.Errorf("unknown plugin %s", name)
+			return "", fmt.Errorf("unknown plugin %s", name)
 		}
 		if entry.terminal && !bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
-			count++
+			if terminal != "" {
+				return "", fmt.Errorf("a route may configure only one terminal plugin")
+			}
+			terminal = name
 		}
 	}
-	if count > 1 {
-		return false, fmt.Errorf("a route may configure only one terminal plugin")
-	}
-	return count == 1, nil
+	return terminal, nil
 }
 
 // Build constructs state once. The returned middleware may wrap several

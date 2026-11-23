@@ -330,6 +330,41 @@ func TestApplyRejectsInvalidRevisionAndIgnoresOlderSnapshots(t *testing.T) {
 	}
 }
 
+func TestInFlightPublishDuringStopReportsStoredOnly(t *testing.T) {
+	entered, release := make(chan struct{}), make(chan struct{})
+	store := &memoryStore{record: Record{Revision: 7, Data: manifest.Bytes(staticDocument("original"))}, beforeCAS: func() { close(entered); <-release }}
+	c := newTestController(t, store)
+	result := make(chan *httptest.ResponseRecorder, 1)
+	go func() {
+		result <- adminRequest(c, http.MethodPut, "/v1/config", manifest.Bytes(staticDocument("next")), `"7"`)
+	}()
+	select {
+	case <-entered:
+	case <-time.After(3 * time.Second):
+		t.Fatal("publish did not reach CAS")
+	}
+	stopped := make(chan struct{})
+	go func() { c.Stop(); close(stopped) }()
+	select {
+	case <-stopped:
+	case <-time.After(time.Second):
+		close(release)
+		t.Fatal("stop blocked the shutdown deadline on an in-flight store transaction")
+	}
+	c.Engine.DrainStreams(t.Context())
+	close(release)
+	w := <-result
+	var state State
+	if err := json.Unmarshal(w.Body.Bytes(), &state); err != nil || w.Code != http.StatusAccepted || state.Revision != 8 || state.AppliedRevision != 7 || state.LastError == "" {
+		t.Fatalf("stored-only outcome = HTTP %d %s", w.Code, w.Body.String())
+	}
+	stored, _ := store.Read(t.Context())
+	if err := c.Apply(stored); err == nil || c.applied != 7 {
+		t.Fatal("stopping watcher published a new revision")
+	}
+	assertLive(t, c, "original")
+}
+
 // Keep blocked helper calls bounded when a regression prevents a result.
 func awaitRecord(t *testing.T, ch <-chan Record) Record {
 	t.Helper()

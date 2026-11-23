@@ -11,33 +11,36 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
-	"path"
+	"net/netip"
 	"sort"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"sitehub/gateway/internal/clientaddr"
 	"sitehub/gateway/internal/discovery"
 	"sitehub/gateway/manifest"
 	"sitehub/gateway/plugin"
 )
 
 type Engine struct {
-	metrics       *metrics
-	mu            sync.Mutex
-	current       atomic.Pointer[Snapshot]
-	registry      *plugin.Registry
-	provider      *discovery.Manager
-	pools         map[string]*pool
-	states        map[string]plugin.Middleware
-	maxBody       int64
-	closed        bool
-	streamSockets map[string]*streamSocket
-	streamContext context.Context
-	stopStreams   context.CancelFunc
-	streamWorkers sync.WaitGroup
-	streamSlots   chan struct{}
+	trustedProxies  clientaddr.Trusted
+	metrics         *metrics
+	mu              sync.Mutex
+	current         atomic.Pointer[Snapshot]
+	registry        *plugin.Registry
+	provider        *discovery.Manager
+	pools           map[string]*pool
+	states          map[string]plugin.Middleware
+	maxBody         int64
+	closed          bool
+	streamSockets   map[string]*streamSocket
+	streamContext   context.Context
+	stopStreams     context.CancelFunc
+	streamWorkers   sync.WaitGroup
+	streamDraining  bool
+	streamDrainDone chan struct{}
+	streamSlots     chan struct{}
 }
 type route struct {
 	config  manifest.Route
@@ -48,6 +51,7 @@ type Snapshot struct {
 	Document      manifest.Document
 	Revision      string
 	routes        []route
+	pathWarnings  []string
 	pools         map[string]*pool
 	states        map[string]plugin.Middleware
 	refs          atomic.Int64
@@ -56,9 +60,9 @@ type Snapshot struct {
 	heldSockets   []*streamSocket // owned by the prepared configuration, then by the active revision
 }
 
-func New(provider *discovery.Manager, registry *plugin.Registry, maxBody int64) *Engine {
+func New(provider *discovery.Manager, registry *plugin.Registry, maxBody int64, trusted ...netip.Prefix) *Engine {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Engine{metrics: newMetrics(), provider: provider, registry: registry, pools: map[string]*pool{}, states: map[string]plugin.Middleware{}, maxBody: maxBody,
+	return &Engine{metrics: newMetrics(), provider: provider, registry: registry, pools: map[string]*pool{}, states: map[string]plugin.Middleware{}, maxBody: maxBody, trustedProxies: trusted,
 		streamSockets: make(map[string]*streamSocket), streamContext: ctx, stopStreams: cancel, streamSlots: make(chan struct{}, 1024)}
 }
 func (e *Engine) Prepare(d manifest.Document) (*Snapshot, error) {
@@ -69,7 +73,7 @@ func (e *Engine) Prepare(d manifest.Document) (*Snapshot, error) {
 	d, _ = manifest.Decode(manifest.Bytes(d))
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	if e.closed {
+	if e.closed || e.streamDraining {
 		return nil, fmt.Errorf("gateway is stopping")
 	}
 	s := &Snapshot{Document: d, Revision: manifest.Revision(d), owner: e, pools: map[string]*pool{}, states: map[string]plugin.Middleware{}}
@@ -119,17 +123,18 @@ func (e *Engine) Prepare(d manifest.Document) (*Snapshot, error) {
 		}
 		return s.routes[i].config.ID < s.routes[j].config.ID
 	})
+	s.pathWarnings = manifest.PathWarnings(d.Routes)
 	if err := e.reserveStreams(s); err != nil {
 		return fail(err)
 	}
 	return s, nil
 }
-func (e *Engine) Commit(s *Snapshot) {
+func (e *Engine) Commit(s *Snapshot) bool {
 	e.mu.Lock()
-	if e.closed {
+	if e.closed || e.streamDraining {
 		e.mu.Unlock()
 		s.Release()
-		return
+		return false
 	}
 	e.metrics.reloads.Inc()
 	e.states = s.states
@@ -148,6 +153,7 @@ func (e *Engine) Commit(s *Snapshot) {
 	if previous != nil {
 		previous.Release()
 	}
+	return true
 }
 func (s *Snapshot) acquire() bool {
 	for {
@@ -204,6 +210,7 @@ func (e *Engine) Revision() string {
 }
 
 func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	forwarded := e.trustedProxies.Resolve(r)
 	started := time.Now()
 	observed := &accessWriter{ResponseWriter: w}
 	w = observed
@@ -222,56 +229,10 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	defer s.Release()
-	// Reject ambiguous paths before matching, so proxy and application cannot
-	// disagree about encoded separators, traversal, or internal control paths.
-	p := r.URL.Path
-	raw := strings.ToLower(r.URL.EscapedPath())
-	if strings.ContainsAny(p, "\\\x00\r\n") || strings.Contains(raw, "%2f") || strings.Contains(raw, "%5c") || strings.Contains(raw, "%25") || strings.Contains(p, "//") || (path.Clean(p) != p && path.Clean(p)+"/" != p) {
-		writeError(w, 400, "Invalid request path")
-		return
-	}
-	host, err := manifest.ParseHost(r.Host)
+	selected, _, _, err := s.match(r.Host, r.Method, forwarded.Scheme, r.URL)
 	if err != nil {
-		writeError(w, 400, "Invalid request host")
+		writeError(w, 400, err.Error())
 		return
-	}
-	if host.Port == "" {
-		host.Port = "80"
-		if r.TLS != nil {
-			host.Port = "443"
-		}
-	}
-	var selected *route
-	longest := -1
-	for i := range s.routes {
-		candidate := &s.routes[i]
-		c := candidate.config
-		// Routes are ordered by priority, host specificity, then ID. Only
-		// routes in the winning group can improve on the longest path.
-		if selected != nil && (c.Priority != selected.config.Priority || candidate.host.Specificity() != selected.host.Specificity()) {
-			break
-		}
-		if !candidate.host.Matches(host) {
-			continue
-		}
-		if len(c.Methods) > 0 {
-			matched := false
-			for _, m := range c.Methods {
-				if m == r.Method {
-					matched = true
-				}
-			}
-			if !matched {
-				continue
-			}
-		}
-		for _, pattern := range c.Paths {
-			match := p == pattern || (strings.HasSuffix(pattern, "/*") && strings.HasPrefix(p, strings.TrimSuffix(pattern, "*")))
-			if match && len(pattern) > longest {
-				selected = candidate
-				longest = len(pattern)
-			}
-		}
 	}
 	if selected == nil {
 		writeError(w, 404, "Not found")
@@ -282,7 +243,7 @@ func (e *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 413, "Request body too large")
 		return
 	}
-	r = r.Clone(r.Context())
+	r = r.Clone(forwarded.Context(r.Context()))
 	r.Body = http.MaxBytesReader(w, r.Body, e.maxBody)
 	for _, name := range []string{"X-Service-Key", "X-Actor-Id", "X-User-Id", "X-Role", "X-Roles", "Forwarded", "X-Forwarded-For", "X-Forwarded-Host", "X-Forwarded-Proto", "X-Real-Ip", "X-Original-Url", "X-Rewrite-Url"} {
 		r.Header.Del(name)
@@ -308,9 +269,11 @@ func (e *Engine) proxy(p *pool) http.Handler {
 			req.Out.URL.Scheme = target.scheme
 			req.Out.URL.Host = target.host
 			req.Out.Host = req.In.Host
-			req.SetXForwarded()
-			ip, _, _ := net.SplitHostPort(req.In.RemoteAddr)
-			req.Out.Header.Set("X-Real-IP", ip)
+			info := clientaddr.From(req.In)
+			req.Out.Header.Set("X-Forwarded-For", info.Client)
+			req.Out.Header.Set("X-Real-IP", info.Client)
+			req.Out.Header.Set("X-Forwarded-Proto", info.Scheme)
+			req.Out.Header.Set("X-Forwarded-Host", info.Host)
 			// Rewrite runs AFTER hop-by-hop header removal. Preserve validated
 			// credentials even when a client names Authorization in Connection.
 			for _, name := range []string{"Authorization", "X-Request-Id"} {

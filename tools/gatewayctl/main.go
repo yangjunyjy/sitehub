@@ -1,11 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -30,34 +28,24 @@ func newCommand() *cobra.Command {
 	root := &cobra.Command{Use: "gatewayctl", Short: "Validate, diff, atomically publish and roll back gateway configurations", SilenceUsage: true, SilenceErrors: true}
 	root.PersistentFlags().StringVarP(&file, "config", "f", "gateway/etc/gatewayctl.yaml", "Viper configuration file")
 	root.PersistentFlags().StringVar(&manifestFile, "manifest", "gateway/etc/routes.json", "native declarative manifest")
-	root.PersistentFlags().StringVar(&from, "release", "", "applied release whose previous content will be restored")
-	for _, action := range []string{"validate", "diff", "publish", "rollback"} {
+	root.PersistentFlags().StringVar(&from, "release", "", "release record to reconcile or roll back")
+	for _, action := range []string{"validate", "diff", "publish", "rollback", "reconcile"} {
 		action := action
 		root.AddCommand(&cobra.Command{Use: action, Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 			var desired manifest.Document
 			var rollbackOf string
-			var expected int64
-			if action == "rollback" {
+			var saved publisher.Release
+			if action == "rollback" || action == "reconcile" {
 				if from == "" {
 					return fmt.Errorf("--release is required")
 				}
-				data, err := os.ReadFile(from)
+				var err error
+				saved, err = publisher.LoadRelease(from)
 				if err != nil {
 					return err
 				}
-				var saved publisher.Release
-				if err = json.Unmarshal(data, &saved); err != nil {
-					return err
-				}
-				if saved.Generation == "" || saved.Status != "applied" || saved.AppliedRevision < 1 {
-					return fmt.Errorf("rollback requires a confirmed applied native release")
-				}
 				rollbackOf = saved.Generation
 				desired = saved.Previous
-				expected = saved.AppliedRevision
-				if err = manifest.Validate(desired, plugin.DefaultRegistry()); err != nil {
-					return err
-				}
 			} else {
 				var err error
 				desired, err = manifest.Read(manifestFile)
@@ -66,6 +54,9 @@ func newCommand() *cobra.Command {
 				}
 			}
 			if action == "validate" {
+				for _, warning := range manifest.PathWarnings(desired.Routes) {
+					fmt.Fprintln(cmd.OutOrStdout(), warning)
+				}
 				fmt.Fprintln(cmd.OutOrStdout(), "native gateway manifest and plugin schemas valid")
 				return nil
 			}
@@ -83,8 +74,23 @@ func newCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if expected != 0 && previous.Revision != expected {
-				return fmt.Errorf("rollback refused: another release has replaced this version; review current configuration first")
+			if saved.Generation != "" {
+				if err := client.Reconcile(cmd.Context(), &saved, previous); err != nil {
+					return err
+				}
+				if action == "reconcile" {
+					fmt.Fprintf(cmd.OutOrStdout(), "release %s status %s revision %d\n", saved.Generation, saved.Status, saved.AppliedRevision)
+					if saved.Status == "pending" || saved.Status == "unconfirmed" {
+						return fmt.Errorf("release outcome still unknown")
+					}
+					return nil
+				}
+				if !saved.Current(previous) {
+					return fmt.Errorf("rollback requires a confirmed release matching the current revision and manifest")
+				}
+				if err := manifest.Validate(desired, plugin.DefaultRegistry()); err != nil {
+					return err
+				}
 			}
 			for _, change := range publisher.Diff(desired, previous.Manifest) {
 				fmt.Fprintln(cmd.OutOrStdout(), change)

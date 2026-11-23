@@ -10,6 +10,8 @@
   "strip-credentials": "移除身份凭据",
 };
 
+import { fieldChanges } from "./manifest-changes";
+
 function pluginList(plugins = {}) {
   return (
     Object.entries(plugins || {})
@@ -98,18 +100,34 @@ export function describe(section, row, id, doc) {
             : "全部 HTTP 路由",
         ],
       ];
-    case "releases":
+    case "releases": {
+      const unknown = row.status === "corrupt";
+      let revision = "—";
+      if (row.previous_revision) {
+        revision = String(row.previous_revision);
+        if (row.applied_revision) revision += " → " + row.applied_revision;
+        else if (["pending", "unconfirmed"].includes(row.status))
+          revision += " → 待确认";
+      }
       return [
         [new Date(row.created_at).toLocaleString()],
-        [row.actor || "gatewayctl"],
-        [row.previous_revision + " → " + (row.applied_revision || "待确认")],
-        [row.rollback_of ? "回滚" : "发布"],
+        [unknown ? "—" : row.actor || "gatewayctl"],
+        [revision],
+        [unknown ? "—" : row.rollback_of ? "回滚" : "发布"],
         [
-          { applied: "已应用", pending: "待确认", unconfirmed: "未确认" }[
-            row.status
-          ] || row.status,
+          {
+            applied: "已应用",
+            committed: "已提交",
+            pending: "待确认",
+            unconfirmed: "未确认",
+            rejected: "已拒绝",
+            conflict: "版本冲突",
+            corrupt: "记录损坏",
+          }[row.status] || row.status,
+          row.message,
         ],
       ];
+    }
   }
 }
 
@@ -147,15 +165,21 @@ export function describeChange(change, previous, next) {
   }[kind];
   const before = snapshot(previous),
     after = snapshot(next);
-  const cells = describe(section, after || before, id, after ? next : previous);
+  const affected = new Set();
+  for (const doc of [previous, next]) {
+    for (const route of doc.routes || []) {
+      if (
+        (kind === "upstream" && route.upstream === id) ||
+        (kind === "profile" && route.profile === id) ||
+        kind === "plugins"
+      )
+        affected.add(route.id);
+    }
+  }
   return {
     key: change,
     title: type + resource + " · " + id,
-    summary: cells
-      .slice(1)
-      .map((c) => c.filter(Boolean).join(" · "))
-      .join(" ｜ "),
-    before,
-    after,
+    fields: fieldChanges(before, after),
+    affected: [...affected],
   };
 }

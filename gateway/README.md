@@ -15,6 +15,8 @@
 
 `Manifest` 相对启动配置文件解析；每个 `include` 相对声明它的文件解析。HTTP 代理使用标准库 `httputil.ReverseProxy`，支持 Range/HEAD、流式上传下载、SSE 和 WebSocket；上游支持主动健康检查和加权轮询。
 
+HTTP 侧可对照 Caddy 的反向代理、可信代理与主动健康检查配置。TCP/UDP 使用各自的监听和转发目标，可对照 Caddy 的四层扩展理解配置边界。本项目使用下文的原生清单。[Caddy reverse_proxy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy) · [caddy-l4](https://github.com/mholt/caddy-l4)
+
 ## 从独立示例开始
 
 从项目根目录执行。先在 PowerShell 生成至少 32 字符的管理密钥，不要输出或提交实际密钥：
@@ -97,7 +99,7 @@ routes:
 
 例如 `host: "192.0.2.10:8443"`、`paths: [/api, /api/*]`、`methods: [GET]`、`upstream: application` 表示访问该 IP 和端口的 GET 请求，只要路径是 `/api` 或以 `/api/` 开头，就转给 application。只填域名或 IP 可以匹配该主机的任意端口。省略 Host 或填写 `"*"` 时可按路径直接分流。`"*:8443"` 匹配任意主机的指定端口。IPv6 搭配端口时使用方括号，例如 `"[::1]:8443"`。
 
-多个规则同时命中时，依次比较优先级（数值较大优先）、指定主机、指定端口和匹配路径长度，最后按规则 ID 排序。端口取自 HTTP Host，省略时 HTTP 使用 80，HTTPS 使用 443。前置反向代理若需保留浏览器端口，应传递原始 Host。
+多个规则同时命中时，依次比较优先级（数值较大优先）、指定主机、指定端口、命中路径的字面长度。长度相同时精确路径优先，例如 `/` 胜过 `/*`，其余平局按规则 ID 升序。升级前可对部署清单运行 `gatewayctl validate --manifest <清单>`，列出可能受精确路径优先影响的规则。端口取自网关收到的 HTTP Host，省略时 HTTP 使用 80，HTTPS 使用 443。前置代理若需保留浏览器端口，可传递 `$http_host`。
 
 ### 四层端口转发
 
@@ -117,6 +119,8 @@ streams:
 ```
 
 四层转发按监听地址与协议选择目标，TCP 可直接透传 TLS。每条规则对应一个目标。四层规则可随清单预览、发布、重载和回滚。容器部署需要把规则的监听地址设为容器可达的接口，例如 `0.0.0.0:1053`，并在 Compose 的 gateway 服务 `ports` 中映射 `127.0.0.1:1053:1053/udp`。TCP 端口同理。对外开放时按实际用途选择宿主机绑定地址。
+
+关闭进程时，网关停止接收新的 TCP 连接和 UDP 会话，已有连接可在 `HTTP.ShutdownTimeout` 内完成收发。四层、HTTP 和 WebSocket 共用这段排空时间，默认 60 秒。容器的停止宽限期应覆盖所配置的排空时间。
 
 文件加载会补齐省略的上游参数：节点权重 1，连接超时 3000ms，响应头超时 10000ms，I/O 空闲超时 30000ms，健康路径 `/healthz`、检查间隔 2000ms、检查超时 1000ms、失败阈值 2。显式填写的无效值仍会被拒绝；需要长时间下载等行为时按上游覆盖。
 
@@ -138,9 +142,15 @@ go run ./tools/gatewayctl publish --manifest gateway/etc/routes.yaml -f gateway/
 
 `gatewayctl` 未显式传入 `--manifest` 时仍读取原有 `gateway/etc/routes.json`，兼容已有发布流程。发布记录写入配置的 `StateDir`，已确认的记录可用 `rollback --release <记录文件>` 恢复其前一版本；并发版本变化时会拒绝覆盖。文件模式使用 `gateway reload`，etcd 模式使用 `gatewayctl publish`。
 
+etcd 将配置和发布回执写入同一个事务。启用了 etcd 权限控制的部署，需要给网关账号授予配置键及 `<Etcd.Key>/releases/` 前缀的读写权限。遇到网络中断，可打开控制台发布记录，或执行 `gatewayctl reconcile --release <记录文件> -f <发布工具配置>` 核对该次提交。校验失败、并发冲突和结果待确认分别显示。旧版本遗留的待确认记录可能缺少回执。回滚会先核对当前修订和配置内容。
+
 ## 独立网关控制台
 
 后台菜单“网关控制台”在新窗口打开独立应用。控制台提供路由、上游、插件策略和发布记录。编辑先保存在当前页面的草稿中，“审阅并发布”会校验整份配置并展示各项修改前后的值。回滚会将上一次配置发布为新修订。文件模式提供只读视图，页面发布与回滚使用 `Source: etcd`。
+
+七层路由页的“试匹配 HTTP 请求”接受网关实际收到的 Host、协议、方法和路径，使用当前实例的生效修订返回规则、匹配路径和上游或响应插件。试匹配不执行插件及上游请求。期望修订和本机生效修订不同时，可以查看各自清单、最近应用错误、本机监听地址及上游健康状态。配置源暂时不可读时，控制台仍提供本机配置的只读视图。
+
+草稿保存在当前标签页的内存中。会话过期后用原账号登录可恢复草稿，期间有其他人发布时，独立修改自动合并，同一资源的冲突由编辑者选择。主动退出、关闭或重新打开标签页会清除草稿。发布与回滚预览都列出修改字段、前后值及受影响的路由。
 
 网关进程同时提供 Vue 3 页面、登录接口和配置管理接口。Go 构建时嵌入 `web/gateway-admin/static` 中随源码分发的页面资源。修改 `web/gateway-admin/src` 后，从仓库根目录执行 `npm --prefix web run build -w @sitehub/gateway-admin`。前端构建成功后会自动更新 `static`，提交页面修改时一并提交其中的资源。
 
@@ -184,6 +194,8 @@ location /gateway-console/ {
 ## 另一台 Nginx 使用公网域名反代云机
 
 三个站点共用云机 8082 端口。边缘 Nginx 用公网域名选中对应的 `server`，云机网关再用收到的 HTTP Host 选中站点。比如博客入口的 `server_name` 是 `blog.ops-gofer.cn`，其 `proxy_pass` 是 `http://blog.sitehub.local:8082`。在该 `location /` 里写 `proxy_set_header Host $proxy_host;`，网关就会收到 `blog.sitehub.local:8082`，命中博客路由。产品和后台使用相同指令，分别由自己的 `proxy_pass` 选择目标。三个内部名称需在 Nginx 所在机器上解析到网关云机。完整示例见 [异机 Nginx 配置](etc/example/remote-nginx.conf)。
+
+排查 404 时，可在“试匹配 HTTP 请求”中依次输入 `blog.ops-gofer.cn` 和 `blog.sitehub.local:8082`，方法选 GET，路径填 `/`。现有内部站点规则只会命中第二项。如果希望继续使用 `proxy_set_header Host $host;`，也可以直接给各站点配置对应的公网 Host，需覆盖首页、API 和静态资源等该站点的所有路由。
 
 替换现有三个 `location /` 的 Host 指令后，在边缘机运行 `sudo nginx -t && sudo nginx -s reload`。从公网访问三个站点的 `/` 验证首页。若还需启用浏览器登录，核对实际生效清单中的 `browser-session.origins`，在 `profiles.site` 加入 `https://www.ops-gofer.cn:2357` 和 `https://blog.ops-gofer.cn:2357`，在 `profiles.admin` 加入 `https://admin.ops-gofer.cn:2357`。保留已有可信来源，按配置源发布或重载。
 
@@ -231,7 +243,7 @@ location /gateway-console/ {
 
 5. 分别打开三个公网入口，核对首页及后台预览、产品站到博客的跳转。在博客或产品站验证会员登录，再在后台验证管理员登录。只验证首页不能覆盖登录时的 Origin 校验。后台配置的菜单外链、友链或下载外链中，指向旧站点的绝对 URL 也需更新。
 
-此部署把 Nginx 放在 Go 网关之前。当前网关以 TCP 对端地址执行限流，并覆盖转发 IP 头，所以同一路由的访客共享代理地址的限流额度，业务访问日志也会记录代理地址。Nginx 的访问日志可查看客户端 IP。若已有基于真实客户端 IP 的限流或审计要求，需先处理这项差异。
+公网入口默认以 TCP 对端识别客户端。要让 HTTPS 协议和访客 IP 穿过 Nginx，在 Compose 的 `.env` 中设置 `GATEWAY_HTTP_TRUSTEDPROXIES=["192.0.2.12/32"]`，将示例地址替换成**网关实际看到的 Nginx 对端地址**，再重建 gateway 容器。独立运行时在进程配置中填写相同的 `HTTP.TrustedProxies` CIDR 列表。Nginx 应设置 `X-Forwarded-Proto $scheme`、`X-Real-IP $remote_addr` 并追加 `X-Forwarded-For`。网关从右往左跳过受信代理，以第一个非受信地址执行限流并重建发往上游的 IP 头。默认空列表忽略入站转发头。控制台登录和内部管理网络各自使用独立的可信来源设置。
 
 ## 扩展与运行边界
 

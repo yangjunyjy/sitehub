@@ -25,6 +25,7 @@ Discovery:
   Enabled: true
   MaxStale: 30s
 HTTP:
+  TrustedProxies: []
   MaxBodyBytes: 2149580800
   ReadHeaderTimeout: 10s
   IdleTimeout: 90s

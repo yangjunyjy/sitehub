@@ -83,7 +83,9 @@ func (c *console) handler() http.Handler {
 	mux.HandleFunc("GET /api/", http.NotFound)
 	mux.HandleFunc("POST /api/auth/login", c.login)
 	mux.HandleFunc("POST /api/auth/logout", c.logout)
+	mux.HandleFunc("GET /api/history", c.guard(readConfig, c.history))
 	mux.HandleFunc("GET /api/workspace", c.guard(readConfig, c.workspace))
+	mux.HandleFunc("POST /api/match", c.guard(readConfig, c.match))
 	mux.HandleFunc("POST /api/preview", c.guard(readConfig, c.change))
 	mux.HandleFunc("POST /api/publish", c.guard(publishConfig, c.change))
 	mux.HandleFunc("POST /api/rollback", c.guard(rollbackConfig, c.change))
@@ -122,16 +124,20 @@ func (c *console) guard(permission string, next consoleHandler) http.HandlerFunc
 }
 
 func (c *console) workspace(w http.ResponseWriter, r *http.Request, actor account) {
-	state, err := c.client.Snapshot(r.Context())
+	state, err := c.client.Workspace(r.Context())
 	if err != nil {
 		problem(w, 502, "无法读取网关配置，请检查控制地址、密钥和管理网段")
 		return
 	}
-	history, err := releaseHistory(c.dir)
-	if err != nil {
-		problem(w, 500, "无法读取发布记录，请检查 StateDir")
-		return
+	history := []publisher.ReleaseSummary{}
+	if r.URL.Query().Get("history") != "0" {
+		history, _, err = c.historyPage(r.Context(), 1, 20, &state)
+		if err != nil {
+			problem(w, 500, "无法读取发布记录，请检查 StateDir")
+			return
+		}
 	}
+	canEdit := !state.FileManaged && !state.DesiredUnavailable
 	reply(w, 200, map[string]any{"state": state, "history": history, "actor": actor.Name, "role": actor.Role,
-		"publish": !state.FileManaged && actor.allows(publishConfig), "rollback": !state.FileManaged && actor.allows(rollbackConfig)})
+		"publish": canEdit && actor.allows(publishConfig), "rollback": canEdit && actor.allows(rollbackConfig)})
 }

@@ -175,7 +175,15 @@ function routeFields(doc, key, field) {
         JSON.stringify(responseHeaders) !==
           JSON.stringify(inheritedResponse.headers || {})
       ) {
-        overrides["static-response"] = response;
+        const original = row.plugins?.["static-response"];
+        // Preserve omitted optional fields when reopening an existing response.
+        const unchanged =
+          original &&
+          original.status === response.status &&
+          (original.body ?? "") === response.body &&
+          JSON.stringify(original.headers || {}) ===
+            JSON.stringify(responseHeaders);
+        overrides["static-response"] = unchanged ? original : response;
       }
     }
     if (Object.keys(overrides).length) value.plugins = overrides;

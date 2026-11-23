@@ -49,7 +49,9 @@ routes:
 
 `proxy-rewrite` 的三个字段均可省略。`strip_prefix: /api` 将 `/api/files` 改为 `/files`，将 `/api` 改为 `/`，但不会匹配 `/apiv2`。改写保留查询字符串和路径的原始转义；`host` 只改变上游 HTTP Host，不改变上游连接目标。请求头不允许覆盖连接管理、消息长度、会话身份、转发来源和请求 ID 等受保护字段；Host 使用单独的 `host` 参数设置。该插件在会话检查和限流之后执行，不改变原始路由选择。
 
-限流使用 `RemoteAddr`，不信任客户端 `X-Forwarded-For`。限流/熔断对象由 `Build()` 构造，网关复用配置未变的 Middleware，热加载不会重置这些对象。熔断观察状态码，不缓存响应体；支持 `Flush`、`ResponseController` 和连接升级，不阻塞 SSE、下载或 WebSocket 转发。
+限流默认使用 TCP 对端 IP。通过 `HTTP.TrustedProxies` 声明边缘代理的 CIDR 后，请求限流与上游 `X-Real-IP` 使用相同的客户端地址。网关从右向左检查 `X-Forwarded-For`，直到遇到第一个非受信地址；缺少该头时读取受信代理提供的单个 `X-Real-IP`。受信代理还可提供单个 `http` 或 `https` 的 `X-Forwarded-Proto`。
+
+限流与熔断对象由 `Build()` 构造，热加载复用配置相同的中间件。熔断观察状态码，支持 `Flush`、`ResponseController` 和连接升级。
 
 新增插件实现 `Factory`，用 `Registry.Register(name, priority, factory)` 注册，并添加参数校验和行为测试。直接生成响应的插件使用 `Registry.RegisterTerminal(name, priority, factory)`；路由根据注册元数据检查“一个上游或一个终止插件”，不依赖 `static-response` 等具体名称。注册后的终止插件不能继续转发到下一处理器。同一路由不能启用两个终止插件。
 

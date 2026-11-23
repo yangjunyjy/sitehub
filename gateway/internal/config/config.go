@@ -9,6 +9,7 @@ import (
 	"github.com/zeromicro/go-zero/core/logx"
 	"sitehub/common/controlplane"
 	"sitehub/gateway/console"
+	"sitehub/gateway/internal/clientaddr"
 )
 
 type Config struct {
@@ -42,6 +43,7 @@ type Config struct {
 		MaxStale time.Duration `json:",default=30s"`
 	}
 	HTTP struct {
+		TrustedProxies    []string      `json:",optional"`
 		MaxBodyBytes      int64         `json:",default=2149580800"`
 		ReadHeaderTimeout time.Duration `json:",default=10s"`
 		IdleTimeout       time.Duration `json:",default=90s"`
@@ -64,6 +66,9 @@ func (c Config) SourceType() string {
 }
 
 func (c Config) Validate() error {
+	if _, err := clientaddr.Parse(c.HTTP.TrustedProxies); err != nil {
+		return err
+	}
 	addresses := []string{c.Listen, c.Admin.Listen}
 	if c.Console.Enabled {
 		if err := c.Console.Validate(); err != nil {

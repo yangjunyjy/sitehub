@@ -12,6 +12,7 @@ import (
 
 	"sitehub/common/controlplane"
 	"sitehub/gateway/console"
+	"sitehub/gateway/internal/clientaddr"
 	"sitehub/gateway/internal/config"
 	"sitehub/gateway/internal/control"
 	"sitehub/gateway/internal/discovery"
@@ -76,7 +77,11 @@ func RunWithRegistry(ctx context.Context, c config.Config, plugins *plugin.Regis
 		provider = discovery.New(registry, c.Discovery.MaxStale)
 		defer provider.Close()
 	}
-	proxy := engine.New(provider, plugins, c.HTTP.MaxBodyBytes)
+	trusted, err := clientaddr.Parse(c.HTTP.TrustedProxies)
+	if err != nil {
+		return err
+	}
+	proxy := engine.New(provider, plugins, c.HTTP.MaxBodyBytes, trusted...)
 	defer proxy.Close()
 	controller := &control.Controller{Store: store, Engine: proxy, Key: c.Admin.Key, Allowed: allowed}
 	if c.SourceType() == "file" {
@@ -89,6 +94,7 @@ func RunWithRegistry(ctx context.Context, c config.Config, plugins *plugin.Regis
 		return err
 	}
 	defer publicListener.Close()
+	controller.HTTPListen = publicListener.Addr().String()
 	adminListener, err := net.Listen("tcp", c.Admin.Listen)
 	if err != nil {
 		return err
@@ -187,6 +193,11 @@ func RunWithRegistry(ctx context.Context, c config.Config, plugins *plugin.Regis
 	drainCtx, cancel := context.WithTimeout(context.Background(), c.HTTP.ShutdownTimeout)
 	defer cancel()
 	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		proxy.DrainStreams(drainCtx)
+	}()
 	for _, srv := range servers {
 		wg.Add(1)
 		go func() {

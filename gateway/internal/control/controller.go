@@ -9,27 +9,27 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 
+	"sitehub/gateway/diagnostics"
 	"sitehub/gateway/internal/engine"
 	"sitehub/gateway/manifest"
 )
 
-type State struct {
-	FileManaged     bool              `json:"file_managed,omitempty"`
-	Revision        int64             `json:"revision"`
-	AppliedRevision int64             `json:"applied_revision"`
-	Manifest        manifest.Document `json:"manifest"`
-	LastError       string            `json:"last_error,omitempty"`
-}
+type State = diagnostics.State
+
+var generationPattern = regexp.MustCompile("^[0-9a-f]{24}$")
+
 type Controller struct {
-	Store   Store
-	Engine  *engine.Engine
-	Key     string
-	Allowed []*net.IPNet
+	HTTPListen string
+	Store      Store
+	Engine     *engine.Engine
+	Key        string
+	Allowed    []*net.IPNet
 	// Load is set only in file mode. PUT is then disabled so restarts and reloads
 	// always use the same authoritative files, including their include tree.
 	Load      func() (manifest.Document, error)
@@ -42,6 +42,9 @@ type Controller struct {
 func (c *Controller) Apply(record Record) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.stopping.Load() {
+		return errors.New("gateway is stopping")
+	}
 	if len(record.Data) == 0 {
 		c.lastError = "active configuration missing; retaining applied snapshot"
 		return errors.New(c.lastError)
@@ -62,13 +65,26 @@ func (c *Controller) Apply(record Record) error {
 		c.lastError = err.Error()
 		return err
 	}
-	c.Engine.Commit(prepared)
-	c.applied = record.Revision
-	c.lastError = ""
-	return nil
+	return c.install(prepared, record.Revision)
+}
+
+// install runs under c.mu. A store transaction may finish after shutdown
+// starts. Only advance applied when the engine actually installed its snapshot.
+func (c *Controller) install(prepared *engine.Snapshot, revision int64) error {
+	if c.stopping.Load() {
+		prepared.Release()
+	} else if c.Engine.Commit(prepared) {
+		c.applied = revision
+		c.lastError = ""
+		return nil
+	}
+	c.lastError = "gateway is stopping; stored configuration was not applied locally"
+	return errors.New(c.lastError)
 }
 func (c *Controller) Failure(err error) { c.mu.Lock(); defer c.mu.Unlock(); c.lastError = err.Error() }
-func (c *Controller) Stop()             { c.stopping.Store(true) }
+func (c *Controller) Stop() {
+	c.stopping.Store(true)
+}
 func (c *Controller) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) { respond(w, 200, map[string]string{"status": "ok"}) })
@@ -80,7 +96,9 @@ func (c *Controller) Handler() http.Handler {
 		respond(w, 200, map[string]string{"status": "ready"})
 	})
 	mux.HandleFunc("/v1/config", c.config)
+	mux.HandleFunc("GET /v1/releases/{generation}", c.receipt)
 	mux.HandleFunc("POST /v1/reload", c.reload)
+	mux.HandleFunc("POST /v1/match", c.match)
 	mux.Handle("GET /metrics", c.Engine.Metrics())
 	mux.HandleFunc("GET /v1/status", func(w http.ResponseWriter, _ *http.Request) {
 		c.mu.Lock()
@@ -113,21 +131,62 @@ func (c *Controller) Handler() http.Handler {
 		mux.ServeHTTP(w, r)
 	})
 }
+func (c *Controller) receipt(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("generation")
+	if !generationPattern.MatchString(id) {
+		respond(w, 400, map[string]string{"message": "Invalid release ID"})
+		return
+	}
+	store, ok := c.Store.(receiptStore)
+	if !ok {
+		respond(w, 404, map[string]string{"message": "Release receipt unavailable"})
+		return
+	}
+	record, err := store.Receipt(r.Context(), id)
+	if err != nil {
+		respond(w, 503, map[string]string{"message": err.Error()})
+		return
+	}
+	if record.Revision == 0 {
+		respond(w, 404, map[string]string{"message": "Release receipt not found"})
+		return
+	}
+	respond(w, 200, map[string]any{"revision": record.Revision, "receipt": string(record.Data)})
+}
+
 func (c *Controller) config(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		record, err := c.Store.Read(r.Context())
-		if err != nil {
-			respond(w, 503, map[string]string{"message": err.Error()})
-			return
+		var d manifest.Document
+		if err == nil {
+			d, err = manifest.Decode(record.Data)
+			if err != nil {
+				err = errors.New("Stored configuration invalid or missing")
+			}
 		}
-		d, err := manifest.Decode(record.Data)
-		if err != nil {
-			respond(w, 503, map[string]string{"message": "Stored configuration invalid; use status and repair the control store"})
+		if err != nil && r.URL.Query().Get("local_fallback") != "1" {
+			respond(w, 503, map[string]string{"message": err.Error()})
 			return
 		}
 		c.mu.Lock()
 		state := State{FileManaged: c.Load != nil, Revision: record.Revision, AppliedRevision: c.applied, Manifest: d, LastError: c.lastError}
+		state.Runtime, state.AppliedManifest = c.Engine.Runtime(c.HTTPListen)
 		c.mu.Unlock()
+		if err != nil {
+			if state.AppliedManifest == nil {
+				respond(w, 503, map[string]string{"message": err.Error()})
+				return
+			}
+			state.Revision = 0
+			state.DesiredUnavailable = true
+			state.Manifest = *state.AppliedManifest
+			state.LastError = "无法读取期望配置：" + err.Error()
+			respond(w, 200, state)
+			return
+		}
+		if record.Revision == state.AppliedRevision {
+			state.AppliedManifest = nil
+		}
 		w.Header().Set("ETag", strconv.Quote(strconv.FormatInt(record.Revision, 10)))
 		respond(w, 200, state)
 		return
@@ -142,7 +201,7 @@ func (c *Controller) config(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if c.stopping.Load() {
-		respond(w, 503, map[string]string{"message": "Gateway is stopping"})
+		respond(w, 503, map[string]string{"message": "Gateway is stopping", "outcome": "rejected"})
 		return
 	}
 	expected, err := strconv.ParseInt(strings.Trim(r.Header.Get("If-Match"), "\""), 10, 64)
@@ -165,7 +224,13 @@ func (c *Controller) config(w http.ResponseWriter, r *http.Request) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.stopping.Load() {
-		respond(w, 503, map[string]string{"message": "Gateway is stopping"})
+		respond(w, 503, map[string]string{"message": "Gateway is stopping", "outcome": "rejected"})
+		return
+	}
+	generation := r.Header.Get("X-Release-ID")
+	store, supportsReceipts := c.Store.(receiptStore)
+	if generation != "" && (!generationPattern.MatchString(generation) || !supportsReceipts) {
+		respond(w, 400, map[string]string{"message": "Invalid release ID or store does not support receipts"})
 		return
 	}
 	prepared, err := c.Engine.Prepare(d)
@@ -173,7 +238,12 @@ func (c *Controller) config(w http.ResponseWriter, r *http.Request) {
 		respond(w, 400, map[string]string{"message": err.Error()})
 		return
 	}
-	record, err := c.Store.CompareAndSwap(r.Context(), expected, manifest.Bytes(d))
+	var record Record
+	if generation != "" {
+		record, err = store.PublishRelease(r.Context(), expected, manifest.Bytes(d), generation)
+	} else {
+		record, err = c.Store.CompareAndSwap(r.Context(), expected, manifest.Bytes(d))
+	}
 	if err != nil {
 		prepared.Release()
 		code := 503
@@ -183,10 +253,11 @@ func (c *Controller) config(w http.ResponseWriter, r *http.Request) {
 		respond(w, code, map[string]string{"message": err.Error()})
 		return
 	}
-	c.Engine.Commit(prepared)
-	c.applied = record.Revision
-	c.lastError = ""
 	w.Header().Set("ETag", strconv.Quote(strconv.FormatInt(record.Revision, 10)))
+	if err := c.install(prepared, record.Revision); err != nil {
+		respond(w, http.StatusAccepted, State{Revision: record.Revision, AppliedRevision: c.applied, Manifest: d, LastError: err.Error()})
+		return
+	}
 	respond(w, 200, State{Revision: record.Revision, AppliedRevision: c.applied, Manifest: d})
 }
 
@@ -229,9 +300,10 @@ func (c *Controller) reload(w http.ResponseWriter, r *http.Request) {
 		respond(w, 503, map[string]string{"message": err.Error()})
 		return
 	}
-	c.Engine.Commit(prepared)
-	c.applied = record.Revision
-	c.lastError = ""
+	if err := c.install(prepared, record.Revision); err != nil {
+		respond(w, 503, map[string]string{"message": err.Error()})
+		return
+	}
 	respond(w, 200, State{Revision: record.Revision, AppliedRevision: c.applied, Manifest: d})
 }
 func respond(w http.ResponseWriter, status int, value any) {

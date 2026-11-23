@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -61,6 +63,7 @@ type etcdFixture struct {
 	pb.UnimplementedWatchServer
 	mu       sync.Mutex
 	record   Record
+	receipts map[string]Record
 	global   int64
 	key      string
 	starts   chan int64
@@ -74,12 +77,17 @@ func (f *etcdFixture) Range(_ context.Context, req *pb.RangeRequest) (*pb.RangeR
 	if f.readFail {
 		return nil, status.Error(codes.PermissionDenied, "secret backend diagnostic")
 	}
-	if string(req.Key) != f.key || req.Serializable || len(req.RangeEnd) != 0 {
+	key := string(req.Key)
+	if (key != f.key && !strings.HasPrefix(key, f.key+"/releases/")) || req.Serializable || len(req.RangeEnd) != 0 {
 		return nil, status.Error(codes.InvalidArgument, "expected linearizable read of the exact configuration key")
 	}
 	response := &pb.RangeResponse{Header: &pb.ResponseHeader{Revision: f.global}}
-	if f.record.Revision > 0 {
-		response.Kvs = []*mvccpb.KeyValue{{Key: []byte(f.key), Value: bytes.Clone(f.record.Data), ModRevision: f.record.Revision}}
+	record := f.record
+	if key != f.key {
+		record = f.receipts[key]
+	}
+	if record.Revision > 0 {
+		response.Kvs = []*mvccpb.KeyValue{{Key: req.Key, Value: bytes.Clone(record.Data), ModRevision: record.Revision}}
 	}
 	return response, nil
 }
@@ -87,7 +95,7 @@ func (f *etcdFixture) Range(_ context.Context, req *pb.RangeRequest) (*pb.RangeR
 func (f *etcdFixture) Txn(_ context.Context, req *pb.TxnRequest) (*pb.TxnResponse, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	if len(req.Compare) != 1 || req.Compare[0].Target != pb.Compare_MOD || req.Compare[0].Result != pb.Compare_EQUAL || string(req.Compare[0].Key) != f.key || len(req.Success) != 1 || req.Success[0].GetRequestPut() == nil || len(req.Failure) != 0 {
+	if (len(req.Compare) != 1 && len(req.Compare) != 2) || len(req.Success) != len(req.Compare) || req.Compare[0].Target != pb.Compare_MOD || req.Compare[0].Result != pb.Compare_EQUAL || string(req.Compare[0].Key) != f.key || req.Success[0].GetRequestPut() == nil || len(req.Failure) != 0 {
 		return nil, status.Error(codes.InvalidArgument, "expected atomic mod-revision compare and single whole-document put")
 	}
 	response := &pb.TxnResponse{Header: &pb.ResponseHeader{Revision: f.global}}
@@ -97,6 +105,16 @@ func (f *etcdFixture) Txn(_ context.Context, req *pb.TxnRequest) (*pb.TxnRespons
 	put := req.Success[0].GetRequestPut()
 	if string(put.Key) != f.key {
 		return nil, status.Error(codes.InvalidArgument, "transaction changed a different key")
+	}
+	if len(req.Compare) == 2 {
+		cmp, receipt := req.Compare[1], req.Success[1].GetRequestPut()
+		if receipt == nil || cmp.Target != pb.Compare_VERSION || cmp.Result != pb.Compare_EQUAL || cmp.GetVersion() != 0 || !bytes.Equal(cmp.Key, receipt.Key) || !strings.HasPrefix(string(cmp.Key), f.key+"/releases/") {
+			return nil, status.Error(codes.InvalidArgument, "invalid create-only release receipt")
+		}
+		if _, exists := f.receipts[string(cmp.Key)]; exists {
+			return response, nil
+		}
+		f.receipts[string(cmp.Key)] = Record{Revision: f.global + 1, Data: bytes.Clone(receipt.Value)}
 	}
 	f.global++
 	f.record = Record{Revision: f.global, Data: bytes.Clone(put.Value)}
@@ -142,7 +160,7 @@ func newEtcdFixture(t *testing.T) (*EtcdStore, *etcdFixture) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f := &etcdFixture{key: "/sitehub/gateway/active", global: 100, starts: make(chan int64, 8), events: make(chan *pb.WatchResponse, 8)}
+	f := &etcdFixture{key: "/sitehub/gateway/active", receipts: map[string]Record{}, global: 100, starts: make(chan int64, 8), events: make(chan *pb.WatchResponse, 8)}
 	server := grpc.NewServer()
 	pb.RegisterKVServer(server, f)
 	pb.RegisterWatchServer(server, f)
@@ -154,6 +172,35 @@ func newEtcdFixture(t *testing.T) (*EtcdStore, *etcdFixture) {
 	}
 	t.Cleanup(func() { _ = client.Close() })
 	return &EtcdStore{Client: client, Key: f.key}, f
+}
+
+func TestEtcdReceiptCommitsWithConfigAndSurvivesLaterRevisions(t *testing.T) {
+	store, _ := newEtcdFixture(t)
+	ctx := t.Context()
+	id := "0123456789abcdef01234567"
+	d := staticDocument("recorded")
+	first, err := store.PublishRelease(ctx, 0, manifest.Bytes(d), id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.PublishRelease(ctx, first.Revision, manifest.Bytes(staticDocument("duplicate")), id); !errors.Is(err, ErrConflict) {
+		t.Fatalf("release ID reused: %v", err)
+	}
+	if _, err := store.CompareAndSwap(ctx, first.Revision, manifest.Bytes(staticDocument("later"))); err != nil {
+		t.Fatal(err)
+	}
+	got, err := store.Receipt(ctx, id)
+	if err != nil || got.Revision != first.Revision || string(got.Data) != fmt.Sprintf("0:%s", manifest.Revision(d)) {
+		t.Fatalf("receipt = %v %v", got, err)
+	}
+	otherID := "000000000000000000000001"
+	if _, err := store.PublishRelease(ctx, first.Revision, manifest.Bytes(d), otherID); !errors.Is(err, ErrConflict) {
+		t.Fatalf("stale revision accepted: %v", err)
+	}
+	missing, err := store.Receipt(ctx, otherID)
+	if err != nil || missing.Revision != 0 {
+		t.Fatalf("stale transaction left a receipt: %+v %v", missing, err)
+	}
 }
 
 func TestEtcdStoreUsesKeyRevisionAndAtomicCompareAndSwap(t *testing.T) {
@@ -211,17 +258,17 @@ func TestEtcdWatchStartsAfterReadRetainsDeletionAndResyncsAfterCompaction(t *tes
 	}
 	select {
 	case revision := <-fixture.starts:
-		if revision != 8 {
+		if revision != 101 {
 			t.Fatalf("watch starts at %d; expected read revision + 1", revision)
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("watch did not start")
 	}
-	fixture.events <- &pb.WatchResponse{Header: &pb.ResponseHeader{Revision: 8}, Events: []*mvccpb.Event{{Type: mvccpb.PUT, Kv: &mvccpb.KeyValue{ModRevision: 8, Value: manifest.Bytes(staticDocument("eight"))}}}}
-	if record := awaitRecord(t, updates); record.Revision != 8 {
+	fixture.events <- &pb.WatchResponse{Header: &pb.ResponseHeader{Revision: 101}, Events: []*mvccpb.Event{{Type: mvccpb.PUT, Kv: &mvccpb.KeyValue{ModRevision: 101, Value: manifest.Bytes(staticDocument("eight"))}}}}
+	if record := awaitRecord(t, updates); record.Revision != 101 {
 		t.Fatalf("pushed watch snapshot = %+v", record)
 	}
-	fixture.events <- &pb.WatchResponse{Header: &pb.ResponseHeader{Revision: 9}, Events: []*mvccpb.Event{{Type: mvccpb.DELETE, Kv: &mvccpb.KeyValue{ModRevision: 9}}}}
+	fixture.events <- &pb.WatchResponse{Header: &pb.ResponseHeader{Revision: 102}, Events: []*mvccpb.Event{{Type: mvccpb.DELETE, Kv: &mvccpb.KeyValue{ModRevision: 102}}}}
 	select {
 	case <-failures:
 	case <-time.After(3 * time.Second):
@@ -233,15 +280,16 @@ func TestEtcdWatchStartsAfterReadRetainsDeletionAndResyncsAfterCompaction(t *tes
 	default:
 	}
 	fixture.mu.Lock()
-	fixture.record = Record{Revision: 12, Data: manifest.Bytes(staticDocument("twelve"))}
+	fixture.global = 250
+	fixture.record = Record{Revision: 112, Data: manifest.Bytes(staticDocument("twelve"))}
 	fixture.mu.Unlock()
-	fixture.events <- &pb.WatchResponse{Header: &pb.ResponseHeader{Revision: 12}, Canceled: true, CompactRevision: 10}
-	if record := awaitRecord(t, updates); record.Revision != 12 {
+	fixture.events <- &pb.WatchResponse{Header: &pb.ResponseHeader{Revision: 250}, Canceled: true, CompactRevision: 200}
+	if record := awaitRecord(t, updates); record.Revision != 112 {
 		t.Fatalf("compacted watch did not reread latest snapshot: %+v", record)
 	}
 	select {
 	case revision := <-fixture.starts:
-		if revision != 13 {
+		if revision != 251 {
 			t.Fatalf("resynchronized watch starts at %d", revision)
 		}
 	case <-time.After(3 * time.Second):

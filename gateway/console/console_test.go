@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"reflect"
 	"sitehub/gateway/manifest"
 	"sitehub/gateway/plugin"
 	"sitehub/gateway/publisher"
@@ -93,10 +95,15 @@ func TestConsoleReleaseLifecycle(t *testing.T) {
 		return result
 	}
 	request("workspace", "", nil, 401)
+	request("history", "", nil, 401)
 	if view := request("workspace", "reader", nil, 200); view["publish"] != false {
 		t.Fatal(view)
 	}
 	original := manifest.Revision(state.Manifest)
+	var originalJSON map[string]any
+	if err := json.Unmarshal(manifest.Bytes(state.Manifest), &originalJSON); err != nil {
+		t.Fatal(err)
+	}
 	desired, _ := manifest.Decode(manifest.Bytes(state.Manifest))
 	desired.Routes[0].Priority = 3
 	payload := map[string]any{"password": "fixture-password", "revision": 7, "manifest": desired}
@@ -118,15 +125,40 @@ func TestConsoleReleaseLifecycle(t *testing.T) {
 	}
 	request("publish", "operator", payload, 409)
 	rollback := map[string]any{"password": "fixture-password", "generation": result["generation"], "revision": 8}
+	preview := map[string]any{"generation": result["generation"], "revision": 8}
+	request("preview", "reader", preview, 403)
+	plan := request("preview", "operator", preview, 200)
+	if !reflect.DeepEqual(plan["manifest"], originalJSON) || len(plan["changes"].([]any)) != 1 || state.Revision != 8 {
+		t.Fatal("invalid rollback preview", plan)
+	}
 	request("rollback", "operator", rollback, 200)
 	if state.Revision != 9 || manifest.Revision(state.Manifest) != original {
 		t.Fatal("rollback did not restore original configuration")
 	}
 	rollback["revision"] = 9
 	request("rollback", "operator", rollback, 409)
-	history, err := releaseHistory(c.dir)
+	history, _, err := c.historyPage(t.Context(), 1, 20, state)
 	if err != nil || len(history) != 2 || history[0].RollbackOf != result["generation"] || history[1].Actor != "operator" {
 		t.Fatal(history, err)
+	}
+	for page := 1; page <= 2; page++ {
+		data := request("history?limit=1&page="+strconv.Itoa(page), "reader", nil, 200)
+		items := data["items"].([]any)
+		if data["total"] != float64(2) || len(items) != 1 || items[0].(map[string]any)["generation"] != history[page-1].Generation {
+			t.Fatal(data)
+		}
+	}
+	request("history?limit=101", "reader", nil, 400)
+	damaged := "1234567890abcdef12345678"
+	if err := os.WriteFile(filepath.Join(c.dir, damaged+".json"), []byte("{"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	page := request("history", "reader", nil, 200)
+	if page["total"] != float64(3) || page["items"].([]any)[0].(map[string]any)["status"] != "corrupt" {
+		t.Fatal(page)
+	}
+	if view := request("workspace?history=0", "reader", nil, 200); len(view["history"].([]any)) != 0 {
+		t.Fatal(view)
 	}
 	state.FileManaged = true
 	if view := request("workspace", "operator", nil, 200); view["publish"] != false || view["rollback"] != false {
